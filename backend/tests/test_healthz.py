@@ -11,12 +11,12 @@ def test_healthz_returns_ok(client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_version_reports_phase_0(client: TestClient) -> None:
+def test_version_reports_current_phase(client: TestClient) -> None:
     response = client.get("/version")
     assert response.status_code == 200
     body = response.json()
     assert body["name"] == "ratiba"
-    assert body["phase"] == "0"
+    assert body["phase"] == "1"
     assert "version" in body
 
 

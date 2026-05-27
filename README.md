@@ -87,8 +87,8 @@ npm run build
 
 | Phase | Description                                | Status        |
 |-------|--------------------------------------------|---------------|
-| 0     | Project setup                              | In progress   |
-| 1     | FTL engine + core data model               | Not started   |
+| 0     | Project setup                              | Done          |
+| 1     | FTL engine + core data model               | In progress   |
 | 2     | Optimiser MVP                              | Not started   |
 | 3     | Crewing Officer dashboard                  | Not started   |
 | 4     | Telegram bot + crew web view               | Not started   |

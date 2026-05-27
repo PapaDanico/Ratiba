@@ -54,7 +54,7 @@ def create_app() -> FastAPI:
 
     @app.get("/version", response_model=VersionResponse, tags=["meta"])
     async def version() -> VersionResponse:
-        return VersionResponse(name="ratiba", version=__version__, phase="0")
+        return VersionResponse(name="ratiba", version=__version__, phase="1")
 
     app.include_router(api_router)
     return app
