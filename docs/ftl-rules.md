@@ -37,10 +37,9 @@ The minimum rule set to encode in Phase 1, per Plan §5 Phase 1:
 8. **Discretion / commander's discretion logging.** Use of discretion,
    reporting obligation, repeated-use audit triggers.
 
-## Open dependency for Capt. Dan
+## Baseline decision
 
-Per Plan §5 Phase 1: confirm whether this baseline should reflect generic
-KCARs 2025 Part 8, or the specific OM-A FTL chapter of the first pilot
-operator. Default = generic, customised in Phase 6.
-
-See `docs/Ratiba_Project_Plan_v1.md` §11 question 3.
+**Decided 2026-05-27** (Capt. Dan / Claude Code, Plan §11 Q3):
+Phase 1 builds the **generic KCARs 2025 Part 8** baseline. Operator-specific
+OM-A deltas will be layered in Phase 6 once the first operator is confirmed
+and their OM-A FTL chapter is in hand.
