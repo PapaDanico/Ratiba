@@ -43,6 +43,155 @@ function statusTone(s: ReviewStatus): "green" | "amber" | "red" | "steel" {
   return "steel";
 }
 
+type Limits = {
+  fdp_max_basic_by_band: { WOCL: number; EARLY: number; DAY_PEAK: number; AFTERNOON: number };
+  fdp_scheduled_ceiling_basic_h: number;
+  fdp_sector_reduction_per_extra: number;
+  fdp_sector_floor: number;
+  fdp_aug_absolute_cap: number;
+  rest_home_floor_h: number;
+  rest_away_floor_h: number;
+  min_sleep_opportunity_h: number;
+  cumul_duty_7d_h: number;
+  cumul_duty_28d_h: number;
+  cumul_duty_365d_h: number;
+  cumul_block_28d_h: number;
+  cumul_block_365d_h: number;
+  standby_short_call_max_h: number;
+  standby_long_call_max_h: number;
+  split_duty_qualifying_break_h: number;
+  split_duty_extension_cap_h: number;
+  discretion_max_extension_h: number;
+  discretion_max_rest_reduction_h: number;
+};
+
+type LimitsResponse = { source: "baseline" | "operator"; regulation_ref: string; limits: Limits };
+
+function Stat({ label, value, unit = "h" }: { label: string; value: number; unit?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-dn-steel-lt/60 py-1">
+      <span className="text-dn-muted">{label}</span>
+      <span className="font-mono text-dn-dark">
+        {value}
+        {unit}
+      </span>
+    </div>
+  );
+}
+
+function BaselineCard() {
+  const [data, setData] = useState<LimitsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await api<LimitsResponse>("/api/v1/ftl/limits");
+        if (!cancelled) setData(d);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "Failed to load limits");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>FTL limits in force</CardTitle>
+          {data && (
+            <Badge tone={data.source === "operator" ? "green" : "steel"}>
+              {data.source === "operator" ? "Operator scheme" : "Generic baseline"}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardBody>
+        {error ? (
+          <p className="text-sm text-dn-red">{error}</p>
+        ) : !data ? (
+          <p className="text-sm text-dn-muted">Loading…</p>
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-dn-muted">
+              {data.source === "operator"
+                ? "Your accepted OM-A scheme is in force (overrides merged over the baseline)."
+                : "No operator OM-A loaded yet — the generic Kenyan baseline is in force. Parse and accept an OM-A below to override these numbers."}{" "}
+              <span className="font-mono text-xs">{data.regulation_ref}</span>
+            </p>
+            <div className="grid gap-x-8 gap-y-5 md:grid-cols-2 text-sm" data-testid="limits-view">
+              <div>
+                <h3 className="font-display text-dn-dark mb-1">Maximum flight duty period</h3>
+                <Stat
+                  label="Day peak report (06:00–13:29)"
+                  value={data.limits.fdp_max_basic_by_band.DAY_PEAK}
+                />
+                <Stat label="Early (05:00–05:59)" value={data.limits.fdp_max_basic_by_band.EARLY} />
+                <Stat
+                  label="Afternoon (13:30–16:59)"
+                  value={data.limits.fdp_max_basic_by_band.AFTERNOON}
+                />
+                <Stat
+                  label="Night / WOCL (17:00–04:59)"
+                  value={data.limits.fdp_max_basic_by_band.WOCL}
+                />
+                <Stat
+                  label="Absolute ceiling (14 h / 24 h)"
+                  value={data.limits.fdp_scheduled_ceiling_basic_h}
+                />
+                <Stat
+                  label="Reduction per extra sector"
+                  value={data.limits.fdp_sector_reduction_per_extra}
+                />
+                <Stat label="Sector floor" value={data.limits.fdp_sector_floor} />
+                <Stat label="Augmented absolute cap" value={data.limits.fdp_aug_absolute_cap} />
+              </div>
+              <div>
+                <h3 className="font-display text-dn-dark mb-1">Rest</h3>
+                <Stat label="Min rest — home base" value={data.limits.rest_home_floor_h} />
+                <Stat label="Min rest — away" value={data.limits.rest_away_floor_h} />
+                <Stat
+                  label="Protected sleep opportunity"
+                  value={data.limits.min_sleep_opportunity_h}
+                />
+                <h3 className="font-display text-dn-dark mt-4 mb-1">Standby &amp; discretion</h3>
+                <Stat label="Standby — short-call" value={data.limits.standby_short_call_max_h} />
+                <Stat label="Standby — long-call" value={data.limits.standby_long_call_max_h} />
+                <Stat
+                  label="Commander's discretion"
+                  value={data.limits.discretion_max_extension_h}
+                />
+              </div>
+              <div>
+                <h3 className="font-display text-dn-dark mb-1">Cumulative duty</h3>
+                <Stat label="7 days" value={data.limits.cumul_duty_7d_h} />
+                <Stat label="28 days" value={data.limits.cumul_duty_28d_h} />
+                <Stat label="12 months" value={data.limits.cumul_duty_365d_h} />
+              </div>
+              <div>
+                <h3 className="font-display text-dn-dark mb-1">Cumulative flying (block)</h3>
+                <Stat label="28 days" value={data.limits.cumul_block_28d_h} />
+                <Stat label="12 months" value={data.limits.cumul_block_365d_h} />
+                <h3 className="font-display text-dn-dark mt-4 mb-1">Split duty</h3>
+                <Stat label="Qualifying break" value={data.limits.split_duty_qualifying_break_h} />
+                <Stat label="Max extension" value={data.limits.split_duty_extension_cap_h} />
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-dn-muted">
+              Decision-support baseline aligned to the KCAA Flight Duty Time Scheme (CAA-AC-OPS033)
+              and ICAO Annex 6. The operator&apos;s Authority-approved scheme remains authoritative.
+            </p>
+          </>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 export function ConstraintsPage() {
   const [sets, setSets] = useState<SetSummary[]>([]);
   const [active, setActive] = useState<SetDetail | null>(null);
@@ -148,6 +297,7 @@ export function ConstraintsPage() {
 
   return (
     <div className="space-y-6">
+      <BaselineCard />
       <Card>
         <CardHeader>
           <CardTitle>Parse an OM-A FTL chapter</CardTitle>

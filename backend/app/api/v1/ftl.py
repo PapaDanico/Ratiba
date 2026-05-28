@@ -9,8 +9,16 @@ clients (dashboard, bot) that need a structured legality verdict.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from typing import Any
 
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models import User
+from app.models.constraint import ConstraintSet, ConstraintSetStatus
 from app.schemas.ftl import (
     CheckRosterSliceRequest,
     CheckRosterSliceResponse,
@@ -19,9 +27,36 @@ from app.schemas.ftl import (
     FtlVerdictOut,
     ValidateFdpResponse,
 )
-from app.services import ftl_engine
+from app.services import ftl_engine, ftl_limits
 
 router = APIRouter()
+
+
+@router.get("/limits", summary="The FTL limits currently in force for this operator")
+def current_limits(
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Read-only view of the limits the engine is enforcing for this operator.
+
+    Returns the operator's *resolved* scheme (their accepted OM-A overrides
+    merged over the generic baseline) and whether it's the generic baseline
+    or operator-specific.
+    """
+    has_scheme = (
+        session.scalar(
+            select(ConstraintSet.id)
+            .where(ConstraintSet.operator_id == user.operator_id)
+            .where(ConstraintSet.status == ConstraintSetStatus.ACCEPTED)
+            .limit(1)
+        )
+        is not None
+    )
+    return {
+        "source": "operator" if has_scheme else "baseline",
+        "regulation_ref": ftl_engine.REGULATION_REF,
+        "limits": ftl_limits.resolve_limits(user.operator_id, session),
+    }
 
 
 def _history_in_to_engine(h: FdpHistoryEntryIn) -> ftl_engine.FdpHistoryEntry:
