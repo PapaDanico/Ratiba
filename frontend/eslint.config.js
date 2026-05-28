@@ -29,5 +29,12 @@ export default [
       "react-refresh/only-export-components": "warn",
     },
   },
+  {
+    // Service worker runs in a worker context with its own globals.
+    files: ["public/sw.js"],
+    languageOptions: {
+      globals: { ...globals.serviceworker, ...globals.browser },
+    },
+  },
   prettier,
 ];

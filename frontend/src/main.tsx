@@ -13,3 +13,11 @@ createRoot(container).render(
     <App />
   </StrictMode>,
 );
+
+// Register the PWA service worker in production builds only (keeps dev
+// hot-reload free of SW caching). Failures are non-fatal.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
