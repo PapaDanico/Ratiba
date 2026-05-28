@@ -52,3 +52,7 @@ PAIRING_LIMITER = RateLimiter(max_events=5, window_s=60.0)
 # Self-serve demo-workspace creation: a handful per hour per source IP is
 # plenty for evaluators while blunting scripted abuse of the open endpoint.
 DEMO_WORKSPACE_LIMITER = RateLimiter(max_events=10, window_s=3600.0)
+
+# Login: blunt password brute-forcing. 10 attempts/min per source IP is far
+# above what a legitimate user needs while making online guessing impractical.
+LOGIN_LIMITER = RateLimiter(max_events=10, window_s=60.0)

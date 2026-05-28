@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.core.rate_limit import DEMO_WORKSPACE_LIMITER, PAIRING_LIMITER
+from app.core.rate_limit import DEMO_WORKSPACE_LIMITER, LOGIN_LIMITER, PAIRING_LIMITER
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -46,7 +46,13 @@ def _user_to_out(user: User) -> CurrentUserOut:
 
 
 @router.post("/login", response_model=TokenPair)
-def login(payload: LoginRequest, session: Session = Depends(get_db)) -> TokenPair:
+def login(payload: LoginRequest, request: Request, session: Session = Depends(get_db)) -> TokenPair:
+    ip = request.client.host if request.client else "unknown"
+    if not LOGIN_LIMITER.hit(f"ip:{ip}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="too many login attempts — try again in a minute",
+        )
     user = session.scalar(select(User).where(User.email == payload.email))
     if (
         user is None
