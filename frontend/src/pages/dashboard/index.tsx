@@ -4,45 +4,100 @@ import { Badge } from "@/components/ui/Badge";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-const GUIDE_DISMISS_KEY = "ratiba.guide.dismissed";
+const GUIDE_COLLAPSE_KEY = "ratiba.guide.collapsed";
 
-const GUIDE_STEPS = [
-  ["Routings", "Add flights — single, or recurring across a date range (UTC times)."],
-  ["Crew + Training", "Add crew, then give each a type rating under Training."],
-  ["Roster → Auto-generate", "One click builds a legal draft roster; review and Publish."],
-  ["Crew → Roster PDF", "Download a per-pilot monthly roster to share."],
-  ["Audit packs", "Generate a KCAA audit pack and export the payroll CSV."],
+const GUIDE_STEPS: Array<{ title: string; tab: string; detail: string }> = [
+  {
+    title: "Add your aircraft & crew",
+    tab: "Fleet · Crew",
+    detail:
+      "Register aircraft under Fleet and add pilots under Crew. (A demo workspace already comes with sample aircraft and crew, so you can skip ahead.)",
+  },
+  {
+    title: "Qualify your crew",
+    tab: "Training",
+    detail:
+      "Give each pilot a type rating for the aircraft they fly. The auto-roster only assigns crew who are type-rated and current, so this step is what makes scheduling work.",
+  },
+  {
+    title: "Build the flight schedule",
+    tab: "Routings",
+    detail:
+      "Add flights individually, or switch to Recurring to create a daily/weekly pattern across a date range in one go. Departure and arrival times are entered in UTC.",
+  },
+  {
+    title: "Auto-generate the roster",
+    tab: "Roster",
+    detail:
+      "Click “Auto-generate roster”. Ratiba runs the FTL-aware optimiser and shows a legal draft — assigned duties, any that couldn’t be filled, and solve time. Review it, then Publish.",
+  },
+  {
+    title: "Share & export",
+    tab: "Crew · Audit packs",
+    detail:
+      "From Crew, download a pilot’s monthly roster PDF or copy their calendar-feed link to subscribe in Google/Apple/Outlook. From Audit packs, generate a KCAA audit pack and export the payroll CSV.",
+  },
+  {
+    title: "Stay ahead of expiries",
+    tab: "Training · Documents",
+    detail:
+      "Record licences and medicals under Documents. Training → Recurrency then lists every rating, currency, and document about to lapse — colour-coded by urgency.",
+  },
 ];
 
 function DemoGuide() {
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem(GUIDE_DISMISS_KEY) === "1");
-  if (dismissed) return null;
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(GUIDE_COLLAPSE_KEY) === "1",
+  );
+
+  function toggle() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(GUIDE_COLLAPSE_KEY, next ? "1" : "0");
+  }
+
   return (
     <Card className="border-dn-gold/40 bg-dn-gold/5">
       <CardBody>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="font-display text-xl text-dn-dark mb-2">Getting started</h2>
-            <ol className="space-y-1 text-sm text-dn-muted list-decimal list-inside">
-              {GUIDE_STEPS.map(([title, desc]) => (
-                <li key={title}>
-                  <span className="font-medium text-dn-dark">{title}</span> — {desc}
-                </li>
-              ))}
-            </ol>
+            <h2 className="font-display text-xl text-dn-dark">Getting started</h2>
+            {!collapsed && (
+              <p className="mt-1 text-sm text-dn-muted">
+                The fastest path from an empty workspace to a published, FTL-legal roster:
+              </p>
+            )}
           </div>
           <button
             type="button"
-            onClick={() => {
-              localStorage.setItem(GUIDE_DISMISS_KEY, "1");
-              setDismissed(true);
-            }}
+            onClick={toggle}
             className="text-xs text-dn-steel underline shrink-0"
-            data-testid="dismiss-guide"
+            data-testid="toggle-guide"
           >
-            Dismiss
+            {collapsed ? "Show guide" : "Hide"}
           </button>
         </div>
+
+        {!collapsed && (
+          <ol className="mt-4 space-y-3">
+            {GUIDE_STEPS.map((step, i) => (
+              <li key={step.title} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-dn-gold/80 text-xs font-semibold text-dn-lava">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm">
+                    <span className="font-medium text-dn-dark">{step.title}</span>{" "}
+                    <span className="font-mono text-[11px] uppercase tracking-wide text-dn-steel">
+                      {step.tab}
+                    </span>
+                  </p>
+                  <p className="text-sm text-dn-muted">{step.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
       </CardBody>
     </Card>
   );
