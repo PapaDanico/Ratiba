@@ -91,8 +91,8 @@ npm run build
 | 1     | FTL engine + core data model               | Done          |
 | 2     | Optimiser MVP                              | Done          |
 | 3     | Crewing Officer dashboard                  | Done          |
-| 4     | Telegram bot + crew web view               | In progress   |
-| 5     | KCAA audit pack generation                 | Not started   |
+| 4     | Telegram bot + crew web view               | Done          |
+| 5     | KCAA audit pack generation                 | In progress   |
 | 6     | Pilot deployment + 30-day stability        | Not started   |
 | 7     | LLM constraint parser (post-pilot)         | Not started   |
 

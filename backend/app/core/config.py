@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     frontend_url: str = Field(default="http://localhost:3000", alias="FRONTEND_URL")
     backend_url: str = Field(default="http://localhost:8000", alias="BACKEND_URL")
 
+    # Audit pack storage (Phase 5 — local FS; Phase 6 swaps to S3)
+    audit_pack_dir: str = Field(default="/app/audit_packs", alias="AUDIT_PACK_DIR")
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

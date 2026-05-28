@@ -5,6 +5,7 @@ metadata, which Alembic's autogenerate relies on.
 """
 
 from app.models.audit import AuditEvent
+from app.models.audit_pack import AuditPack
 from app.models.base import TimestampMixin, UUIDMixin
 from app.models.crew import ContractType, Crew, CrewRole
 from app.models.ftl import FdpType, FlightDutyPeriod, FtlRule, LegalityState, RuleSource
@@ -19,6 +20,7 @@ from app.models.user import User, UserRole
 
 __all__ = [
     "AuditEvent",
+    "AuditPack",
     "ContractType",
     "Crew",
     "CrewCurrency",
