@@ -51,6 +51,25 @@ def create_refresh_token(subject: str) -> str:
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
+def create_pilot_token(crew_id: str, operator_id: str, days: int = 30) -> str:
+    """Issue a long-lived pilot JWT used by the bot and the /crew/me web view.
+
+    ``sub`` carries the ``crew:<uuid>`` prefix so it can't collide with
+    user tokens (whose ``sub`` is a bare uuid).
+    """
+    settings = get_settings()
+    now = datetime.now(UTC)
+    expire = now + timedelta(days=days)
+    payload: dict[str, Any] = {
+        "sub": f"crew:{crew_id}",
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+        "type": "pilot",
+        "operator_id": operator_id,
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
 def decode_token(token: str) -> dict[str, Any]:
     """Decode and validate a JWT. Raises ``jose.JWTError`` on failure."""
     settings = get_settings()

@@ -10,6 +10,7 @@ import { LeavePage } from "@/pages/leave";
 import { RosterPage } from "@/pages/roster";
 import { SettingsPage } from "@/pages/settings";
 import { AuditPage } from "@/pages/audit";
+import { CrewMePage } from "@/pages/me";
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/crew/me" element={<CrewMePage />} />
           <Route
             element={
               <ProtectedRoute>

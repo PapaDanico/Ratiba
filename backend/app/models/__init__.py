@@ -10,6 +10,7 @@ from app.models.crew import ContractType, Crew, CrewRole
 from app.models.ftl import FdpType, FlightDutyPeriod, FtlRule, LegalityState, RuleSource
 from app.models.leave import LeaveRequest, LeaveStatus, LeaveType
 from app.models.operator import Operator, OperatorTier
+from app.models.pairing import PairingToken
 from app.models.roster import Sector, SectorAssignment, SectorStatus
 from app.models.swap import SwapRequest, SwapStatus
 from app.models.training import CrewCurrency, CrewTypeRating, CurrencyType
@@ -32,6 +33,7 @@ __all__ = [
     "LegalityState",
     "Operator",
     "OperatorTier",
+    "PairingToken",
     "RuleSource",
     "Sector",
     "SectorAssignment",

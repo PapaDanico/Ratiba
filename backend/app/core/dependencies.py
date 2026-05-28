@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_token
-from app.models import Operator, User
+from app.models import Crew, Operator, User
 
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
@@ -65,3 +65,52 @@ def get_current_operator(
             detail="user's operator not found",
         )
     return operator
+
+
+def get_current_pilot(
+    token: str | None = Depends(_oauth2_scheme),
+    session: Session = Depends(get_db),
+) -> Crew:
+    """Resolve a pilot JWT (sub=``crew:<uuid>``) to a Crew row.
+
+    Pilots authenticate via :func:`app.core.security.create_pilot_token`,
+    issued by ``POST /api/v1/auth/pilot-pair``. Same Bearer-header shape as
+    user tokens so the bot and the /crew/me web view share one client.
+    """
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="missing bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != "pilot":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="not a pilot token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        sub = str(payload["sub"])
+        if not sub.startswith("crew:"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="malformed pilot token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        crew_id = uuid.UUID(sub.removeprefix("crew:"))
+    except (JWTError, KeyError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    crew = session.get(Crew, crew_id)
+    if crew is None or not crew.active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="crew member not found or inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return crew

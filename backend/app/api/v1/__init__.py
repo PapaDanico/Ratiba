@@ -8,6 +8,7 @@ from app.api.v1 import (
     crew,
     ftl,
     leave,
+    me,
     roster,
     swap,
     training,
@@ -18,6 +19,9 @@ from app.api.v1 import (
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+# Pilot self-service surface (bot + /crew/me web view) registered before the
+# crewing-officer-scoped /crew router so /crew/me/* matches first.
+api_router.include_router(me.router, prefix="/crew/me", tags=["crew-me"])
 api_router.include_router(crew.router, prefix="/crew", tags=["crew"])
 api_router.include_router(roster.router, prefix="/roster", tags=["roster"])
 api_router.include_router(ftl.router, prefix="/ftl", tags=["ftl"])

@@ -6,7 +6,7 @@ import enum
 from datetime import date
 from typing import Any
 
-from sqlalchemy import ARRAY, Boolean, Date, String, UniqueConstraint
+from sqlalchemy import ARRAY, BigInteger, Boolean, Date, String, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -48,3 +48,4 @@ class Crew(UUIDMixin, TimestampMixin, OperatorScopedMixin, Base):
     faith_observance_flags: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict
     )
+    telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)

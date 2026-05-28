@@ -21,7 +21,9 @@ from app.schemas.crew import (
     CurrencyOut,
     CurrencyStatus,
 )
+from app.schemas.pilot import IssuePairingResponse
 from app.services import audit_log
+from app.services import pairing as pairing_service
 
 router = APIRouter()
 
@@ -194,3 +196,21 @@ def record_currency(
     session.commit()
     session.refresh(row)
     return CurrencyOut.model_validate(row)
+
+
+@router.post(
+    "/{crew_id}/pairing-token",
+    response_model=IssuePairingResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def issue_pairing_token(
+    crew_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> IssuePairingResponse:
+    """Issue a short-lived pairing code so a pilot can link the bot/web view."""
+    try:
+        token = pairing_service.issue_pairing_code(session, user=user, crew_id=crew_id)
+    except pairing_service.PairingError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return IssuePairingResponse(code=token.code, expires_at=token.expires_at)

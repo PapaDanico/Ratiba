@@ -25,6 +25,8 @@ from app.schemas.auth import (
     RefreshRequest,
     TokenPair,
 )
+from app.schemas.pilot import PilotPairRequest, PilotPairResponse
+from app.services import pairing
 
 router = APIRouter()
 
@@ -90,3 +92,35 @@ def logout() -> None:
 @router.get("/me", response_model=CurrentUserOut)
 def me(user: User = Depends(get_current_user)) -> CurrentUserOut:
     return _user_to_out(user)
+
+
+# -- Pilot pairing -----------------------------------------------------------
+
+
+@router.post("/pilot-pair", response_model=PilotPairResponse)
+def pilot_pair(
+    payload: PilotPairRequest,
+    session: Session = Depends(get_db),
+) -> PilotPairResponse:
+    """Exchange a pairing code (issued by the dashboard) for a pilot JWT.
+
+    Public endpoint — anyone with a valid, unredeemed, unexpired code can
+    redeem. Used by the Telegram bot's ``/start`` handler and by the
+    ``/crew/me`` web view's pairing screen.
+    """
+    try:
+        crew, token = pairing.redeem_pairing_code(
+            session,
+            code=payload.code.strip().upper(),
+            telegram_chat_id=payload.telegram_chat_id,
+        )
+    except pairing.PairingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return PilotPairResponse(
+        pilot_token=token,
+        crew_id=crew.id,
+        employee_no=crew.employee_no,
+        role=crew.role,
+        operator_id=crew.operator_id,
+    )

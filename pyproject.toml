@@ -96,7 +96,7 @@ show_error_codes = true
 show_error_context = true
 namespace_packages = true
 explicit_package_bases = true
-mypy_path = "backend:bot"
+mypy_path = "backend:."
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
