@@ -20,6 +20,7 @@ import { FleetPage } from "@/pages/fleet";
 import { ConstraintsPage } from "@/pages/constraints";
 import { PrivacyPage } from "@/pages/legal/privacy";
 import { TermsPage } from "@/pages/legal/terms";
+import { ImportPage } from "@/pages/import";
 
 export function App() {
   return (
@@ -41,6 +42,7 @@ export function App() {
             <Route path="routings" element={<RoutingsPage />} />
             <Route path="roster" element={<RosterPage />} />
             <Route path="crew" element={<CrewPage />} />
+            <Route path="import" element={<ImportPage />} />
             <Route path="training" element={<TrainingPage />} />
             <Route path="documents" element={<DocumentsPage />} />
             <Route path="currency" element={<CurrencyPage />} />
