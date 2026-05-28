@@ -38,7 +38,7 @@ from app.schemas.roster import (
     PublishRosterResponse,
     SectorInputIn,
 )
-from app.services import audit_log, ftl_engine
+from app.services import audit_log, ftl_engine, ftl_limits
 
 
 class RosterPersistenceError(Exception):
@@ -96,8 +96,17 @@ def _compute_fdp_legality(
     sectors: list[SectorInputIn],
     _crew_id: uuid.UUID,
     date_local: date,
+    *,
+    session: Session,
+    operator_id: uuid.UUID,
 ) -> tuple[datetime, datetime, int, Decimal, Decimal, LegalityState, list[str]]:
-    """Group ``sectors`` filtered to ``date_local`` and run them through the FTL engine."""
+    """Group ``sectors`` filtered to ``date_local`` and run them through the FTL engine.
+
+    Uses the operator's *resolved* limits (their latest ACCEPTED constraint
+    set merged over the baseline) so a published roster's legality reflects
+    the operator's own Authority-approved Flight & Duty Time scheme, not just
+    the generic baseline.
+    """
     day_sectors = sorted(
         [s for s in sectors if s.date_local == date_local],
         key=lambda s: s.std,
@@ -117,7 +126,7 @@ def _compute_fdp_legality(
         flight_hours=flight_h,
         duty_hours=duty_h,
     )
-    verdicts = ftl_engine.check_fdp(fdp_in)
+    verdicts = ftl_limits.check_fdp_for_operator(fdp_in, operator_id, session)
     aggregated = ftl_engine.aggregate_verdicts(verdicts)
     rules_applied = list(dict.fromkeys(aggregated.rules_applied))
     return report, off, len(day_sectors), flight_h, duty_h, aggregated.legality_state, rules_applied
@@ -216,7 +225,9 @@ def publish_roster(
             duty_h,
             legality,
             rules_applied,
-        ) = _compute_fdp_legality(day_sectors, crew_id, day)
+        ) = _compute_fdp_legality(
+            day_sectors, crew_id, day, session=session, operator_id=user.operator_id
+        )
         session.add(
             FlightDutyPeriod(
                 operator_id=user.operator_id,
@@ -470,7 +481,9 @@ def amend_roster(
             duty_h,
             legality,
             rules_applied,
-        ) = _compute_fdp_legality(day_sector_inputs, crew.id, day)
+        ) = _compute_fdp_legality(
+            day_sector_inputs, crew.id, day, session=session, operator_id=user.operator_id
+        )
         session.add(
             FlightDutyPeriod(
                 operator_id=user.operator_id,
