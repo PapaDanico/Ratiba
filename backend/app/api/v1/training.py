@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models import Crew, CrewCurrency, CrewTypeRating, User
+from app.models import Crew, CrewCurrency, CrewDocument, CrewTypeRating, User
 from app.schemas.training import RecurrencyItem, TypeRatingIn, TypeRatingOut
 from app.services import audit_log
 
@@ -208,6 +208,30 @@ def recurrency(
                 kind="type_rating",
                 label=f"Type rating: {r.aircraft_type}",
                 expires_date=r.valid_until,
+                days_remaining=days,
+                state=_state(days),
+            )
+        )
+
+    documents = session.scalars(
+        select(CrewDocument)
+        .where(CrewDocument.operator_id == user.operator_id)
+        .where(CrewDocument.expiry_date.is_not(None))
+    ).all()
+    for d in documents:
+        assert d.expiry_date is not None  # guaranteed by the query filter
+        days = (d.expiry_date - today).days
+        if d.expiry_date.toordinal() > horizon:
+            continue
+        c = crew_by_id.get(d.crew_id)
+        items.append(
+            RecurrencyItem(
+                crew_id=d.crew_id,
+                employee_no=c.employee_no if c else "—",
+                crew_name=f"{c.first_name} {c.last_name}" if c else "—",
+                kind="document",
+                label=d.doc_type.value.replace("_", " ").title(),
+                expires_date=d.expiry_date,
                 days_remaining=days,
                 state=_state(days),
             )

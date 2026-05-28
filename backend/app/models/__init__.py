@@ -16,6 +16,7 @@ from app.models.constraint import (
     ConstraintSetStatus,
 )
 from app.models.crew import ContractType, Crew, CrewRole
+from app.models.document import CrewDocument, DocumentType
 from app.models.ftl import FdpType, FlightDutyPeriod, FtlRule, LegalityState, RuleSource
 from app.models.leave import LeaveRequest, LeaveStatus, LeaveType
 from app.models.llm_usage import LlmUsageEvent
@@ -44,9 +45,11 @@ __all__ = [
     "ContractType",
     "Crew",
     "CrewCurrency",
+    "CrewDocument",
     "CrewRole",
     "CrewTypeRating",
     "CurrencyType",
+    "DocumentType",
     "FdpType",
     "FlightDutyPeriod",
     "FtlRule",

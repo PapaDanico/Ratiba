@@ -7,6 +7,7 @@ import { DashboardPage } from "@/pages/dashboard";
 import { CrewPage } from "@/pages/crew";
 import { CurrencyPage } from "@/pages/currency";
 import { TrainingPage } from "@/pages/training";
+import { DocumentsPage } from "@/pages/documents";
 import { LeavePage } from "@/pages/leave";
 import { RosterPage } from "@/pages/roster";
 import { RoutingsPage } from "@/pages/routings";
@@ -37,6 +38,7 @@ export function App() {
             <Route path="roster" element={<RosterPage />} />
             <Route path="crew" element={<CrewPage />} />
             <Route path="training" element={<TrainingPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
             <Route path="currency" element={<CurrencyPage />} />
             <Route path="leave" element={<LeavePage />} />
             <Route path="swaps" element={<SwapsPage />} />
