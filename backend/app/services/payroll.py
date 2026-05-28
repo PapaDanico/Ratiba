@@ -83,8 +83,10 @@ def build_rows(
     rows: list[dict[str, object]] = []
     for c in crew:
         crew_fdps = fdps_by_crew.get(c.id, [])
-        duty_h = sum(float(f.duty_hours or 0) for f in crew_fdps if f.type == FdpType.FDP)
-        block_h = sum(float(f.flight_hours or 0) for f in crew_fdps if f.type == FdpType.FDP)
+        # 0.0 start keeps the column a float even when a crew has no FDPs
+        # (bare sum() of an empty generator returns int 0 → "0" not "0.0").
+        duty_h = sum((float(f.duty_hours or 0) for f in crew_fdps if f.type == FdpType.FDP), 0.0)
+        block_h = sum((float(f.flight_hours or 0) for f in crew_fdps if f.type == FdpType.FDP), 0.0)
         fdp_count = sum(1 for f in crew_fdps if f.type == FdpType.FDP)
         standby_days = sum(1 for f in crew_fdps if f.type == FdpType.STANDBY)
         rows.append(

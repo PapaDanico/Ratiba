@@ -58,8 +58,9 @@ def test_payroll_csv_headers_and_row(auth_client: tuple[TestClient, User]) -> No
     rows = list(reader)
     p1 = next(r for r in rows if r["employee_no"] == "P1")
     assert p1["name"] == "Pay Roller"
-    assert p1["fdp_count"] == "0"  # nothing published yet
-    assert p1["duty_hours"] == "0.0"
+    assert int(p1["fdp_count"]) == 0  # nothing published yet
+    assert float(p1["duty_hours"]) == 0.0
+    assert float(p1["block_hours"]) == 0.0
 
 
 def test_payroll_counts_approved_leave(
