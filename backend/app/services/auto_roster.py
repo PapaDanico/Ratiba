@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from app.models import Crew, CrewCurrency, CrewTypeRating, Sector
 from app.models.leave import LeaveRequest, LeaveStatus
 from app.schemas.roster import SectorInputIn
-from app.services import optimiser
+from app.services import ftl_limits, optimiser
 
 # Recurrent checks whose expiry grounds a pilot. Other currencies
 # (route familiarisation, first aid, etc.) don't block scheduling here.
@@ -195,6 +195,8 @@ def build_auto_roster(
             publish_sectors,
         )
 
+    # Judge the draft by the operator's resolved scheme so it matches publish.
+    limits = ftl_limits.resolve_limits(operator_id, session)
     result = optimiser.solve(
         optimiser.OptimiserInput(
             horizon_from=horizon_from,
@@ -204,6 +206,7 @@ def build_auto_roster(
             leave_requests=tuple(leave),
             base_tz=base_tz,
             timeout_s=timeout_s,
-        )
+        ),
+        limits=limits,
     )
     return result, publish_sectors

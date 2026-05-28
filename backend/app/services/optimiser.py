@@ -227,9 +227,12 @@ def _has_pending_leave(crew_id: str, day: date, leave: Iterable[LeaveRequestInpu
     )
 
 
-def _ftl_legal_solo(dd: DutyDay, base_tz: str) -> bool:
+def _ftl_legal_solo(dd: DutyDay, base_tz: str, limits: dict[str, Any] | None = None) -> bool:
     """Cheap, stand-alone FTL pre-check (no history): would this single duty day
-    be legal in isolation? Used to prune impossible (crew, duty_day) pairs."""
+    be legal in isolation? Used to prune impossible (crew, duty_day) pairs.
+
+    ``limits`` carries the operator's resolved scheme so the draft is judged
+    by the same limits that govern the published roster."""
     fdp = ftl_engine.FdpInput(
         report_time=dd.report_time,
         off_duty_time=dd.off_duty_time,
@@ -238,7 +241,7 @@ def _ftl_legal_solo(dd: DutyDay, base_tz: str) -> bool:
         duty_hours=dd.duty_hours,
         base_tz=base_tz,
     )
-    verdicts = ftl_engine.check_fdp(fdp)
+    verdicts = ftl_engine.check_fdp(fdp, limits=limits)
     return all(v.legality_state != LegalityState.ILLEGAL for v in verdicts)
 
 
@@ -247,6 +250,7 @@ def _eligibility(
     duty_days: list[DutyDay],
     leave: tuple[LeaveRequestInput, ...],
     base_tz: str,
+    limits: dict[str, Any] | None = None,
 ) -> dict[tuple[str, str, CrewRole], dict[str, Any]]:
     """Return ``{(duty_day_key, crew_id, role): {"eligible": bool, "reasons": [...]}}``.
 
@@ -262,7 +266,7 @@ def _eligibility(
     leave_by_crew = {c.crew_id: _unavailable_dates(c.crew_id, leave) for c in crew}
 
     for dd in duty_days:
-        dd_legal = _ftl_legal_solo(dd, base_tz)
+        dd_legal = _ftl_legal_solo(dd, base_tz, limits)
         for c in crew:
             for role in (CrewRole.CAPT, CrewRole.FO):
                 reasons: list[str] = []
@@ -321,9 +325,14 @@ def _is_sunday(d: date) -> bool:
     return d.weekday() == 6
 
 
-def solve(input: OptimiserInput) -> OptimiserResult:
-    """Run the CP-SAT solver and return the best roster found within timeout."""
+def solve(input: OptimiserInput, *, limits: dict[str, Any] | None = None) -> OptimiserResult:
+    """Run the CP-SAT solver and return the best roster found within timeout.
+
+    ``limits`` is the operator's resolved FTL scheme; when supplied, both the
+    per-duty legality prune and the cumulative-hour caps use it instead of
+    the generic baseline, keeping the draft consistent with publish."""
     t0 = time.perf_counter()
+    eff_limits = limits if limits is not None else ftl_engine.LIMITS
 
     duty_days = build_duty_days(input.sectors)
     duty_days_in_horizon = [
@@ -339,7 +348,9 @@ def solve(input: OptimiserInput) -> OptimiserResult:
             elapsed_s=time.perf_counter() - t0,
         )
 
-    elig = _eligibility(input.crew, duty_days_in_horizon, input.leave_requests, input.base_tz)
+    elig = _eligibility(
+        input.crew, duty_days_in_horizon, input.leave_requests, input.base_tz, eff_limits
+    )
 
     model = cp_model.CpModel()
 
@@ -422,9 +433,9 @@ def solve(input: OptimiserInput) -> OptimiserResult:
                 per_dd_role_vars.append((dd, presence))
 
         for window_days, duty_cap, block_cap in (
-            (7, ftl_engine.LIMITS["cumul_duty_7d_h"], None),
-            (28, ftl_engine.LIMITS["cumul_duty_28d_h"], ftl_engine.LIMITS["cumul_block_28d_h"]),
-            (365, ftl_engine.LIMITS["cumul_duty_365d_h"], ftl_engine.LIMITS["cumul_block_365d_h"]),
+            (7, eff_limits["cumul_duty_7d_h"], None),
+            (28, eff_limits["cumul_duty_28d_h"], eff_limits["cumul_block_28d_h"]),
+            (365, eff_limits["cumul_duty_365d_h"], eff_limits["cumul_block_365d_h"]),
         ):
             # Rolling window starting on each unique date in the horizon.
             unique_dates = sorted({dd.date_local for dd, _ in per_dd_role_vars})
@@ -585,7 +596,9 @@ def solve(input: OptimiserInput) -> OptimiserResult:
 # -----------------------------------------------------------------------------
 
 
-def explain(input: OptimiserInput, duty_day_key: str) -> Explanation:
+def explain(
+    input: OptimiserInput, duty_day_key: str, *, limits: dict[str, Any] | None = None
+) -> Explanation:
     """Return the binding constraints for a specific duty day.
 
     We deliberately don't re-run the solver — we enumerate the eligibility
@@ -598,7 +611,7 @@ def explain(input: OptimiserInput, duty_day_key: str) -> Explanation:
     if dd is None:
         return Explanation(duty_day_key, None, None, ())
 
-    elig = _eligibility(input.crew, [dd], input.leave_requests, input.base_tz)
+    elig = _eligibility(input.crew, [dd], input.leave_requests, input.base_tz, limits)
 
     bindings: list[ConstraintBinding] = []
 
@@ -637,7 +650,7 @@ def explain(input: OptimiserInput, duty_day_key: str) -> Explanation:
         duty_hours=dd.duty_hours,
         base_tz=input.base_tz,
     )
-    verdicts = ftl_engine.check_fdp(fdp_in)
+    verdicts = ftl_engine.check_fdp(fdp_in, limits=limits)
     worst = ftl_engine.aggregate_verdicts(verdicts)
     bindings.append(
         ConstraintBinding(
