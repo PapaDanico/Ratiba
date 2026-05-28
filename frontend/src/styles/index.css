@@ -51,7 +51,8 @@
    * Very subtle — used on login page and section backgrounds.
    */
   .tribal-texture {
-    background-image: repeating-linear-gradient(
+    background-image:
+      repeating-linear-gradient(
         45deg,
         rgba(201, 168, 76, 0.06) 0px,
         rgba(201, 168, 76, 0.06) 1px,
@@ -69,6 +70,13 @@
 
   /* Savanna-sunrise gradient — login page backdrop */
   .savanna-dawn {
-    background: linear-gradient(160deg, #1a0d05 0%, #4a1e0a 25%, #8b3a1a 55%, #c47b2e 80%, #c9a84c 100%);
+    background: linear-gradient(
+      160deg,
+      #1a0d05 0%,
+      #4a1e0a 25%,
+      #8b3a1a 55%,
+      #c47b2e 80%,
+      #c9a84c 100%
+    );
   }
 }
