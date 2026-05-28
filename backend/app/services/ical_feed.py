@@ -95,12 +95,17 @@ def build_feed(session: Session, *, crew: Crew) -> str:
             if f.legality_state:
                 desc_parts.append(f"FTL: {f.legality_state.value}")
         uid = f"{f.id}@ratiba"
+        lines += ["BEGIN:VEVENT", f"UID:{uid}", f"DTSTAMP:{now_stamp}"]
+        if f.off_duty_time <= f.report_time:
+            # Zero-duration duty (e.g. an OFF day) → all-day event, which
+            # calendars render correctly (a point-in-time event would not).
+            lines += [
+                f"DTSTART;VALUE=DATE:{f.date.strftime('%Y%m%d')}",
+                f"DTEND;VALUE=DATE:{(f.date + timedelta(days=1)).strftime('%Y%m%d')}",
+            ]
+        else:
+            lines += [f"DTSTART:{_fmt(f.report_time)}", f"DTEND:{_fmt(f.off_duty_time)}"]
         lines += [
-            "BEGIN:VEVENT",
-            f"UID:{uid}",
-            f"DTSTAMP:{now_stamp}",
-            f"DTSTART:{_fmt(f.report_time)}",
-            f"DTEND:{_fmt(f.off_duty_time)}",
             f"SUMMARY:{_esc(summary)}",
             f"DESCRIPTION:{_esc(' · '.join(desc_parts))}",
             "END:VEVENT",

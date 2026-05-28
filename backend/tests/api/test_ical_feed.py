@@ -89,3 +89,35 @@ def test_feed_rejects_token_for_other_crew(auth_client: tuple[TestClient, User])
     # Use crew A's token on crew B's feed → rejected.
     resp = client.get(f"/api/v1/crew/{b['id']}/roster.ics", params={"token": token})
     assert resp.status_code == 401
+
+
+def test_off_day_is_all_day_event(
+    auth_client: tuple[TestClient, User],
+    db_session: Session,
+) -> None:
+    client, user = auth_client
+    crew = _create_crew(client, employee_no="I5")
+    crew_id = uuid.UUID(crew["id"])
+    today = date.today()
+    midnight = datetime.combine(today, datetime.min.time(), tzinfo=UTC)
+    db_session.add(
+        FlightDutyPeriod(
+            operator_id=user.operator_id,
+            crew_id=crew_id,
+            date=today,
+            report_time=midnight,
+            off_duty_time=midnight,  # zero-duration → all-day event
+            sectors_count=0,
+            flight_hours=0,
+            duty_hours=0,
+            type=FdpType.OFF,
+            legality_state=LegalityState.LEGAL,
+        )
+    )
+    db_session.commit()
+    token = client.post(f"/api/v1/crew/{crew_id}/calendar-feed").json()["token"]
+    body = client.get(f"/api/v1/crew/{crew_id}/roster.ics", params={"token": token}).text
+    assert "DTSTART;VALUE=DATE:" in body
+    assert "Day off" in body
+    # No zero-duration timed event slipped through.
+    assert f"DTSTART:{midnight.strftime('%Y%m%dT%H%M%SZ')}" not in body
