@@ -179,6 +179,9 @@ export function AppShell() {
             <polygon points="4,0 8,4 4,8 0,4" />
           </svg>
         </span>
+        <p className="mt-1 font-display italic text-dn-muted/80">
+          Shaping Africa&apos;s Future, Together.
+        </p>
         <div className="mt-1">
           <NavLink to="/privacy" className="underline hover:text-dn-dark">
             Privacy Policy

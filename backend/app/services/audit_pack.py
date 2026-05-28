@@ -274,6 +274,7 @@ h1 { font-size: 28pt; }
 h2 { font-size: 18pt; border-bottom: 1.5pt solid #C9A84C; padding-bottom: 4pt; margin-top: 24pt; }
 h3 { font-size: 13pt; margin-top: 14pt; }
 .dn-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: 2pt; text-transform: uppercase; color: #4A7FA5; }
+.dn-slogan { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 13pt; color: #C9A84C; margin: 4pt 0 0 0; }
 .muted { color: #6B7280; font-size: 9pt; }
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 9pt; }
 .cover { page-break-after: always; }
@@ -385,6 +386,7 @@ def _render_html(data: PackData) -> str:
 <section class="cover">
   <p class="dn-eyebrow">DN Consultancy · FTL compliance evidence</p>
   <h1>Ratiba audit pack</h1>
+  <p class="dn-slogan">Shaping Africa&apos;s Future, Together.</p>
   <h3>{_esc(op.name)} — AOC {_esc(op.aoc_number)}</h3>
   <p class="muted">Operating base: {_esc(op.base)} · Contact: {_esc(op.contact_email)}</p>
   <p style="margin-top: 30pt;">Period: <strong class="mono">{_esc(period)}</strong></p>

@@ -102,7 +102,12 @@ export function LoginPage() {
                   DN Consultancy
                 </span>
               </div>
-              <h2 className="font-display text-3xl text-dn-gold mb-6 lg:hidden">Ratiba</h2>
+              <div className="lg:hidden mb-6">
+                <h2 className="font-display text-3xl text-dn-gold">Ratiba</h2>
+                <p className="font-display italic text-sm text-dn-gold/40">
+                  Shaping Africa&apos;s Future, Together.
+                </p>
+              </div>
               <p className="text-sm text-dn-gold/60 pb-6">
                 {mode === "signin"
                   ? "Sign in to the Crewing Officer dashboard."
