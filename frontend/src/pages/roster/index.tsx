@@ -185,6 +185,241 @@ function AmendModal({
   );
 }
 
+type CrewLite = { id: string; employee_no: string; first_name: string; last_name: string };
+
+type Duty = {
+  id: string;
+  crew_id: string;
+  employee_no: string;
+  crew_name: string;
+  date: string;
+  type: string;
+  start: string;
+  end: string;
+  duration_h: number;
+  legality_state: "LEGAL" | "AT_LIMIT" | "REQUIRES_FRMS_DEROGATION" | "ILLEGAL" | null;
+};
+
+function StandbyPanel({ from, to }: { from: string; to: string }) {
+  const [crew, setCrew] = useState<CrewLite[]>([]);
+  const [duties, setDuties] = useState<Duty[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [crewId, setCrewId] = useState("");
+  const [dutyType, setDutyType] = useState("STANDBY_SHORT");
+  const [day, setDay] = useState(from);
+  const [start, setStart] = useState("06:00");
+  const [end, setEnd] = useState("14:00");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api<CrewLite[]>("/api/v1/crew");
+        if (!cancelled) {
+          setCrew(list);
+          if (list[0]) setCrewId(list[0].id);
+        }
+      } catch {
+        /* non-fatal */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api<Duty[]>(`/api/v1/duties?date_from=${from}&date_to=${to}`);
+        if (!cancelled) setDuties(list);
+      } catch {
+        if (!cancelled) setDuties([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [from, to, reloadKey]);
+
+  const isStandby = dutyType !== "OFF";
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/v1/duties", {
+        method: "POST",
+        body: JSON.stringify({
+          crew_id: crewId,
+          date: day,
+          duty_type: dutyType,
+          start_time: isStandby ? start : null,
+          end_time: isStandby ? end : null,
+        }),
+      });
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to assign duty");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await api(`/api/v1/duties/${id}`, { method: "DELETE" });
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to delete duty");
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Standby &amp; days off</CardTitle>
+      </CardHeader>
+      <CardBody>
+        <form onSubmit={submit} className="mb-5 space-y-3" data-testid="assign-duty-form">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+              <Label htmlFor="d-crew">Crew</Label>
+              <select
+                id="d-crew"
+                value={crewId}
+                onChange={(e) => setCrewId(e.target.value)}
+                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
+                required
+              >
+                {crew.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.first_name} {c.last_name} ({c.employee_no})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="d-type">Duty</Label>
+              <select
+                id="d-type"
+                value={dutyType}
+                onChange={(e) => setDutyType(e.target.value)}
+                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
+              >
+                <option value="STANDBY_SHORT">Standby (short-call)</option>
+                <option value="STANDBY_LONG">Standby (long-call)</option>
+                <option value="OFF">Day off</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="d-date">Date</Label>
+              <Input
+                id="d-date"
+                type="date"
+                value={day}
+                onChange={(e) => setDay(e.target.value)}
+                required
+              />
+            </div>
+            {isStandby && (
+              <>
+                <div>
+                  <Label htmlFor="d-start">Start (UTC)</Label>
+                  <Input
+                    id="d-start"
+                    type="time"
+                    value={start}
+                    onChange={(e) => setStart(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="d-end">End (UTC)</Label>
+                  <Input
+                    id="d-end"
+                    type="time"
+                    value={end}
+                    onChange={(e) => setEnd(e.target.value)}
+                    required
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          {error && <p className="text-sm text-dn-red">{error}</p>}
+          <div className="flex justify-end">
+            <Button type="submit" disabled={busy || !crewId} data-testid="assign-duty-submit">
+              {busy ? "Assigning…" : "Assign duty"}
+            </Button>
+          </div>
+        </form>
+
+        {duties.length === 0 ? (
+          <p className="text-sm text-dn-muted" data-testid="duties-empty">
+            No standby or off-day duties in this window.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="rtable min-w-full text-sm" data-testid="duties-table">
+              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                <tr>
+                  <th className="py-2 pr-4 font-medium">Crew</th>
+                  <th className="py-2 pr-4 font-medium">Date</th>
+                  <th className="py-2 pr-4 font-medium">Type</th>
+                  <th className="py-2 pr-4 font-medium">Window (UTC)</th>
+                  <th className="py-2 pr-4 font-medium">State</th>
+                  <th className="py-2 pr-4 font-medium" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dn-steel-lt">
+                {duties.map((d) => (
+                  <tr key={d.id} className="hover:bg-dn-fog">
+                    <td data-label="Crew" className="py-2 pr-4">
+                      <span className="text-dn-dark">{d.crew_name}</span>{" "}
+                      <span className="font-mono text-xs text-dn-muted">({d.employee_no})</span>
+                    </td>
+                    <td data-label="Date" className="py-2 pr-4 font-mono">
+                      {d.date}
+                    </td>
+                    <td data-label="Type" className="py-2 pr-4">
+                      <Badge tone={d.type === "STANDBY" ? "amber" : "neutral"}>{d.type}</Badge>
+                    </td>
+                    <td data-label="Window (UTC)" className="py-2 pr-4 font-mono text-xs">
+                      {d.type === "OFF" ? "—" : `${d.duration_h.toFixed(1)}h`}
+                    </td>
+                    <td data-label="State" className="py-2 pr-4">
+                      {d.legality_state ? (
+                        <Badge tone={legalityTone(d.legality_state)}>{d.legality_state}</Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td data-label="" className="py-2 pr-4">
+                      <button
+                        type="button"
+                        onClick={() => remove(d.id)}
+                        className="text-dn-red underline text-xs"
+                        data-testid={`delete-duty-${d.id}`}
+                      >
+                        remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 export function RosterPage() {
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(addDays(todayIso(), 27));
@@ -296,7 +531,7 @@ export function RosterPage() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -467,6 +702,9 @@ export function RosterPage() {
           )}
         </CardBody>
       </Card>
+
+      <StandbyPanel from={from} to={to} />
+
       {editing && (
         <AmendModal
           assignment={editing}
@@ -474,6 +712,6 @@ export function RosterPage() {
           onAmended={() => setReloadKey((k) => k + 1)}
         />
       )}
-    </>
+    </div>
   );
 }

@@ -9,6 +9,7 @@ from app.api.v1 import (
     constraints,
     crew,
     documents,
+    duties,
     ftl,
     leave,
     me,
@@ -36,6 +37,7 @@ api_router.include_router(sectors.router, prefix="/sectors", tags=["sectors"])
 api_router.include_router(ftl.router, prefix="/ftl", tags=["ftl"])
 api_router.include_router(training.router, prefix="/training", tags=["training"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
+api_router.include_router(duties.router, prefix="/duties", tags=["duties"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(leave.router, prefix="/leave", tags=["leave"])
 api_router.include_router(swap.router, prefix="/swap", tags=["swap"])
