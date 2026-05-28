@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { DnLogo } from "@/components/ui/DnLogo";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 
@@ -34,17 +35,14 @@ export function LoginPage() {
 
   return (
     <main className="min-h-screen flex savanna-dawn tribal-texture">
-      {/* Left panel: decorative brand column */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-end p-16 relative">
-        {/* Decorative Maasai diamond stack */}
-        <div className="absolute top-12 left-12 flex flex-col gap-4 opacity-20">
-          {[40, 28, 18, 12].map((size, i) => (
-            <svg key={i} width={size} height={size} viewBox="0 0 20 20" fill="#C9A84C">
-              <polygon points="10,0 20,10 10,20 0,10" />
-            </svg>
-          ))}
+      {/* Left panel: brand column */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-16 relative">
+        {/* DN Consultancy logo — top */}
+        <div className="relative z-10">
+          <DnLogo variant="light" showText={true} width={240} />
         </div>
 
+        {/* Ratiba product identity — bottom */}
         <div className="relative z-10">
           <div className="tribal-stripe mb-6 w-24" />
           <h1 className="font-display text-6xl text-dn-gold leading-tight">Ratiba</h1>
@@ -52,7 +50,7 @@ export function LoginPage() {
             Crew rostering for East African aviation operations.
           </p>
           <p className="mt-6 font-mono text-xs uppercase tracking-widest text-dn-gold/30">
-            KCARs 2025 Part 8 · DN Consultancy
+            KCARs 2025 Part 8
           </p>
         </div>
       </div>
@@ -64,10 +62,8 @@ export function LoginPage() {
           <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
             {/* Card header strip */}
             <div className="bg-dn-lava px-8 pt-8 pb-0">
-              <div className="flex items-center gap-2 mb-4">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="#C9A84C">
-                  <polygon points="6,0 12,6 6,12 0,6" />
-                </svg>
+              <div className="flex items-center gap-3 mb-4">
+                <DnLogo variant="light" showText={false} width={28} />
                 <span className="font-mono text-xs uppercase tracking-widest text-dn-gold/50">
                   DN Consultancy
                 </span>

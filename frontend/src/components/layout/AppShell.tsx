@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
+import { DnLogo } from "@/components/ui/DnLogo";
 import { cn } from "@/lib/cn";
 
 const NAV: Array<{ to: string; label: string; end?: boolean }> = [
@@ -26,22 +27,10 @@ export function AppShell() {
       {/* ── Top bar: dark volcanic header ── */}
       <header className="bg-dn-lava tribal-texture">
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            {/* Maasai diamond glyph */}
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              aria-hidden
-              className="text-dn-gold"
-              fill="currentColor"
-            >
-              <polygon points="7,0 14,7 7,14 0,7" />
-            </svg>
+          <div className="flex items-center gap-4">
+            <DnLogo variant="light" showText={false} width={40} className="opacity-80" />
+            <div className="w-px h-6 bg-dn-gold/20" />
             <span className="font-display text-2xl text-dn-gold tracking-wide">Ratiba</span>
-            <span className="ml-3 font-mono text-xs uppercase tracking-widest text-dn-gold/40">
-              DN Consultancy
-            </span>
           </div>
           <div className="flex items-center gap-3">
             {user && (
