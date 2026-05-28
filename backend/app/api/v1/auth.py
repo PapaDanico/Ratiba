@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.core.rate_limit import PAIRING_LIMITER
+from app.core.rate_limit import DEMO_WORKSPACE_LIMITER, PAIRING_LIMITER
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -22,12 +22,14 @@ from app.models import User
 from app.schemas.auth import (
     AccessTokenOnly,
     CurrentUserOut,
+    DemoWorkspaceRequest,
+    DemoWorkspaceResponse,
     LoginRequest,
     RefreshRequest,
     TokenPair,
 )
 from app.schemas.pilot import PilotPairRequest, PilotPairResponse
-from app.services import pairing
+from app.services import demo_workspace, pairing
 
 router = APIRouter()
 
@@ -81,6 +83,46 @@ def refresh(payload: RefreshRequest, session: Session = Depends(get_db)) -> Acce
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="user not found")
     return AccessTokenOnly(
         access_token=create_access_token(str(user.id), extra={"operator_id": str(user.operator_id)})
+    )
+
+
+@router.post(
+    "/demo-workspace",
+    response_model=DemoWorkspaceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_demo_workspace(
+    payload: DemoWorkspaceRequest,
+    request: Request,
+    session: Session = Depends(get_db),
+) -> DemoWorkspaceResponse:
+    """Provision an isolated, pre-seeded demo workspace + crewing-officer login.
+
+    Public + rate-limited per source IP. Lets an evaluator spin up their own
+    sandbox (so feedback testers don't collide on shared data) and walk the
+    golden path immediately. After this returns, the client logs in normally
+    with the email + password just chosen.
+    """
+    ip = request.client.host if request.client else "unknown"
+    if not DEMO_WORKSPACE_LIMITER.hit(f"ip:{ip}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="too many demo workspaces created from this network — try again later",
+        )
+    try:
+        operator, _user = demo_workspace.create_workspace(
+            session,
+            full_name=payload.full_name,
+            email=payload.email,
+            password=payload.password,
+            operator_name=payload.operator_name,
+        )
+    except demo_workspace.DemoWorkspaceError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return DemoWorkspaceResponse(
+        operator_id=operator.id,
+        operator_name=operator.name,
+        email=payload.email,
     )
 
 

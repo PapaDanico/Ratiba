@@ -4,6 +4,50 @@ import { Badge } from "@/components/ui/Badge";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+const GUIDE_DISMISS_KEY = "ratiba.guide.dismissed";
+
+const GUIDE_STEPS = [
+  ["Routings", "Add flights — single, or recurring across a date range (UTC times)."],
+  ["Crew + Training", "Add crew, then give each a type rating under Training."],
+  ["Roster → Auto-generate", "One click builds a legal draft roster; review and Publish."],
+  ["Crew → Roster PDF", "Download a per-pilot monthly roster to share."],
+  ["Audit packs", "Generate a KCAA audit pack and export the payroll CSV."],
+];
+
+function DemoGuide() {
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(GUIDE_DISMISS_KEY) === "1");
+  if (dismissed) return null;
+  return (
+    <Card className="border-dn-gold/40 bg-dn-gold/5">
+      <CardBody>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-xl text-dn-dark mb-2">Getting started</h2>
+            <ol className="space-y-1 text-sm text-dn-muted list-decimal list-inside">
+              {GUIDE_STEPS.map(([title, desc]) => (
+                <li key={title}>
+                  <span className="font-medium text-dn-dark">{title}</span> — {desc}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.setItem(GUIDE_DISMISS_KEY, "1");
+              setDismissed(true);
+            }}
+            className="text-xs text-dn-steel underline shrink-0"
+            data-testid="dismiss-guide"
+          >
+            Dismiss
+          </button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 type CurrencyStatus = {
   crew_id: string;
   currency_type: string;
@@ -68,6 +112,7 @@ export function DashboardPage() {
           <CardBody className="text-sm text-dn-red">{error}</CardBody>
         </Card>
       )}
+      <DemoGuide />
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>

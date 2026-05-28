@@ -48,3 +48,7 @@ class RateLimiter:
 
 # Single global instance — endpoints import and call ``hit`` directly.
 PAIRING_LIMITER = RateLimiter(max_events=5, window_s=60.0)
+
+# Self-serve demo-workspace creation: a handful per hour per source IP is
+# plenty for evaluators while blunting scripted abuse of the open endpoint.
+DEMO_WORKSPACE_LIMITER = RateLimiter(max_events=10, window_s=3600.0)

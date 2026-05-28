@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models.user import UserRole
 
@@ -12,6 +12,19 @@ from app.models.user import UserRole
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class DemoWorkspaceRequest(BaseModel):
+    full_name: str = Field(min_length=1, max_length=128)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    operator_name: str | None = Field(default=None, max_length=128)
+
+
+class DemoWorkspaceResponse(BaseModel):
+    operator_id: uuid.UUID
+    operator_name: str
+    email: str
 
 
 class TokenPair(BaseModel):
