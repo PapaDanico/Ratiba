@@ -558,13 +558,30 @@ def _seed_demo(session: Session) -> None:
         except Exception as exc:
             print(f"  Audit pack generation skipped for {demo.name}: {exc}")
 
+    # The flagship Jetways Airlines demo (dual-Fokker fleet, night cargo,
+    # 27-pilot establishment) lives in its own module — richer than the
+    # uniform DemoOperator shape allows.
+    try:
+        from seed_jetways import seed_jetways
+
+        summary = seed_jetways(session)
+        print(
+            f"  Seeded Jetways Airlines: {summary['crew']} pilots, "
+            f"{summary['aircraft']} aircraft, {summary['assignments']} assignments."
+        )
+    except Exception as exc:  # never let Jetways break the core demo seed
+        print(f"  Jetways seed skipped: {exc}")
+
     print()
-    print("Demo seed ready. Two operators populated:")
+    print("Demo seed ready. Operators populated:")
     for demo in DEMO_OPERATORS:
         print(
             f"  {demo.name:<22} → officer@{demo.aoc_number.lower()}.example.aero "
             f"/ {DEFAULT_USER_PASSWORD}"
         )
+    print(
+        f"  {'Jetways Airlines Ltd':<22} → officer@jetways.example.aero / {DEFAULT_USER_PASSWORD}"
+    )
     print()
     print(
         "Each operator has crew with mixed currency states, a 28-day "
@@ -580,10 +597,19 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Populate two fictional operators with rich demo data.",
     )
+    parser.add_argument(
+        "--jetways",
+        action="store_true",
+        help="Seed only the Jetways Airlines demo workspace.",
+    )
     args = parser.parse_args(argv)
 
     with SessionLocal() as session:
-        if args.demo:
+        if args.jetways:
+            from seed_jetways import seed_jetways
+
+            seed_jetways(session)
+        elif args.demo:
             _seed_demo(session)
         else:
             _seed_default(session)
