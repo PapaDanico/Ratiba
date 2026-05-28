@@ -12,6 +12,6 @@ fi
 alembic upgrade head
 
 # Load demo data on first run (idempotent — safe to run every startup).
-python scripts/seed.py --demo
+PYTHONPATH=/app python scripts/seed.py --demo
 
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
