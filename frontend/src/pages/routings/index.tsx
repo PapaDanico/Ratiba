@@ -196,6 +196,229 @@ function AddRoutingForm({
   );
 }
 
+const WEEKDAYS = [
+  { idx: 0, label: "Mon" },
+  { idx: 1, label: "Tue" },
+  { idx: 2, label: "Wed" },
+  { idx: 3, label: "Thu" },
+  { idx: 4, label: "Fri" },
+  { idx: 5, label: "Sat" },
+  { idx: 6, label: "Sun" },
+];
+
+function AddRecurringForm({
+  defaultFrom,
+  aircraftTypes,
+  onAdded,
+}: {
+  defaultFrom: string;
+  aircraftTypes: AircraftType[];
+  onAdded: (msg: string) => void;
+}) {
+  const [flightNo, setFlightNo] = useState("");
+  const [origin, setOrigin] = useState("");
+  const [destination, setDestination] = useState("");
+  const [stdTime, setStdTime] = useState("08:00");
+  const [staTime, setStaTime] = useState("10:00");
+  const [reg, setReg] = useState("");
+  const [type, setType] = useState(aircraftTypes[0]?.icao ?? "");
+  const [dateFrom, setDateFrom] = useState(defaultFrom);
+  const [dateTo, setDateTo] = useState(addDays(defaultFrom, 27));
+  const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4]); // weekdays default
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function toggleDay(idx: number) {
+    setDays((prev) => (prev.includes(idx) ? prev.filter((d) => d !== idx) : [...prev, idx].sort()));
+  }
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await api<{ created: number; skipped_existing: number }>(
+        "/api/v1/sectors/recurring",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            flight_no: flightNo.trim(),
+            origin: origin.trim(),
+            destination: destination.trim(),
+            std_time: stdTime,
+            sta_time: staTime,
+            aircraft_reg: reg.trim(),
+            aircraft_type: type,
+            date_from: dateFrom,
+            date_to: dateTo,
+            days_of_week: days,
+          }),
+        },
+      );
+      setFlightNo("");
+      setOrigin("");
+      setDestination("");
+      setReg("");
+      const skipped =
+        result.skipped_existing > 0 ? ` (${result.skipped_existing} already existed)` : "";
+      onAdded(`Created ${result.created} routing${result.created === 1 ? "" : "s"}${skipped}.`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to add recurring routings");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3" data-testid="add-recurring-form">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <Label htmlFor="r-flight">Flight no.</Label>
+          <Input
+            id="r-flight"
+            value={flightNo}
+            onChange={(e) => setFlightNo(e.target.value)}
+            placeholder="KQ410"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="r-origin">Origin</Label>
+          <Input
+            id="r-origin"
+            value={origin}
+            onChange={(e) => setOrigin(e.target.value)}
+            placeholder="HKJK"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="r-dest">Destination</Label>
+          <Input
+            id="r-dest"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            placeholder="HKMO"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="r-type">Type</Label>
+          <select
+            id="r-type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
+            required
+          >
+            {aircraftTypes.map((t) => (
+              <option key={t.icao} value={t.icao}>
+                {t.icao}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="r-std">Departure (UTC)</Label>
+          <Input
+            id="r-std"
+            type="time"
+            value={stdTime}
+            onChange={(e) => setStdTime(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="r-sta">Arrival (UTC)</Label>
+          <Input
+            id="r-sta"
+            type="time"
+            value={staTime}
+            onChange={(e) => setStaTime(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="r-reg">Aircraft reg.</Label>
+          <Input
+            id="r-reg"
+            value={reg}
+            onChange={(e) => setReg(e.target.value)}
+            placeholder="5Y-ABC"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="r-from">From</Label>
+          <Input
+            id="r-from"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="r-to">To</Label>
+          <Input
+            id="r-to"
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+      <div>
+        <Label>Operating days</Label>
+        <div className="flex flex-wrap items-center gap-2 mt-1">
+          {WEEKDAYS.map((d) => (
+            <button
+              key={d.idx}
+              type="button"
+              onClick={() => toggleDay(d.idx)}
+              className={[
+                "px-2 py-1 rounded text-xs border",
+                days.includes(d.idx)
+                  ? "bg-dn-steel text-white border-dn-steel"
+                  : "bg-white text-dn-steel border-dn-steel-lt",
+              ].join(" ")}
+              data-testid={`weekday-${d.idx}`}
+            >
+              {d.label}
+            </button>
+          ))}
+          <span className="mx-1 text-dn-steel-lt">|</span>
+          <button
+            type="button"
+            onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])}
+            className="text-xs underline text-dn-steel"
+          >
+            Daily
+          </button>
+          <button
+            type="button"
+            onClick={() => setDays([0, 1, 2, 3, 4])}
+            className="text-xs underline text-dn-steel"
+          >
+            Weekdays
+          </button>
+        </div>
+      </div>
+      {error && <p className="text-sm text-dn-red">{error}</p>}
+      <div className="flex justify-end">
+        <Button
+          type="submit"
+          disabled={busy || days.length === 0}
+          data-testid="add-recurring-submit"
+        >
+          {busy ? "Creating…" : "Create recurring routings"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function RoutingsPage() {
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(addDays(todayIso(), 27));
@@ -204,6 +427,8 @@ export function RoutingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [mode, setMode] = useState<"single" | "recurring">("single");
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,18 +476,67 @@ export function RoutingsPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Add flight routing</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Add flight routing</CardTitle>
+            <div className="inline-flex rounded-md border border-dn-steel-lt overflow-hidden text-sm">
+              <button
+                type="button"
+                onClick={() => setMode("single")}
+                className={
+                  mode === "single"
+                    ? "px-3 py-1 bg-dn-steel text-white"
+                    : "px-3 py-1 bg-white text-dn-steel"
+                }
+                data-testid="mode-single"
+              >
+                Single
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("recurring")}
+                className={
+                  mode === "recurring"
+                    ? "px-3 py-1 bg-dn-steel text-white"
+                    : "px-3 py-1 bg-white text-dn-steel"
+                }
+                data-testid="mode-recurring"
+              >
+                Recurring
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardBody>
           <p className="text-sm text-dn-muted mb-4">
             Build the flight schedule the auto-roster assigns crew to. Departure and arrival times
             are entered and stored in <strong>UTC</strong>.
+            {mode === "recurring" &&
+              " Recurring mode creates one routing per operating day across the date range."}
           </p>
-          <AddRoutingForm
-            defaultDate={from}
-            aircraftTypes={aircraftTypes}
-            onAdded={() => setReloadKey((k) => k + 1)}
-          />
+          {notice && (
+            <p className="mb-3 text-sm text-dn-steel" data-testid="routing-notice">
+              {notice}
+            </p>
+          )}
+          {mode === "single" ? (
+            <AddRoutingForm
+              defaultDate={from}
+              aircraftTypes={aircraftTypes}
+              onAdded={() => {
+                setNotice(null);
+                setReloadKey((k) => k + 1);
+              }}
+            />
+          ) : (
+            <AddRecurringForm
+              defaultFrom={from}
+              aircraftTypes={aircraftTypes}
+              onAdded={(msg) => {
+                setNotice(msg);
+                setReloadKey((k) => k + 1);
+              }}
+            />
+          )}
         </CardBody>
       </Card>
 
