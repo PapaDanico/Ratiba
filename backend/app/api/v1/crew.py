@@ -7,11 +7,15 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
+from jose import JWTError
+from pydantic import BaseModel
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
+from app.core.security import create_ical_token, decode_token
 from app.models import Crew, CrewCurrency, User
 from app.schemas.crew import (
     CrewIn,
@@ -22,12 +26,18 @@ from app.schemas.crew import (
     CurrencyStatus,
 )
 from app.schemas.pilot import IssuePairingResponse
-from app.services import audit_log
+from app.services import audit_log, ical_feed
 from app.services import pairing as pairing_service
 
 router = APIRouter()
 
 AMBER_THRESHOLD_DAYS = 30
+
+
+class CalendarFeedOut(BaseModel):
+    crew_id: uuid.UUID
+    token: str
+    path: str  # relative feed path; client prefixes its own origin
 
 
 def _scoped(query: Select[Any], user: User) -> Select[Any]:
@@ -214,3 +224,51 @@ def issue_pairing_token(
     except pairing_service.PairingError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return IssuePairingResponse(code=token.code, expires_at=token.expires_at)
+
+
+@router.post("/{crew_id}/calendar-feed", response_model=CalendarFeedOut)
+def issue_calendar_feed(
+    crew_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> CalendarFeedOut:
+    """Mint a subscribe URL for the crew member's roster calendar feed."""
+    crew = session.scalar(_scoped(select(Crew).where(Crew.id == crew_id), user))
+    if crew is None:
+        raise HTTPException(status_code=404, detail="crew not found")
+    token = create_ical_token(str(crew_id))
+    return CalendarFeedOut(
+        crew_id=crew_id,
+        token=token,
+        path=f"/api/v1/crew/{crew_id}/roster.ics?token={token}",
+    )
+
+
+@router.get("/{crew_id}/roster.ics")
+def crew_roster_ics(
+    crew_id: uuid.UUID,
+    token: str,
+    session: Session = Depends(get_db),
+) -> Response:
+    """Public iCalendar feed for one crew member, authorised by the URL token.
+
+    No bearer auth — calendar clients can't send headers — so the
+    capability token in the query string is the credential.
+    """
+    try:
+        payload = decode_token(token)
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="invalid feed token") from exc
+    if payload.get("type") != "ical" or payload.get("sub") != f"ical:{crew_id}":
+        raise HTTPException(status_code=401, detail="feed token does not match this crew")
+
+    crew = ical_feed.crew_for_feed(session, crew_id=crew_id)
+    if crew is None:
+        raise HTTPException(status_code=404, detail="crew not found")
+
+    body = ical_feed.build_feed(session, crew=crew)
+    return Response(
+        content=body,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'inline; filename="ratiba-{crew_id}.ics"'},
+    )

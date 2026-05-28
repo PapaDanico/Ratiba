@@ -126,6 +126,94 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
   );
 }
 
+function CalendarFeedButton({ crew }: { crew: Crew }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  async function generate() {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const res = await api<{ path: string }>(`/api/v1/crew/${crew.id}/calendar-feed`, {
+        method: "POST",
+      });
+      setUrl(`${window.location.origin}${res.path}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to create feed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !url) await generate();
+  }
+
+  async function copy() {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={toggle}
+        data-testid={`calendar-feed-btn-${crew.id}`}
+      >
+        Calendar feed
+      </Button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-dn-dark">Subscribe this roster in a calendar</p>
+          <p className="text-xs text-dn-muted">
+            Add this URL in Google/Apple/Outlook as a subscribed calendar — it stays in sync.
+          </p>
+          {busy ? (
+            <p className="text-xs text-dn-muted">Generating…</p>
+          ) : error ? (
+            <p className="text-xs text-dn-red">{error}</p>
+          ) : url ? (
+            <>
+              <textarea
+                readOnly
+                value={url}
+                className="w-full text-[10px] font-mono border border-dn-steel-lt rounded p-1 h-16"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <Button size="sm" className="w-full" onClick={copy}>
+                {copied ? "Copied ✓" : "Copy link"}
+              </Button>
+            </>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,7 +286,10 @@ export function CrewPage() {
                       )}
                     </td>
                     <td className="py-2 pr-4">
-                      <RosterPdfButton crew={c} />
+                      <div className="flex gap-2">
+                        <RosterPdfButton crew={c} />
+                        <CalendarFeedButton crew={c} />
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -86,6 +86,25 @@ def create_pilot_token(crew_id: str, operator_id: str, days: int = 30) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
 
 
+def create_ical_token(crew_id: str, days: int = 730) -> str:
+    """Long-lived capability token embedded in a crew member's calendar-feed URL.
+
+    Calendar clients can't send auth headers, so the token rides in the query
+    string. Scoped to a single crew's read-only roster feed; ``sub`` carries
+    the ``ical:<uuid>`` prefix so it can't be replayed as any other token type.
+    """
+    settings = get_settings()
+    now = datetime.now(UTC)
+    expire = now + timedelta(days=days)
+    payload: dict[str, Any] = {
+        "sub": f"ical:{crew_id}",
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+        "type": "ical",
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
 def decode_token(token: str) -> dict[str, Any]:
     """Decode and validate a JWT. Raises ``jose.JWTError`` on failure."""
     settings = get_settings()
