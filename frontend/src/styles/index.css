@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-dn-fog;
+  }
+  body {
+    @apply font-body text-dn-dark antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  /* Smooth focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-dn-gold ring-offset-2 ring-offset-dn-fog;
+  }
+}
+
+@layer utilities {
+  /*
+   * Maasai-inspired geometric chevron stripe.
+   * Three-colour repeating diagonal weave: gold, shuka-earth, rift-blue.
+   * Use as a thin decorative separator on card headers, page dividers, etc.
+   */
+  .tribal-stripe {
+    height: 3px;
+    background: repeating-linear-gradient(
+      90deg,
+      #c9a84c 0px,
+      #c9a84c 12px,
+      #a83822 12px,
+      #a83822 24px,
+      #1b4f72 24px,
+      #1b4f72 36px,
+      #c9a84c 36px,
+      #c9a84c 48px,
+      #c47b2e 48px,
+      #c47b2e 60px,
+      #1b4f72 60px,
+      #1b4f72 72px
+    );
+    flex-shrink: 0;
+  }
+
+  /*
+   * Maasai diamond-grid background texture.
+   * Very subtle — used on login page and section backgrounds.
+   */
+  .tribal-texture {
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        rgba(201, 168, 76, 0.06) 0px,
+        rgba(201, 168, 76, 0.06) 1px,
+        transparent 1px,
+        transparent 14px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        rgba(201, 168, 76, 0.06) 0px,
+        rgba(201, 168, 76, 0.06) 1px,
+        transparent 1px,
+        transparent 14px
+      );
+  }
+
+  /* Savanna-sunrise gradient — login page backdrop */
+  .savanna-dawn {
+    background: linear-gradient(
+      160deg,
+      #1a0d05 0%,
+      #4a1e0a 25%,
+      #8b3a1a 55%,
+      #c47b2e 80%,
+      #c9a84c 100%
+    );
+  }
+}
+
+/*
+ * Responsive data tables: on phones, collapse each row into a labelled
+ * card (label from the cell's data-label, value on the right). Tag a
+ * <table> with `rtable` and give each <td> a data-label.
+ */
+@media (max-width: 640px) {
+  table.rtable thead {
+    display: none;
+  }
+  table.rtable,
+  table.rtable tbody,
+  table.rtable tr,
+  table.rtable td {
+    display: block;
+    width: 100%;
+  }
+  table.rtable tr {
+    border: 1px solid #d0e8f5;
+    border-radius: 10px;
+    padding: 6px 12px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  table.rtable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 5px 0 !important;
+    border: none !important;
+    text-align: right;
+  }
+  table.rtable td::before {
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #6b7280;
+    text-align: left;
+    flex-shrink: 0;
+  }
+  /* Action cells (no label) span the full width, buttons left-aligned. */
+  table.rtable td[data-label=""] {
+    justify-content: flex-start;
+    padding-top: 8px !important;
+  }
+  table.rtable td[data-label=""]::before {
+    content: none;
+  }
+}

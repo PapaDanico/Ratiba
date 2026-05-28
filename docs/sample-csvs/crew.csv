@@ -1,0 +1,7 @@
+employee_no,first_name,last_name,role,date_of_hire,date_of_birth,base_station,contract_type,languages,faith_observance_flags
+P001,Amani,Otieno,CAPT,2018-06-01,1980-02-12,HKJK,FULL_TIME,en;sw,
+P002,Asha,Kamau,CAPT,2019-03-15,1982-07-04,HKJK,FULL_TIME,en;sw,sunday_protected=true
+P003,Baraka,Kiprotich,CAPT,2020-01-10,1985-11-21,HKJK,FULL_TIME,en;sw,
+P010,Peter,Onyango,FO,2022-01-15,1993-11-04,HKJK,FULL_TIME,en;sw,
+P011,Faraja,Mwangi,FO,2023-04-01,1995-08-09,HKJK,FULL_TIME,en;sw,
+P012,Sifa,Akinyi,FO,2024-02-20,1997-05-30,HKJK,CONTRACT,en;sw,

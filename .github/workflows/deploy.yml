@@ -1,0 +1,31 @@
+name: deploy
+
+# Production deployment is wired in Phase 6. This workflow is a placeholder
+# that runs only when manually dispatched and only from `main`, so that the
+# pipeline shape and required secrets are visible from day one.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse non-main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Deploys must run from main. Refusing." >&2
+          exit 1
+      - name: Phase 6 placeholder
+        run: |
+          echo "Deployment pipeline will be wired in Phase 6."
+          echo "Target: ${{ inputs.environment }}"

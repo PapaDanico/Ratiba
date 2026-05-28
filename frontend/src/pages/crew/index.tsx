@@ -1,0 +1,311 @@
+import { useEffect, useRef, useState } from "react";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { api, ApiError, tokenStore } from "@/lib/api";
+
+type Crew = {
+  id: string;
+  employee_no: string;
+  first_name: string;
+  last_name: string;
+  role: "CAPT" | "FO" | "SO";
+  base_station: string;
+  contract_type: string;
+  active: boolean;
+  email: string | null;
+  phone_number: string | null;
+};
+
+function todayYearMonth(): { year: number; month: number } {
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+}
+
+function RosterPdfButton({ crew }: { crew: Crew }) {
+  const { year: curYear, month: curMonth } = todayYearMonth();
+  const [year, setYear] = useState(curYear);
+  const [month, setMonth] = useState(curMonth);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  async function download() {
+    setBusy(true);
+    setError(null);
+    try {
+      const url = `/api/v1/roster/crew/${crew.id}/monthly-pdf?year=${year}&month=${month}`;
+      const token = tokenStore.getAccess();
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `roster_${crew.employee_no}_${year}-${String(month).padStart(2, "0")}.pdf`;
+      link.click();
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Download failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const years = [curYear - 1, curYear, curYear + 1];
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => setOpen((o) => !o)}
+        data-testid={`roster-pdf-btn-${crew.id}`}
+      >
+        Roster PDF
+      </Button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-52 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-dn-dark">Download monthly roster</p>
+          <div className="flex gap-2">
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
+            >
+              {months.map((m, i) => (
+                <option key={i} value={i + 1}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          {error && <p className="text-xs text-dn-red">{error}</p>}
+          <Button size="sm" className="w-full" onClick={download} disabled={busy}>
+            {busy ? "Generating…" : "Download PDF"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CalendarFeedButton({ crew }: { crew: Crew }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  async function generate() {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const res = await api<{ path: string }>(`/api/v1/crew/${crew.id}/calendar-feed`, {
+        method: "POST",
+      });
+      setUrl(`${window.location.origin}${res.path}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to create feed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !url) await generate();
+  }
+
+  async function copy() {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={toggle}
+        data-testid={`calendar-feed-btn-${crew.id}`}
+      >
+        Calendar feed
+      </Button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-dn-dark">Subscribe this roster in a calendar</p>
+          <p className="text-xs text-dn-muted">
+            Add this URL in Google/Apple/Outlook as a subscribed calendar — it stays in sync.
+          </p>
+          {busy ? (
+            <p className="text-xs text-dn-muted">Generating…</p>
+          ) : error ? (
+            <p className="text-xs text-dn-red">{error}</p>
+          ) : url ? (
+            <>
+              <textarea
+                readOnly
+                value={url}
+                className="w-full text-[10px] font-mono border border-dn-steel-lt rounded p-1 h-16"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <Button size="sm" className="w-full" onClick={copy}>
+                {copied ? "Copied ✓" : "Copy link"}
+              </Button>
+            </>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function CrewPage() {
+  const [rows, setRows] = useState<Crew[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api<Crew[]>("/api/v1/crew");
+        if (!cancelled) setRows(list);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "Failed to load crew");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Crew roster</CardTitle>
+      </CardHeader>
+      <CardBody>
+        {loading ? (
+          <p className="text-sm text-dn-muted">Loading…</p>
+        ) : error ? (
+          <p className="text-sm text-dn-red">{error}</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-dn-muted">
+            No crew yet. Create one via the API or wait for the import flow in Phase 6.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="rtable min-w-full text-sm" data-testid="crew-table">
+              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                <tr>
+                  <th className="py-2 pr-4 font-medium">Employee #</th>
+                  <th className="py-2 pr-4 font-medium">Name</th>
+                  <th className="py-2 pr-4 font-medium">Role</th>
+                  <th className="py-2 pr-4 font-medium">Base</th>
+                  <th className="py-2 pr-4 font-medium">Email</th>
+                  <th className="py-2 pr-4 font-medium">Phone</th>
+                  <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dn-steel-lt">
+                {rows.map((c) => (
+                  <tr key={c.id} className="hover:bg-dn-fog">
+                    <td data-label="Employee #" className="py-2 pr-4 font-mono text-dn-steel">
+                      {c.employee_no}
+                    </td>
+                    <td data-label="Name" className="py-2 pr-4 text-dn-dark">
+                      {c.first_name} {c.last_name}
+                    </td>
+                    <td data-label="Role" className="py-2 pr-4">
+                      <Badge tone="steel">{c.role}</Badge>
+                    </td>
+                    <td data-label="Base" className="py-2 pr-4 font-mono">
+                      {c.base_station}
+                    </td>
+                    <td data-label="Email" className="py-2 pr-4 text-xs text-dn-muted">
+                      {c.email ?? "—"}
+                    </td>
+                    <td data-label="Phone" className="py-2 pr-4 font-mono text-xs">
+                      {c.phone_number ?? "—"}
+                    </td>
+                    <td data-label="Status" className="py-2 pr-4">
+                      {c.active ? (
+                        <Badge tone="green">Active</Badge>
+                      ) : (
+                        <Badge tone="neutral">Inactive</Badge>
+                      )}
+                    </td>
+                    <td data-label="" className="py-2 pr-4">
+                      <div className="flex gap-2">
+                        <RosterPdfButton crew={c} />
+                        <CalendarFeedButton crew={c} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
