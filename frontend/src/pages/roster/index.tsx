@@ -17,6 +17,20 @@ type Assignment = {
   legality_state: "LEGAL" | "AT_LIMIT" | "REQUIRES_FRMS_DEROGATION" | "ILLEGAL" | null;
 };
 
+type PublicHoliday = {
+  country_code: string;
+  date: string;
+  name: string;
+  is_variable: boolean;
+};
+
+const COUNTRY_OPTIONS = [
+  { code: "KE", label: "Kenya" },
+  { code: "UG", label: "Uganda" },
+  { code: "TZ", label: "Tanzania" },
+  { code: "ET", label: "Ethiopia" },
+];
+
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -150,6 +164,8 @@ export function RosterPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [holidayCountry, setHolidayCountry] = useState("KE");
+  const [holidays, setHolidays] = useState<PublicHoliday[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,12 +185,35 @@ export function RosterPage() {
     };
   }, [from, to, reloadKey]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api<PublicHoliday[]>(
+          `/api/v1/reference/public-holidays?country_code=${holidayCountry}&date_from=${from}&date_to=${to}`,
+        );
+        if (!cancelled) setHolidays(list);
+      } catch {
+        if (!cancelled) setHolidays([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [holidayCountry, from, to]);
+
   const byDate = new Map<string, Assignment[]>();
   for (const r of rows) {
     const list = byDate.get(r.date_local) ?? [];
     list.push(r);
     byDate.set(r.date_local, list);
   }
+
+  const holidayByDate = new Map<string, string>();
+  for (const h of holidays) {
+    holidayByDate.set(h.date, h.name);
+  }
+
   const days = dateRange(from, to);
 
   return (
@@ -183,22 +222,39 @@ export function RosterPage() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Roster calendar</CardTitle>
-            <div className="flex items-center gap-2 text-sm text-dn-muted">
-              <input
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
-                data-testid="roster-date-from"
-              />
-              <span>→</span>
-              <input
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
-                data-testid="roster-date-to"
-              />
+            <div className="flex flex-wrap items-center gap-3 text-sm text-dn-muted">
+              {/* Date range */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+                  data-testid="roster-date-from"
+                />
+                <span>→</span>
+                <input
+                  type="date"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+                  data-testid="roster-date-to"
+                />
+              </div>
+              {/* Holiday country picker */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-dn-muted">Holidays:</span>
+                <select
+                  value={holidayCountry}
+                  onChange={(e) => setHolidayCountry(e.target.value)}
+                  className="rounded-md border border-dn-steel-lt px-2 py-1 text-xs font-mono"
+                  data-testid="holiday-country-select"
+                >
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -211,12 +267,26 @@ export function RosterPage() {
             <div className="grid grid-cols-1 md:grid-cols-7 gap-2" data-testid="roster-calendar">
               {days.map((d) => {
                 const dayAssignments = byDate.get(d) ?? [];
+                const holidayName = holidayByDate.get(d);
                 return (
                   <div
                     key={d}
-                    className="rounded-md border border-dn-steel-lt p-2 min-h-[100px] bg-dn-fog"
+                    className={[
+                      "rounded-md border p-2 min-h-[100px]",
+                      holidayName
+                        ? "bg-amber-50 border-amber-200"
+                        : "bg-dn-fog border-dn-steel-lt",
+                    ].join(" ")}
                   >
                     <div className="font-mono text-xs text-dn-steel mb-1">{d}</div>
+                    {holidayName && (
+                      <div
+                        className="text-xs font-medium text-amber-700 mb-1 truncate"
+                        title={holidayName}
+                      >
+                        🏛 {holidayName}
+                      </div>
+                    )}
                     {dayAssignments.length === 0 ? (
                       <div className="text-xs text-dn-muted">—</div>
                     ) : (

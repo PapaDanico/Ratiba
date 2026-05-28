@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api";
 
 type Crew = {
@@ -15,6 +16,98 @@ type Crew = {
   email: string | null;
   phone_number: string | null;
 };
+
+function todayYearMonth(): { year: number; month: number } {
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+}
+
+function RosterPdfButton({ crew }: { crew: Crew }) {
+  const { year: curYear, month: curMonth } = todayYearMonth();
+  const [year, setYear] = useState(curYear);
+  const [month, setMonth] = useState(curMonth);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  async function download() {
+    setBusy(true);
+    setError(null);
+    try {
+      const url = `/api/v1/roster/crew/${crew.id}/monthly-pdf?year=${year}&month=${month}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `roster_${crew.employee_no}_${year}-${String(month).padStart(2, "0")}.pdf`;
+      link.click();
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Download failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const years = [curYear - 1, curYear, curYear + 1];
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => setOpen((o) => !o)}
+        data-testid={`roster-pdf-btn-${crew.id}`}
+      >
+        Roster PDF
+      </Button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-52 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-dn-dark">Download monthly roster</p>
+          <div className="flex gap-2">
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
+            >
+              {months.map((m, i) => (
+                <option key={i} value={i + 1}>{m}</option>
+              ))}
+            </select>
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          {error && <p className="text-xs text-dn-red">{error}</p>}
+          <Button size="sm" className="w-full" onClick={download} disabled={busy}>
+            {busy ? "Generating…" : "Download PDF"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
@@ -64,6 +157,7 @@ export function CrewPage() {
                   <th className="py-2 pr-4 font-medium">Email</th>
                   <th className="py-2 pr-4 font-medium">Phone</th>
                   <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
@@ -85,6 +179,9 @@ export function CrewPage() {
                       ) : (
                         <Badge tone="neutral">Inactive</Badge>
                       )}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <RosterPdfButton crew={c} />
                     </td>
                   </tr>
                 ))}

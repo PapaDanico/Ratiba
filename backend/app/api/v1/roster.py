@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -26,6 +28,7 @@ from app.schemas.roster import (
     RosterResult,
 )
 from app.services import optimiser, roster_service
+from app.services.crew_roster_pdf import CrewRosterPdfError, generate_crew_roster_pdf
 from app.tasks.roster_job import payload_to_input
 
 router = APIRouter()
@@ -164,4 +167,35 @@ async def explain(payload: ExplainRequest) -> ExplainResponse:
             )
             for b in explanation.bindings
         ],
+    )
+
+
+@router.get(
+    "/crew/{crew_id}/monthly-pdf",
+    summary="Download monthly roster PDF for a single crew member",
+    response_class=StreamingResponse,
+)
+def crew_monthly_pdf(
+    crew_id: uuid.UUID,
+    year: int = Query(..., ge=2020, le=2040),
+    month: int = Query(..., ge=1, le=12),
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> StreamingResponse:
+    try:
+        pdf_bytes = generate_crew_roster_pdf(
+            session,
+            operator_id=user.operator_id,
+            crew_id=crew_id,
+            year=year,
+            month=month,
+        )
+    except CrewRosterPdfError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    filename = f"roster_{crew_id}_{year}-{month:02d}.pdf"
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
