@@ -33,8 +33,8 @@ class CrewRosterPdfError(Exception):
 class DayCell:
     date: date
     in_month: bool
-    fdp_type: str = ""          # FDP type label
-    legality: str = ""          # LEGAL / AT_LIMIT / etc.
+    fdp_type: str = ""  # FDP type label
+    legality: str = ""  # LEGAL / AT_LIMIT / etc.
     duty_h: float = 0.0
     flight_h: float = 0.0
     sector_ids: list[str] = field(default_factory=list)
@@ -113,7 +113,7 @@ def _gather(
     while cur <= grid_end:
         week: list[DayCell] = []
         for _ in range(7):
-            in_month = (first_day <= cur <= last_day)
+            in_month = first_day <= cur <= last_day
             cell = DayCell(date=cur, in_month=in_month)
             if in_month:
                 fdp = fdp_by_date.get(cur)
@@ -135,10 +135,7 @@ def _gather(
     total_flight_h = sum(f.flight_hours or 0 for f in fdps if f.type == FdpType.FDP)
     fdp_count = sum(1 for f in fdps if f.type == FdpType.FDP)
     leave_days = len(leave_by_date)
-    anomalies = sum(
-        1 for f in fdps
-        if f.legality_state and f.legality_state != LegalityState.LEGAL
-    )
+    anomalies = sum(1 for f in fdps if f.legality_state and f.legality_state != LegalityState.LEGAL)
 
     summary = {
         "fdp_count": fdp_count,
@@ -317,8 +314,19 @@ td.today {
 
 _DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 _MONTH_NAMES = [
-    "", "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 
 
@@ -338,7 +346,13 @@ def _duty_badge(cell: DayCell) -> str:
     t = cell.fdp_type
     # Leave types
     if t in ("ANNUAL", "SICK", "COMPASSIONATE", "FAITH", "OTHER"):
-        label = {"ANNUAL": "Leave", "SICK": "Sick", "COMPASSIONATE": "Comp.", "FAITH": "Faith", "OTHER": "Leave"}.get(t, t)
+        label = {
+            "ANNUAL": "Leave",
+            "SICK": "Sick",
+            "COMPASSIONATE": "Comp.",
+            "FAITH": "Faith",
+            "OTHER": "Leave",
+        }.get(t, t)
         return f'<span class="badge badge-leave">{_esc(label)}</span>'
     if t == "OFF":
         return '<span class="badge badge-off">OFF</span>'
@@ -379,7 +393,12 @@ def _render_html(
                     codes += f" +{len(cell.sector_ids) - 3}"
                 body_rows += f'<div class="duty-code">{codes}</div>'
             elif cell.fdp_type and cell.fdp_type not in (
-                "ANNUAL", "SICK", "COMPASSIONATE", "FAITH", "OTHER", "OFF"
+                "ANNUAL",
+                "SICK",
+                "COMPASSIONATE",
+                "FAITH",
+                "OTHER",
+                "OFF",
             ):
                 body_rows += f'<div class="duty-code">{_esc(cell.fdp_type)}</div>'
             # Duty hours
@@ -466,6 +485,7 @@ def _render_html(
 
 def _render_pdf(html: str) -> bytes:
     from weasyprint import HTML
+
     return bytes(HTML(string=html).write_pdf() or b"")
 
 

@@ -24,13 +24,15 @@ def _prepare(plain: str) -> bytes:
 
 def hash_password(plain: str) -> str:
     """Hash a plaintext password with bcrypt."""
-    return bcrypt.hashpw(_prepare(plain), bcrypt.gensalt()).decode("utf-8")
+    result: bytes = bcrypt.hashpw(_prepare(plain), bcrypt.gensalt())
+    return result.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
     try:
-        return bcrypt.checkpw(_prepare(plain), hashed.encode("utf-8"))
+        result: bool = bcrypt.checkpw(_prepare(plain), hashed.encode("utf-8"))
+        return result
     except ValueError:
         return False
 

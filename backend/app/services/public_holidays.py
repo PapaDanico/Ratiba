@@ -27,6 +27,7 @@ class PublicHoliday:
 # Easter calculation (Gregorian Computus)
 # ---------------------------------------------------------------------------
 
+
 def _easter(year: int) -> date:
     a = year % 19
     b, c = divmod(year, 100)
@@ -88,14 +89,15 @@ _MAULID: dict[int, date] = {
 # Holiday builders per country
 # ---------------------------------------------------------------------------
 
+
 def _kenya_holidays(year: int) -> list[PublicHoliday]:
     ke = "KE"
     h = [
-        PublicHoliday(ke, date(year, 1, 1),  "New Year's Day"),
-        PublicHoliday(ke, _good_friday(year), "Good Friday",    is_variable=True),
+        PublicHoliday(ke, date(year, 1, 1), "New Year's Day"),
+        PublicHoliday(ke, _good_friday(year), "Good Friday", is_variable=True),
         PublicHoliday(ke, _easter_monday(year), "Easter Monday", is_variable=True),
-        PublicHoliday(ke, date(year, 5, 1),  "Labour Day"),
-        PublicHoliday(ke, date(year, 6, 1),  "Madaraka Day"),
+        PublicHoliday(ke, date(year, 5, 1), "Labour Day"),
+        PublicHoliday(ke, date(year, 6, 1), "Madaraka Day"),
         PublicHoliday(ke, date(year, 10, 10), "Huduma Day"),
         PublicHoliday(ke, date(year, 10, 20), "Mashujaa Day"),
         PublicHoliday(ke, date(year, 12, 12), "Jamhuri Day"),
@@ -114,15 +116,15 @@ def _kenya_holidays(year: int) -> list[PublicHoliday]:
 def _uganda_holidays(year: int) -> list[PublicHoliday]:
     ug = "UG"
     h = [
-        PublicHoliday(ug, date(year, 1, 1),  "New Year's Day"),
+        PublicHoliday(ug, date(year, 1, 1), "New Year's Day"),
         PublicHoliday(ug, date(year, 1, 26), "Liberation Day"),
         PublicHoliday(ug, date(year, 2, 16), "Archbishop Janani Luwum Day"),
-        PublicHoliday(ug, date(year, 3, 8),  "International Women's Day"),
-        PublicHoliday(ug, _good_friday(year), "Good Friday",    is_variable=True),
+        PublicHoliday(ug, date(year, 3, 8), "International Women's Day"),
+        PublicHoliday(ug, _good_friday(year), "Good Friday", is_variable=True),
         PublicHoliday(ug, _easter_monday(year), "Easter Monday", is_variable=True),
-        PublicHoliday(ug, date(year, 5, 1),  "Labour Day"),
-        PublicHoliday(ug, date(year, 6, 3),  "Martyrs Day"),
-        PublicHoliday(ug, date(year, 6, 9),  "Heroes Day"),
+        PublicHoliday(ug, date(year, 5, 1), "Labour Day"),
+        PublicHoliday(ug, date(year, 6, 3), "Martyrs Day"),
+        PublicHoliday(ug, date(year, 6, 9), "Heroes Day"),
         PublicHoliday(ug, date(year, 10, 9), "Independence Day"),
         PublicHoliday(ug, date(year, 12, 25), "Christmas Day"),
         PublicHoliday(ug, date(year, 12, 26), "Boxing Day"),
@@ -137,17 +139,17 @@ def _uganda_holidays(year: int) -> list[PublicHoliday]:
 def _tanzania_holidays(year: int) -> list[PublicHoliday]:
     tz = "TZ"
     h = [
-        PublicHoliday(tz, date(year, 1, 1),  "New Year's Day"),
+        PublicHoliday(tz, date(year, 1, 1), "New Year's Day"),
         PublicHoliday(tz, date(year, 1, 12), "Zanzibar Revolution Day"),
-        PublicHoliday(tz, _good_friday(year), "Good Friday",    is_variable=True),
+        PublicHoliday(tz, _good_friday(year), "Good Friday", is_variable=True),
         PublicHoliday(tz, _easter_monday(year), "Easter Monday", is_variable=True),
-        PublicHoliday(tz, date(year, 4, 7),  "Karume Day"),
+        PublicHoliday(tz, date(year, 4, 7), "Karume Day"),
         PublicHoliday(tz, date(year, 4, 26), "Union Day"),
-        PublicHoliday(tz, date(year, 5, 1),  "Workers Day"),
-        PublicHoliday(tz, date(year, 7, 7),  "Saba Saba Day"),
-        PublicHoliday(tz, date(year, 8, 8),  "Nane Nane Day"),
+        PublicHoliday(tz, date(year, 5, 1), "Workers Day"),
+        PublicHoliday(tz, date(year, 7, 7), "Saba Saba Day"),
+        PublicHoliday(tz, date(year, 8, 8), "Nane Nane Day"),
         PublicHoliday(tz, date(year, 10, 14), "Nyerere Day"),
-        PublicHoliday(tz, date(year, 12, 9),  "Independence Day"),
+        PublicHoliday(tz, date(year, 12, 9), "Independence Day"),
         PublicHoliday(tz, date(year, 12, 25), "Christmas Day"),
         PublicHoliday(tz, date(year, 12, 26), "Boxing Day"),
     ]
@@ -169,7 +171,7 @@ def _ethiopia_holidays(year: int) -> list[PublicHoliday]:
     et = "ET"
     # Ethiopian Fasika (Orthodox Easter) — approximate Gregorian equivalent
     _fasika: dict[int, date] = {
-        2025: date(2025, 4, 20),   # same as Gregorian in 2025
+        2025: date(2025, 4, 20),  # same as Gregorian in 2025
         2026: date(2026, 4, 19),
         2027: date(2027, 4, 11),
         2028: date(2028, 4, 30),
@@ -177,11 +179,11 @@ def _ethiopia_holidays(year: int) -> list[PublicHoliday]:
         2030: date(2030, 4, 28),
     }
     h = [
-        PublicHoliday(et, date(year, 1, 7),  "Genna (Ethiopian Christmas)"),
+        PublicHoliday(et, date(year, 1, 7), "Genna (Ethiopian Christmas)"),
         PublicHoliday(et, date(year, 1, 19), "Timkat (Ethiopian Epiphany)"),
-        PublicHoliday(et, date(year, 3, 2),  "Victory of Adwa"),
-        PublicHoliday(et, date(year, 5, 1),  "International Workers Day"),
-        PublicHoliday(et, date(year, 5, 5),  "Patriots Victory Day"),
+        PublicHoliday(et, date(year, 3, 2), "Victory of Adwa"),
+        PublicHoliday(et, date(year, 5, 1), "International Workers Day"),
+        PublicHoliday(et, date(year, 5, 5), "Patriots Victory Day"),
         PublicHoliday(et, date(year, 5, 28), "Downfall of the Derg"),
         PublicHoliday(et, date(year, 9, 11), "Ethiopian New Year (Enkutatash)"),
         PublicHoliday(et, date(year, 9, 27), "Meskel (Finding of the True Cross)"),
