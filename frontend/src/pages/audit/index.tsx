@@ -107,8 +107,42 @@ export function AuditPage() {
     }
   }
 
+  async function downloadPayroll() {
+    try {
+      const url = `/api/v1/reports/payroll.csv?date_from=${periodFrom}&date_to=${periodTo}`;
+      const resp = await fetch(url, {
+        headers: { Authorization: `Bearer ${tokenStore.getAccess() ?? ""}` },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `payroll_${periodFrom}_${periodTo}.csv`;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Payroll export failed");
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Payroll / duty-hours export</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <p className="mb-4 text-sm text-dn-muted">
+            Export per-crew duty hours, block hours, standby, and leave/sick days for the selected
+            period as a CSV — ready to drop into your payroll system. Uses the period dates below.
+          </p>
+          <Button variant="secondary" onClick={downloadPayroll} data-testid="payroll-export">
+            Download payroll CSV
+          </Button>
+        </CardBody>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Generate KCAA audit pack</CardTitle>
