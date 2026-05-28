@@ -1,0 +1,357 @@
+import { useEffect, useState } from "react";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import { api, ApiError } from "@/lib/api";
+
+type Sector = {
+  id: string;
+  flight_no: string;
+  date: string;
+  origin: string;
+  destination: string;
+  std: string; // UTC ISO
+  sta: string; // UTC ISO
+  aircraft_reg: string;
+  aircraft_type: string;
+  status: string;
+  block_hours: number;
+};
+
+type AircraftType = { icao: string; label: string };
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDays(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Format a UTC ISO datetime as "HH:MM" with a Z marker. */
+function utcTime(iso: string): string {
+  const d = new Date(iso);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}Z`;
+}
+
+/** datetime-local value (no tz) -> UTC ISO by treating the input as UTC. */
+function localInputToUtcIso(value: string): string {
+  // value like "2025-06-01T08:30"; we treat it as already-UTC and append Z.
+  return value.length === 16 ? `${value}:00Z` : `${value}Z`;
+}
+
+function AddRoutingForm({
+  defaultDate,
+  aircraftTypes,
+  onAdded,
+}: {
+  defaultDate: string;
+  aircraftTypes: AircraftType[];
+  onAdded: () => void;
+}) {
+  const [flightNo, setFlightNo] = useState("");
+  const [flightDate, setFlightDate] = useState(defaultDate);
+  const [origin, setOrigin] = useState("");
+  const [destination, setDestination] = useState("");
+  const [std, setStd] = useState(`${defaultDate}T08:00`);
+  const [sta, setSta] = useState(`${defaultDate}T10:00`);
+  const [reg, setReg] = useState("");
+  const [type, setType] = useState(aircraftTypes[0]?.icao ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/v1/sectors", {
+        method: "POST",
+        body: JSON.stringify({
+          flight_no: flightNo.trim(),
+          date: flightDate,
+          origin: origin.trim(),
+          destination: destination.trim(),
+          std: localInputToUtcIso(std),
+          sta: localInputToUtcIso(sta),
+          aircraft_reg: reg.trim(),
+          aircraft_type: type,
+        }),
+      });
+      setFlightNo("");
+      setOrigin("");
+      setDestination("");
+      setReg("");
+      onAdded();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to add routing");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3" data-testid="add-routing-form">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <Label htmlFor="flight_no">Flight no.</Label>
+          <Input
+            id="flight_no"
+            value={flightNo}
+            onChange={(e) => setFlightNo(e.target.value)}
+            placeholder="KQ410"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="flight_date">Date</Label>
+          <Input
+            id="flight_date"
+            type="date"
+            value={flightDate}
+            onChange={(e) => setFlightDate(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="origin">Origin</Label>
+          <Input
+            id="origin"
+            value={origin}
+            onChange={(e) => setOrigin(e.target.value)}
+            placeholder="HKJK"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="destination">Destination</Label>
+          <Input
+            id="destination"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            placeholder="HKMO"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="std">Departure (UTC)</Label>
+          <Input
+            id="std"
+            type="datetime-local"
+            value={std}
+            onChange={(e) => setStd(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="sta">Arrival (UTC)</Label>
+          <Input
+            id="sta"
+            type="datetime-local"
+            value={sta}
+            onChange={(e) => setSta(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="reg">Aircraft reg.</Label>
+          <Input
+            id="reg"
+            value={reg}
+            onChange={(e) => setReg(e.target.value)}
+            placeholder="5Y-ABC"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="type">Type</Label>
+          <select
+            id="type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
+            required
+          >
+            {aircraftTypes.map((t) => (
+              <option key={t.icao} value={t.icao}>
+                {t.icao}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {error && <p className="text-sm text-dn-red">{error}</p>}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={busy} data-testid="add-routing-submit">
+          {busy ? "Adding…" : "Add routing"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function RoutingsPage() {
+  const [from, setFrom] = useState(todayIso());
+  const [to, setTo] = useState(addDays(todayIso(), 27));
+  const [rows, setRows] = useState<Sector[]>([]);
+  const [aircraftTypes, setAircraftTypes] = useState<AircraftType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const types = await api<AircraftType[]>("/api/v1/reference/aircraft-types");
+        if (!cancelled) setAircraftTypes(types);
+      } catch {
+        if (!cancelled) setAircraftTypes([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const list = await api<Sector[]>(`/api/v1/sectors?date_from=${from}&date_to=${to}`);
+        if (!cancelled) setRows(list);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "Failed to load routings");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [from, to, reloadKey]);
+
+  async function remove(id: string) {
+    try {
+      await api(`/api/v1/sectors/${id}`, { method: "DELETE" });
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to delete routing");
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Add flight routing</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <p className="text-sm text-dn-muted mb-4">
+            Build the flight schedule the auto-roster assigns crew to. Departure and arrival times
+            are entered and stored in <strong>UTC</strong>.
+          </p>
+          <AddRoutingForm
+            defaultDate={from}
+            aircraftTypes={aircraftTypes}
+            onAdded={() => setReloadKey((k) => k + 1)}
+          />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Scheduled routings</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-dn-muted">
+              <input
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+              />
+              <span>→</span>
+              <input
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {loading ? (
+            <p className="text-sm text-dn-muted">Loading…</p>
+          ) : error ? (
+            <p className="text-sm text-dn-red">{error}</p>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-dn-muted" data-testid="routings-empty">
+              No routings in this window. Add flights above, then go to Roster → Auto-generate.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm" data-testid="routings-table">
+                <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                  <tr>
+                    <th className="py-2 pr-4 font-medium">Flight</th>
+                    <th className="py-2 pr-4 font-medium">Date</th>
+                    <th className="py-2 pr-4 font-medium">Route</th>
+                    <th className="py-2 pr-4 font-medium">Dep (UTC)</th>
+                    <th className="py-2 pr-4 font-medium">Arr (UTC)</th>
+                    <th className="py-2 pr-4 font-medium">Block</th>
+                    <th className="py-2 pr-4 font-medium">Aircraft</th>
+                    <th className="py-2 pr-4 font-medium">Status</th>
+                    <th className="py-2 pr-4 font-medium" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dn-steel-lt">
+                  {rows.map((s) => (
+                    <tr key={s.id} className="hover:bg-dn-fog">
+                      <td className="py-2 pr-4 font-mono text-dn-steel">{s.flight_no}</td>
+                      <td className="py-2 pr-4 font-mono">{s.date}</td>
+                      <td className="py-2 pr-4 font-mono">
+                        {s.origin}→{s.destination}
+                      </td>
+                      <td className="py-2 pr-4 font-mono">{utcTime(s.std)}</td>
+                      <td className="py-2 pr-4 font-mono">{utcTime(s.sta)}</td>
+                      <td className="py-2 pr-4 font-mono">{s.block_hours.toFixed(1)}h</td>
+                      <td className="py-2 pr-4">
+                        <span className="font-mono">{s.aircraft_reg}</span>{" "}
+                        <Badge tone="steel">{s.aircraft_type}</Badge>
+                      </td>
+                      <td className="py-2 pr-4">
+                        <Badge tone={s.status === "PUBLISHED" ? "green" : "neutral"}>
+                          {s.status}
+                        </Badge>
+                      </td>
+                      <td className="py-2 pr-4">
+                        {s.status === "PLANNED" && (
+                          <button
+                            type="button"
+                            onClick={() => remove(s.id)}
+                            className="text-dn-red underline text-xs"
+                            data-testid={`delete-routing-${s.id}`}
+                          >
+                            delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+    </div>
+  );
+}

@@ -24,6 +24,35 @@ type PublicHoliday = {
   is_variable: boolean;
 };
 
+type SectorInput = {
+  sector_id: string;
+  date_local: string;
+  std: string;
+  sta: string;
+  aircraft_reg: string;
+  aircraft_type: string;
+  block_hours: number;
+};
+
+type RosterResult = {
+  status: string;
+  assignments: Assignment[];
+  objective_value: number | null;
+  unassigned_duty_days: string[];
+  diagnostics: Record<string, unknown>;
+  elapsed_s: number;
+};
+
+type AutoGenerateResponse = {
+  result: RosterResult;
+  sectors: SectorInput[];
+};
+
+type Draft = {
+  result: RosterResult;
+  sectors: SectorInput[];
+};
+
 const COUNTRY_OPTIONS = [
   { code: "KE", label: "Kenya" },
   { code: "UG", label: "Uganda" },
@@ -166,6 +195,10 @@ export function RosterPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [holidayCountry, setHolidayCountry] = useState("KE");
   const [holidays, setHolidays] = useState<PublicHoliday[]>([]);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [draftMsg, setDraftMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,6 +249,52 @@ export function RosterPage() {
 
   const days = dateRange(from, to);
 
+  async function autoGenerate() {
+    setGenerating(true);
+    setDraft(null);
+    setDraftMsg(null);
+    try {
+      const resp = await api<AutoGenerateResponse>("/api/v1/roster/auto-generate", {
+        method: "POST",
+        body: JSON.stringify({ horizon_from: from, horizon_to: to }),
+      });
+      setDraft({ result: resp.result, sectors: resp.sectors });
+      if (resp.result.assignments.length === 0) {
+        const reason =
+          (resp.result.diagnostics?.reason as string | undefined) ??
+          "No assignments could be made — check crew type ratings and routings.";
+        setDraftMsg(reason);
+      }
+    } catch (err) {
+      setDraftMsg(err instanceof ApiError ? err.message : "Auto-generate failed");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function publishDraft() {
+    if (!draft || draft.result.assignments.length === 0) return;
+    setPublishing(true);
+    setDraftMsg(null);
+    try {
+      await api("/api/v1/roster/publish", {
+        method: "POST",
+        body: JSON.stringify({
+          horizon_from: from,
+          horizon_to: to,
+          sectors: draft.sectors,
+          assignments: draft.result.assignments,
+        }),
+      });
+      setDraft(null);
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setDraftMsg(err instanceof ApiError ? err.message : "Publish failed");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   return (
     <>
       <Card>
@@ -257,10 +336,61 @@ export function RosterPage() {
                   ))}
                 </select>
               </div>
+              <Button
+                size="sm"
+                onClick={autoGenerate}
+                disabled={generating}
+                data-testid="auto-generate-btn"
+              >
+                {generating ? "Generating…" : "Auto-generate roster"}
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardBody>
+          {(draft || draftMsg) && (
+            <div
+              className="mb-4 rounded-md border border-dn-gold/40 bg-dn-gold/5 p-4"
+              data-testid="draft-banner"
+            >
+              {draft && (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-sm">
+                    <span className="font-medium text-dn-dark">
+                      Draft roster: {draft.result.status}
+                    </span>{" "}
+                    <span className="text-dn-muted">
+                      · {draft.result.assignments.length} duty days assigned
+                      {draft.result.unassigned_duty_days.length > 0 &&
+                        ` · ${draft.result.unassigned_duty_days.length} unassigned`}{" "}
+                      · solved in {draft.result.elapsed_s.toFixed(1)}s
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setDraft(null);
+                        setDraftMsg(null);
+                      }}
+                    >
+                      Discard
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={publishDraft}
+                      disabled={publishing || draft.result.assignments.length === 0}
+                      data-testid="publish-draft-btn"
+                    >
+                      {publishing ? "Publishing…" : "Publish this draft"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {draftMsg && <p className="mt-2 text-sm text-dn-red">{draftMsg}</p>}
+            </div>
+          )}
           {loading ? (
             <p className="text-sm text-dn-muted">Loading…</p>
           ) : error ? (

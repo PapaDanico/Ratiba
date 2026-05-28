@@ -8,6 +8,7 @@ import { CrewPage } from "@/pages/crew";
 import { CurrencyPage } from "@/pages/currency";
 import { LeavePage } from "@/pages/leave";
 import { RosterPage } from "@/pages/roster";
+import { RoutingsPage } from "@/pages/routings";
 import { SettingsPage } from "@/pages/settings";
 import { AuditPage } from "@/pages/audit";
 import { CrewMePage } from "@/pages/me";
@@ -31,6 +32,7 @@ export function App() {
             }
           >
             <Route index element={<DashboardPage />} />
+            <Route path="routings" element={<RoutingsPage />} />
             <Route path="roster" element={<RosterPage />} />
             <Route path="crew" element={<CrewPage />} />
             <Route path="currency" element={<CurrencyPage />} />

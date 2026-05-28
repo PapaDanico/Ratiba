@@ -17,6 +17,8 @@ from app.schemas.roster import (
     AmendRosterRequest,
     AmendRosterResponse,
     AssignmentOut,
+    AutoGenerateRosterRequest,
+    AutoGenerateRosterResponse,
     ConstraintBindingOut,
     ExplainRequest,
     ExplainResponse,
@@ -27,7 +29,7 @@ from app.schemas.roster import (
     PublishRosterResponse,
     RosterResult,
 )
-from app.services import optimiser, roster_service
+from app.services import auto_roster, optimiser, roster_service
 from app.services.crew_roster_pdf import CrewRosterPdfError, generate_crew_roster_pdf
 from app.tasks.roster_job import payload_to_input
 
@@ -54,6 +56,50 @@ async def generate(
         _payload_to_dict(payload),
     )
     return GenerateRosterAcceptedResponse(job_id=job.id, status=job.status)
+
+
+@router.post(
+    "/auto-generate",
+    response_model=AutoGenerateRosterResponse,
+    summary="Build a draft roster from stored crew + schedule (one click)",
+)
+def auto_generate(
+    payload: AutoGenerateRosterRequest,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> AutoGenerateRosterResponse:
+    if payload.horizon_to < payload.horizon_from:
+        raise HTTPException(status_code=422, detail="horizon_to before horizon_from")
+    result, sectors = auto_roster.build_auto_roster(
+        session,
+        operator_id=user.operator_id,
+        horizon_from=payload.horizon_from,
+        horizon_to=payload.horizon_to,
+        base_tz=payload.base_tz,
+        timeout_s=payload.timeout_s,
+    )
+    return AutoGenerateRosterResponse(
+        result=RosterResult(
+            status=result.status,
+            assignments=[
+                AssignmentOut(
+                    duty_day_key=a.duty_day_key,
+                    date_local=a.date_local,
+                    aircraft_reg=a.aircraft_reg,
+                    aircraft_type=a.aircraft_type,
+                    sector_ids=list(a.sector_ids),
+                    captain_id=a.captain_id,
+                    fo_id=a.fo_id,
+                )
+                for a in result.assignments
+            ],
+            objective_value=result.objective_value,
+            unassigned_duty_days=list(result.unassigned_duty_days),
+            diagnostics=result.diagnostics,
+            elapsed_s=result.elapsed_s,
+        ),
+        sectors=sectors,
+    )
 
 
 @router.get(

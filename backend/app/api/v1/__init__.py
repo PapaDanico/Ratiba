@@ -15,6 +15,7 @@ from app.api.v1 import (
     onboarding,
     reference,
     roster,
+    sectors,
     swap,
     training,
 )
@@ -29,6 +30,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(me.router, prefix="/crew/me", tags=["crew-me"])
 api_router.include_router(crew.router, prefix="/crew", tags=["crew"])
 api_router.include_router(roster.router, prefix="/roster", tags=["roster"])
+api_router.include_router(sectors.router, prefix="/sectors", tags=["sectors"])
 api_router.include_router(ftl.router, prefix="/ftl", tags=["ftl"])
 api_router.include_router(training.router, prefix="/training", tags=["training"])
 api_router.include_router(leave.router, prefix="/leave", tags=["leave"])

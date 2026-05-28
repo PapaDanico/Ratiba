@@ -1,11 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
-import { DnLogo } from "@/components/ui/DnLogo";
 import { cn } from "@/lib/cn";
 
 const NAV: Array<{ to: string; label: string; end?: boolean }> = [
   { to: "/", label: "Overview", end: true },
+  { to: "/routings", label: "Routings" },
   { to: "/roster", label: "Roster" },
   { to: "/crew", label: "Crew" },
   { to: "/fleet", label: "Fleet" },
@@ -28,8 +28,6 @@ export function AppShell() {
       <header className="bg-dn-lava tribal-texture">
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <DnLogo variant="light" showText={false} width={40} className="opacity-80" />
-            <div className="w-px h-6 bg-dn-gold/20" />
             <span className="font-display text-2xl text-dn-gold tracking-wide">Ratiba</span>
           </div>
           <div className="flex items-center gap-3">

@@ -53,6 +53,19 @@ class GenerateRosterAcceptedResponse(BaseModel):
     status: str  # QUEUED | RUNNING | FINISHED | FAILED
 
 
+class AutoGenerateRosterRequest(BaseModel):
+    """Build a roster straight from stored data — no hand-assembled payload.
+
+    The backend reads crew, type ratings, currency, scheduled sectors, and
+    leave for the operator over the horizon, then runs the optimiser.
+    """
+
+    horizon_from: date
+    horizon_to: date
+    base_tz: str = "Africa/Nairobi"
+    timeout_s: float = Field(default=30.0, gt=0, le=600)
+
+
 class AssignmentOut(BaseModel):
     duty_day_key: str
     date_local: date
@@ -81,6 +94,12 @@ class JobStatusResponse(BaseModel):
     status: str
     result: RosterResult | None = None
     error: str | None = None
+
+
+class AutoGenerateRosterResponse(BaseModel):
+    result: RosterResult
+    # Echoed back so the client can publish without re-sending the schedule.
+    sectors: list[SectorInputIn]
 
 
 class ExplainRequest(BaseModel):
