@@ -23,24 +23,36 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white border-b border-dn-steel-lt">
+      {/* ── Top bar: dark volcanic header ── */}
+      <header className="bg-dn-lava tribal-texture">
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <span className="inline-block h-2 w-2 rounded-full bg-dn-gold" aria-hidden />
-            <span className="font-display text-2xl text-dn-dark">Ratiba</span>
-            <span className="ml-3 font-mono text-xs uppercase tracking-widest text-dn-steel">
+            {/* Maasai diamond glyph */}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              aria-hidden
+              className="text-dn-gold"
+              fill="currentColor"
+            >
+              <polygon points="7,0 14,7 7,14 0,7" />
+            </svg>
+            <span className="font-display text-2xl text-dn-gold tracking-wide">Ratiba</span>
+            <span className="ml-3 font-mono text-xs uppercase tracking-widest text-dn-gold/40">
               DN Consultancy
             </span>
           </div>
           <div className="flex items-center gap-3">
             {user && (
-              <span className="text-sm text-dn-muted">
+              <span className="text-sm text-dn-gold/60">
                 {user.full_name} · {user.role.toLowerCase().replace(/_/g, " ")}
               </span>
             )}
             <Button
               variant="ghost"
               size="sm"
+              className="text-dn-gold/70 hover:text-dn-gold hover:bg-white/10"
               onClick={() => {
                 logout();
                 navigate("/login");
@@ -50,7 +62,12 @@ export function AppShell() {
             </Button>
           </div>
         </div>
-        <nav className="mx-auto max-w-7xl px-6 flex gap-1 -mb-px">
+
+        {/* Maasai geometric stripe separator */}
+        <div className="tribal-stripe" />
+
+        {/* Navigation tabs */}
+        <nav className="mx-auto max-w-7xl px-6 flex gap-1 bg-dn-lava/80">
           {NAV.map((item) => (
             <NavLink
               key={item.to}
@@ -60,8 +77,8 @@ export function AppShell() {
                 cn(
                   "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
                   isActive
-                    ? "border-dn-gold text-dn-dark"
-                    : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-steel-lt",
+                    ? "border-dn-gold text-dn-gold"
+                    : "border-transparent text-dn-gold/50 hover:text-dn-gold/80 hover:border-dn-gold/30",
                 )
               }
             >
@@ -70,11 +87,23 @@ export function AppShell() {
           ))}
         </nav>
       </header>
+
+      {/* ── Main content ── */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-8">
         <Outlet />
       </main>
-      <footer className="border-t border-dn-gold/30 py-4 text-center text-xs text-dn-muted">
-        © DN Consultancy · KCARs 2025 Part 8 compliant
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-dn-gold/20 py-4 text-center text-xs text-dn-muted">
+        <span className="inline-flex items-center gap-2">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="#C9A84C" aria-hidden>
+            <polygon points="4,0 8,4 4,8 0,4" />
+          </svg>
+          DN Consultancy · KCARs 2025 Part 8 compliant
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="#C9A84C" aria-hidden>
+            <polygon points="4,0 8,4 4,8 0,4" />
+          </svg>
+        </span>
       </footer>
     </div>
   );

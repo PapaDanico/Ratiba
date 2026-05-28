@@ -6,11 +6,12 @@ type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-dn-steel text-white hover:bg-dn-steel/90 disabled:bg-dn-steel/40 focus-visible:ring-dn-steel",
+    "bg-dn-steel text-white hover:bg-dn-steel/85 disabled:bg-dn-steel/40 focus-visible:ring-dn-steel",
   secondary:
-    "bg-white text-dn-dark border border-dn-steel-lt hover:bg-dn-fog focus-visible:ring-dn-steel",
-  ghost: "bg-transparent text-dn-dark hover:bg-dn-fog focus-visible:ring-dn-muted",
-  danger: "bg-dn-red text-white hover:bg-dn-red/90 disabled:bg-dn-red/40 focus-visible:ring-dn-red",
+    "bg-white text-dn-dark border border-dn-sand hover:bg-dn-fog focus-visible:ring-dn-steel",
+  ghost: "bg-transparent text-dn-dark hover:bg-dn-sand/60 focus-visible:ring-dn-muted",
+  danger:
+    "bg-dn-red text-white hover:bg-dn-red/90 disabled:bg-dn-red/40 focus-visible:ring-dn-red",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -35,7 +36,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-md font-medium transition-colors",
+        "inline-flex items-center justify-center rounded font-medium transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-dn-fog",
         "disabled:cursor-not-allowed",
         variantClasses[variant],
