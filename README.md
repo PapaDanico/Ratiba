@@ -2,45 +2,70 @@
 
 > *Swahili for "schedule"* — AI-anchored crew rostering for sub-scale East African aviation operators.
 
-Ratiba combines a deterministic optimiser (Google OR-Tools CP-SAT) with LLM-anchored
-configuration and a conversational crew interface, purpose-built for operators with
-3–10 aircraft and 15–60 flight crew, and KCARs 2025 Part 8 FTL/FRMS compliance.
+Ratiba is a working MVP for the segment that enterprise tools (Sabre AirOps,
+Jeppesen NetLine, AIMS) structurally cannot serve: 3–10 aircraft, 15–60 flight
+crew, KCARs 2025 Part 8 compliance, run by a single Crewing Officer on Excel
+today.
 
-See [`docs/Ratiba_Project_Plan_v1.md`](docs/Ratiba_Project_Plan_v1.md) for the full plan.
+It combines a deterministic optimiser (Google OR-Tools CP-SAT) with LLM-anchored
+configuration (Claude Haiku 4.5 for the bot, Claude Sonnet 4.5 for OM-A
+parsing) and a conversational crew interface (Telegram + responsive mobile web).
+
+## Try it — 10 minutes
+
+You need Docker and Docker Compose. Nothing else — no cloud credentials,
+no API keys, no contracts.
+
+```bash
+git clone https://github.com/papadanico/ratiba.git
+cd ratiba
+cp .env.example .env
+docker compose up --build
+# wait for "Application startup complete." then in a second terminal:
+docker compose exec backend alembic upgrade head
+docker compose exec backend python scripts/seed.py --demo
+```
+
+Open http://localhost:3000 and log in:
+
+- **Acacia Air** — `officer@demo-aoc-ac.example.aero` / `hunter2pass`
+- **Maendeleo Aviation** — `officer@demo-aoc-ma.example.aero` / `hunter2pass`
+
+You'll find two fictional operators with realistic crew, mixed currency states,
+a 14-day published roster, pending leave + swap requests, and a generated KCAA
+audit pack ready to download.
+
+See [`docs/walkthrough.md`](docs/walkthrough.md) for a guided click-path through
+every screen + the questions whose answers we want from you.
+
+## What's in the box
+
+| Capability                                | Where                                     |
+|-------------------------------------------|-------------------------------------------|
+| KCARs 2025 Part 8 FTL engine — 13 rules   | `backend/app/services/ftl_engine.py`      |
+| OR-Tools CP-SAT roster optimiser           | `backend/app/services/optimiser.py`       |
+| Crewing-Officer dashboard                  | `frontend/src/pages/`                     |
+| `/crew/me` mobile-first pilot web view     | `frontend/src/pages/me/`                  |
+| Telegram bot + LLM intent routing          | `bot/`                                    |
+| KCAA-presentable audit pack (PDF)          | `backend/app/services/audit_pack.py`      |
+| Append-only audit trail (PG trigger)       | `backend/alembic/versions/0001_initial_schema.py` |
+| CSV importers for onboarding               | `backend/app/services/imports.py`         |
+
+For the full plan see [`docs/Ratiba_Project_Plan_v1.md`](docs/Ratiba_Project_Plan_v1.md).
 
 ---
 
-## Quick start
-
-You need Docker and Docker Compose.
-
-```bash
-cp .env.example .env          # fill in ANTHROPIC_API_KEY etc. when you need them
-docker compose up --build
-```
-
-That brings up:
+## Service map
 
 | Service  | URL                        | Description                       |
 |----------|----------------------------|-----------------------------------|
 | frontend | http://localhost:3000      | React + Vite dashboard            |
 | backend  | http://localhost:8000      | FastAPI; OpenAPI at `/docs`       |
 | backend healthcheck | http://localhost:8000/healthz |                      |
+| backend readiness  | http://localhost:8000/readyz  |                      |
 | db       | localhost:5432             | PostgreSQL 16                     |
 | redis    | localhost:6379             | Redis 7                           |
-| bot      | (long-poll, no port)       | Telegram bot worker               |
-
-To apply database migrations:
-
-```bash
-docker compose exec backend alembic upgrade head
-```
-
-To seed sample data for development:
-
-```bash
-docker compose exec backend python scripts/seed.py
-```
+| bot      | (long-poll, no port)       | Telegram bot worker (idle until token set) |
 
 ---
 
