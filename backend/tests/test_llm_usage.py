@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -28,14 +27,26 @@ def stub_anthropic(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 
 
 def test_emits_structured_log_line(
-    stub_anthropic: MagicMock, caplog: pytest.LogCaptureFixture
+    stub_anthropic: MagicMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    with caplog.at_level(logging.INFO, logger="ratiba.llm"):
-        result = llm_client.conversational_route(system="sys", user_message="hi")
+    # Monkeypatch the module-level logger directly rather than relying on
+    # pytest's caplog / a root handler — global logging config is reconfigured
+    # by the FastAPI app's startup in other tests, which makes log-capture
+    # order-dependent. Asserting on the logger's call args is hermetic and
+    # tests exactly the contract: a structured "llm_usage" line is emitted.
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    def _record(msg: str, *_args: Any, **kwargs: Any) -> None:
+        calls.append((msg, kwargs.get("extra", {})))
+
+    monkeypatch.setattr(llm_client.log, "info", _record)
+
+    result = llm_client.conversational_route(system="sys", user_message="hi")
     assert result.input_tokens == 42
-    records = [r for r in caplog.records if r.message == "llm_usage"]
-    assert len(records) == 1
-    payload: dict[str, Any] = records[0].__dict__
+
+    usage = [extra for msg, extra in calls if msg == "llm_usage"]
+    assert len(usage) == 1
+    payload = usage[0]
     assert payload["call_site"] == "conversational_route"
     assert payload["model"] == "claude-haiku-4-5"
     assert payload["input_tokens"] == 42

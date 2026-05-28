@@ -1,24 +1,38 @@
-"""JWT and password hashing primitives. Phase 3 wires these into endpoints."""
+"""JWT and password hashing primitives.
+
+Uses the ``bcrypt`` library directly rather than ``passlib`` — passlib
+1.7.4 is incompatible with bcrypt >= 4.1 (it feeds bcrypt a >72-byte
+self-calibration value that modern bcrypt hard-rejects).
+"""
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import bcrypt
 from jose import jwt
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt only considers the first 72 bytes of a password and raises on
+# anything longer; truncate to keep hashing + verification consistent.
+_BCRYPT_MAX_BYTES = 72
+
+
+def _prepare(plain: str) -> bytes:
+    return plain.encode("utf-8")[:_BCRYPT_MAX_BYTES]
 
 
 def hash_password(plain: str) -> str:
     """Hash a plaintext password with bcrypt."""
-    return _pwd_context.hash(plain)
+    return bcrypt.hashpw(_prepare(plain), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Verify a plaintext password against a bcrypt hash."""
-    return bool(_pwd_context.verify(plain, hashed))
+    try:
+        return bcrypt.checkpw(_prepare(plain), hashed.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def create_access_token(subject: str, extra: dict[str, Any] | None = None) -> str:

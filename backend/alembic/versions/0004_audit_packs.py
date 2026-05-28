@@ -1,7 +1,7 @@
 """Phase 5 — KCAA audit pack storage.
 
 Revision ID: 0004_audit_packs
-Revises: 0003_operator_weights_and_llm_usage
+Revises: 0003_operator_weights
 Create Date: 2026-05-28
 
 The PDF bytes live on disk under ``backend/audit_packs/`` (or
@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0004_audit_packs"
-down_revision: str | None = "0003_operator_weights_and_llm_usage"
+down_revision: str | None = "0003_operator_weights"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

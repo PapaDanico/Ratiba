@@ -1,6 +1,6 @@
 """Phase 4.5 — operator soft-weight overrides + LLM usage telemetry table.
 
-Revision ID: 0003_operator_weights_and_llm_usage
+Revision ID: 0003_operator_weights
 Revises: 0002_pilot_pairing
 Create Date: 2026-05-28
 
@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0003_operator_weights_and_llm_usage"
+revision: str = "0003_operator_weights"
 down_revision: str | None = "0002_pilot_pairing"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

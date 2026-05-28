@@ -285,7 +285,9 @@ def _publish_demo_roster(
             for sector_idx in range(2):
                 seg_std = std + timedelta(hours=sector_idx * 2)
                 seg_sta = seg_std + timedelta(hours=1, minutes=45)
-                sector_id = f"{operator.aoc_number}-S{counter:04d}"
+                # flight_no is VARCHAR(16); keep the demo id compact but
+                # operator-distinct via the AOC's trailing segment.
+                sector_id = f"{operator.aoc_number.split('-')[-1]}-S{counter:04d}"
                 counter += 1
                 sectors.append(
                     SectorInputIn(
