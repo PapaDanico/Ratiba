@@ -21,6 +21,10 @@ router = APIRouter()
 
 Importer = Callable[..., imports.ImportResult]
 
+# Reject oversized uploads before reading them fully into memory — protects a
+# small instance from a memory-exhaustion DoS. Generous for any CSV onboarding.
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+
 
 def _run(
     importer: Importer,
@@ -29,7 +33,13 @@ def _run(
     file: UploadFile,
     commit: bool,
 ) -> dict[str, Any]:
-    content = file.file.read()
+    # Read one byte past the cap so we can detect (not just truncate) overflow.
+    content = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"file exceeds the {MAX_UPLOAD_BYTES // (1024 * 1024)} MB limit",
+        )
     try:
         result = importer(session, user=user, content=content, commit=commit)
     except imports.ImportError_ as exc:

@@ -4,6 +4,13 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Security headers (server-level → inherited by both location blocks, since
+    # neither sets its own add_header). Don't leak the nginx version.
+    server_tokens off;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;

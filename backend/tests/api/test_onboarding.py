@@ -132,3 +132,40 @@ def test_type_rating_for_unknown_crew_errors(
     body = _upload(client, "type-ratings", TYPE_RATINGS_CSV)
     assert body["inserted"] == 0
     assert any("not found" in e["message"] for e in body["errors"])
+
+
+def test_oversized_upload_rejected_413(auth_client: tuple[TestClient, User]) -> None:
+    client, _ = auth_client
+    huge = b"x" * (5 * 1024 * 1024 + 1)  # 1 byte over the 5 MB cap
+    resp = client.post(
+        "/api/v1/onboarding/crew",
+        files={"file": ("big.csv", io.BytesIO(huge), "text/csv")},
+    )
+    assert resp.status_code == 413, resp.text
+
+
+def test_too_many_rows_rejected_400(auth_client: tuple[TestClient, User]) -> None:
+    client, _ = auth_client
+    header = (
+        b"employee_no,first_name,last_name,role,date_of_hire,date_of_birth,"
+        b"base_station,contract_type\n"
+    )
+    row = b"IF%05d,A,B,CAPT,2020-01-01,1980-01-01,HKJK,FULL_TIME\n"
+    body = header + b"".join(row % i for i in range(20_001))
+    resp = client.post(
+        "/api/v1/onboarding/crew",
+        files={"file": ("many.csv", io.BytesIO(body), "text/csv")},
+    )
+    assert resp.status_code == 400, resp.text
+    assert "row limit" in resp.json()["detail"]
+
+
+def test_binary_upload_rejected_400(auth_client: tuple[TestClient, User]) -> None:
+    client, _ = auth_client
+    binary = bytes(range(256)) * 16  # non-UTF-8 bytes
+    resp = client.post(
+        "/api/v1/onboarding/crew",
+        files={"file": ("image.csv", io.BytesIO(binary), "text/csv")},
+    )
+    assert resp.status_code == 400, resp.text
+    assert "UTF-8" in resp.json()["detail"]

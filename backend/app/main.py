@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -46,6 +47,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+
+    # Defense-in-depth: never run a real deployment on the baked-in dev secret
+    # (it would let anyone forge JWTs). Render sets RENDER=true; on Render the
+    # secret is injected (render.yaml generateValue), so this only trips on a
+    # genuine misconfig. Local dev/tests (no RENDER var) are unaffected.
+    if os.getenv("RENDER") and settings.secret_key.startswith("change_me_dev_only"):
+        raise RuntimeError(
+            "SECRET_KEY is the insecure dev default in a deployed environment — "
+            "set a strong SECRET_KEY before starting."
+        )
+
     app = FastAPI(
         title="Ratiba",
         description="AI-anchored crew rostering platform.",

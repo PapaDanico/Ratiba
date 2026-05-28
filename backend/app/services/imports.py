@@ -61,15 +61,28 @@ class ImportResult:
         }
 
 
+# Cap parsed rows so a pathological upload can't exhaust memory/time. Far
+# above any realistic sub-scale operator onboarding batch.
+MAX_ROWS = 20_000
+
+
 def _read_csv(content: bytes, required: tuple[str, ...]) -> list[dict[str, str]]:
-    text = content.decode("utf-8-sig")
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ImportError_("file is not valid UTF-8 text — upload a CSV") from exc
     reader = csv.DictReader(io.StringIO(text))
     if reader.fieldnames is None:
         raise ImportError_("CSV is empty")
     missing = [c for c in required if c not in reader.fieldnames]
     if missing:
         raise ImportError_(f"missing required columns: {', '.join(missing)}")
-    return list(reader)
+    rows: list[dict[str, str]] = []
+    for row in reader:
+        if len(rows) >= MAX_ROWS:
+            raise ImportError_(f"CSV exceeds the {MAX_ROWS:,}-row limit — split it into batches")
+        rows.append(row)
+    return rows
 
 
 def _parse_date(value: str, *, row: int, field_name: str) -> date:
