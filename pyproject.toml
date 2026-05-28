@@ -122,7 +122,10 @@ ignore_errors = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["backend/tests"]
-pythonpath = ["backend"]
+# "backend" exposes the `app` package; "." (repo root) exposes the `bot`
+# package, whose tests live under backend/tests/bot. CI sets no PYTHONPATH,
+# so both roots must be declared here for collection to succeed.
+pythonpath = ["backend", "."]
 asyncio_mode = "auto"
 addopts = [
     "-ra",
