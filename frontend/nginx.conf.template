@@ -9,9 +9,17 @@ server {
     gzip_min_length 1024;
     gzip_types text/css application/javascript application/json image/svg+xml text/plain;
 
+    # Dynamic resolution so nginx sends SNI on HTTPS upstreams.
+    # Without this nginx resolves the hostname once at startup, connects by IP,
+    # and Render's edge rejects the handshake (no SNI = wrong certificate).
+    resolver 8.8.8.8 valid=30s ipv6=off;
+
     # Proxy backend routes: API, health, FastAPI docs
     location ~ ^/(api|healthz|version|docs|redoc|openapi\.json) {
-        proxy_pass $BACKEND_URL;
+        # Use a variable so nginx resolves per-request (enables SNI).
+        set $upstream $BACKEND_URL;
+        proxy_pass $upstream;
+        proxy_ssl_server_name on;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
