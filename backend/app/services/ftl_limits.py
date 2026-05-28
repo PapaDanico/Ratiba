@@ -8,6 +8,7 @@ accepted set exists so callers don't need to handle None.
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import uuid
 from typing import Any
@@ -35,10 +36,8 @@ def _apply_overrides(overrides: dict[str, Any]) -> dict[str, Any]:
                 # (e.g. fdp_aug_3_pilot, tz_recovery).
                 typed_child: Any = child
                 if group and all(isinstance(k, int) for k in group):
-                    try:
+                    with contextlib.suppress(ValueError):
                         typed_child = int(child)
-                    except ValueError:
-                        pass
                 group[typed_child] = value
         elif dotted_key in merged:
             merged[dotted_key] = value

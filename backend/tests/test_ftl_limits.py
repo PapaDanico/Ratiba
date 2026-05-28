@@ -5,18 +5,14 @@ from __future__ import annotations
 import copy
 import uuid
 from datetime import UTC, datetime
-from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from app.services import ftl_engine
-from app.services.ftl_engine import LIMITS, FdpInput
+from app.services.ftl_engine import LIMITS
 from app.services.ftl_limits import _apply_overrides, check_fdp_for_operator, resolve_limits
 from tests.ftl._factories import fdp
-
 
 # ---------------------------------------------------------------------------
 # _apply_overrides — unit tests
@@ -128,7 +124,7 @@ def test_resolve_limits_merges_final_values() -> None:
 
     call_count = 0
 
-    def scalars_side_effect(stmt):  # noqa: ANN001
+    def scalars_side_effect(stmt):
         nonlocal call_count
         call_count += 1
         mock = MagicMock()
@@ -147,7 +143,9 @@ def test_resolve_limits_merges_final_values() -> None:
     assert result["rest_home_floor_h"] == 11.0
     assert result["fdp_max_basic_by_band"]["WOCL"] == 10.0
     # Non-overridden keys remain at baseline
-    assert result["fdp_max_basic_by_band"]["DAY_PEAK"] == LIMITS["fdp_max_basic_by_band"]["DAY_PEAK"]
+    assert (
+        result["fdp_max_basic_by_band"]["DAY_PEAK"] == LIMITS["fdp_max_basic_by_band"]["DAY_PEAK"]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +162,7 @@ def test_check_fdp_for_operator_uses_resolved_limits() -> None:
 
     call_count = 0
 
-    def scalars_side_effect(stmt):  # noqa: ANN001
+    def scalars_side_effect(stmt):
         nonlocal call_count
         call_count += 1
         mock = MagicMock()
