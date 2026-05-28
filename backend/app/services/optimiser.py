@@ -52,7 +52,8 @@ DEFAULT_WEIGHTS: dict[str, float] = {
 }
 
 # Hours of buffer either side of the first/last sector to model report and
-# off-duty time. KCARs 2025 Part 8 typically allows ~1 h report, ~30 min after.
+# off-duty time. The KCAA Flight Duty Time Scheme typically allows ~1 h report,
+# ~30 min after.
 PRE_DUTY_BUFFER_H: float = 1.0
 POST_DUTY_BUFFER_H: float = 0.5
 

@@ -1,7 +1,8 @@
 """FTL validation endpoints — Phase 1.
 
-These endpoints are read-style: they evaluate FDPs against KCARs 2025 Part 8
-rules without writing to the database. Phase 2's optimiser calls
+These endpoints are read-style: they evaluate FDPs against the KCAA Flight
+Duty Time Scheme (CAA-AC-OPS033) rules without writing to the database.
+Phase 2's optimiser calls
 ``app.services.ftl_engine.check_fdp`` directly; this surface exists for
 clients (dashboard, bot) that need a structured legality verdict.
 """
@@ -79,7 +80,7 @@ def _verdict_to_out(v: ftl_engine.FtlVerdict) -> FtlVerdictOut:
 @router.post(
     "/validate-fdp",
     response_model=ValidateFdpResponse,
-    summary="Validate a single FDP against KCARs 2025 Part 8",
+    summary="Validate a single FDP against the KCAA Flight Duty Time Scheme",
 )
 async def validate_fdp(payload: FdpInputIn) -> ValidateFdpResponse:
     aggregated, trace = ftl_engine.validate_fdp(_to_engine(payload))

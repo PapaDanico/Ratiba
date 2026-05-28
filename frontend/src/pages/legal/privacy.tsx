@@ -75,8 +75,9 @@ export function PrivacyPage() {
           </li>
           <li>
             <strong>Compliance with a legal obligation</strong> — to maintain crew FTL, currency,
-            and duty records required under the Kenya Civil Aviation Regulations (KCARs) 2025 Part 8
-            and to support audit by the Kenya Civil Aviation Authority (KCAA).
+            and duty records required under the KCAA Flight Duty Time Scheme (CAA-AC-OPS033) and
+            Kenya’s civil aviation regulations, and to support audit by the Kenya Civil Aviation
+            Authority (KCAA).
           </li>
           <li>
             <strong>Consent</strong> — where required, in particular for certain sensitive personal

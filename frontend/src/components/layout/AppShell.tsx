@@ -174,7 +174,7 @@ export function AppShell() {
           <svg width="8" height="8" viewBox="0 0 8 8" fill="#C9A84C" aria-hidden>
             <polygon points="4,0 8,4 4,8 0,4" />
           </svg>
-          DN Consultancy · KCARs 2025 Part 8 compliant
+          DN Consultancy · Aligned with the KCAA Flight Duty Time Scheme &amp; ICAO Annex 6
           <svg width="8" height="8" viewBox="0 0 8 8" fill="#C9A84C" aria-hidden>
             <polygon points="4,0 8,4 4,8 0,4" />
           </svg>

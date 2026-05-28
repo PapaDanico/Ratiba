@@ -21,8 +21,8 @@ export function TermsPage() {
         <p>
           Ratiba provides tools for building flight routings, generating and publishing crew
           rosters, tracking training and currencies, managing crew documents, and producing
-          compliance and payroll exports aligned to the Kenya Civil Aviation Regulations (KCARs)
-          2025 Part 8. Features may change, and some environments are provided for{" "}
+          compliance and payroll exports aligned to the KCAA Flight Duty Time Scheme (CAA-AC-OPS033)
+          and ICAO Annex 6. Features may change, and some environments are provided for{" "}
           <strong>demonstration and evaluation</strong> only.
         </p>
       </Section>
@@ -59,12 +59,12 @@ export function TermsPage() {
 
       <Section heading="6. Compliance disclaimer">
         <p>
-          Ratiba is a decision-support tool that assists with KCARs 2025 Part 8 Flight Time
-          Limitation checks, record-keeping, and audit preparation. It does <strong>not</strong>{" "}
-          replace the AOC holder’s legal responsibilities. The Operator and its accountable managers
-          remain solely responsible for regulatory compliance, the legality of published rosters,
-          and operational safety decisions. Always verify outputs against your approved Operations
-          Manual and applicable regulations.
+          Ratiba is a decision-support tool that assists with Flight Time Limitation (FTL) checks
+          under the KCAA Flight Duty Time Scheme (CAA-AC-OPS033), record-keeping, and audit
+          preparation. It does <strong>not</strong> replace the AOC holder’s legal responsibilities.
+          The Operator and its accountable managers remain solely responsible for regulatory
+          compliance, the legality of published rosters, and operational safety decisions. Always
+          verify outputs against your approved Operations Manual and applicable regulations.
         </p>
       </Section>
 

@@ -180,7 +180,7 @@ export function DashboardPage() {
           Welcome back, {user?.full_name.split(" ")[0]}
         </h1>
         <p className="mt-1 text-dn-muted text-sm">
-          Operations overview — KCARs 2025 Part 8 baseline.
+          Operations overview — KCAA Flight Duty Time Scheme baseline.
         </p>
       </div>
       {error && (

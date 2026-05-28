@@ -85,7 +85,7 @@ export function LoginPage() {
             Crew rostering for East African aviation operations.
           </p>
           <p className="mt-6 font-mono text-xs uppercase tracking-widest text-dn-gold/30">
-            KCARs 2025 Part 8
+            KCAA FTL Scheme · ICAO Annex 6
           </p>
         </div>
       </div>

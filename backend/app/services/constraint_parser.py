@@ -3,7 +3,7 @@
 Pipeline: an operator's OM-A flight-time-limitation chapter (plain text)
 is handed to Claude Sonnet, which is asked to extract the numeric limits
 that map onto Ratiba's internal FTL rule schema. Each extracted value is
-diffed against the KCARs 2025 baseline (:data:`app.services.ftl_engine.LIMITS`)
+diffed against the KCAA scheme baseline (:data:`app.services.ftl_engine.LIMITS`)
 so a crewing officer reviews *changes*, not a wall of numbers.
 
 The output is intentionally a flat ``rule_key -> value`` map (nested
@@ -104,9 +104,9 @@ def _build_system_prompt() -> str:
         "You are an aviation flight-time-limitations (FTL) analyst. You are given "
         "the flight-time-limitation chapter of an operator's Operations Manual "
         "Part A (OM-A). Extract the operator's numeric limits and map each onto "
-        "the rule keys below. The baseline is the Kenyan KCARs 2025 Part 8 "
-        "regulation; only return a key if the OM-A text actually states a value "
-        "for it.\n\n"
+        "the rule keys below. The baseline is the Kenyan KCAA Flight Duty Time "
+        "Scheme (CAA-AC-OPS033); only return a key if the OM-A text actually "
+        "states a value for it.\n\n"
         "Return ONLY a JSON object (no prose, no code fences) of the form:\n"
         '{"rules": [{"rule_key": "<key>", "value": <number>, '
         '"source_excerpt": "<verbatim quote from the OM-A>", '
