@@ -24,15 +24,16 @@ describe("DN brand tokens", () => {
   });
 
   it("uses the exact hex values from docs/brand-tokens.md", () => {
-    expect(colors?.dark).toBe("#1C1C1C");
-    expect(colors?.steel).toBe("#4A7FA5");
-    expect(colors?.["steel-lt"]).toBe("#D6E4F0");
+    // Savanna Sky palette — see docs/brand-tokens.md
+    expect(colors?.dark).toBe("#1E0F05");
+    expect(colors?.steel).toBe("#1B4F72");
+    expect(colors?.["steel-lt"]).toBe("#D0E8F5");
     expect(colors?.gold).toBe("#C9A84C");
-    expect(colors?.["gold-lt"]).toBe("#FFF8E6");
-    expect(colors?.fog).toBe("#F4F4F2");
-    expect(colors?.muted).toBe("#6B7280");
-    expect(colors?.green).toBe("#1E8449");
-    expect(colors?.red).toBe("#C0392B");
-    expect(colors?.amber).toBe("#D4AC0D");
+    expect(colors?.["gold-lt"]).toBe("#FEF3CC");
+    expect(colors?.fog).toBe("#F7EFE0");
+    expect(colors?.muted).toBe("#7D6245");
+    expect(colors?.green).toBe("#1A6B40");
+    expect(colors?.red).toBe("#A83822");
+    expect(colors?.amber).toBe("#C47B2E");
   });
 });
