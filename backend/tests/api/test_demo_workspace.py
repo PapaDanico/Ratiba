@@ -43,7 +43,7 @@ def test_create_workspace_then_login_and_use(anon_client: TestClient) -> None:
         "/api/v1/auth/demo-workspace",
         json={
             "full_name": "Test Evaluator",
-            "email": "eval1@example.test",
+            "email": "eval1@evaluator.example",
             "password": "supersecret1",
             "operator_name": "Savanna Air",
         },
@@ -51,12 +51,12 @@ def test_create_workspace_then_login_and_use(anon_client: TestClient) -> None:
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["operator_name"] == "Savanna Air"
-    assert body["email"] == "eval1@example.test"
+    assert body["email"] == "eval1@evaluator.example"
 
     # The returned credentials log in.
     login = anon_client.post(
         "/api/v1/auth/login",
-        json={"email": "eval1@example.test", "password": "supersecret1"},
+        json={"email": "eval1@evaluator.example", "password": "supersecret1"},
     )
     assert login.status_code == 200, login.text
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
@@ -84,7 +84,7 @@ def test_create_workspace_then_login_and_use(anon_client: TestClient) -> None:
 def test_duplicate_email_conflicts(anon_client: TestClient) -> None:
     payload = {
         "full_name": "Dup User",
-        "email": "dup@example.test",
+        "email": "dup@evaluator.example",
         "password": "supersecret1",
     }
     assert anon_client.post("/api/v1/auth/demo-workspace", json=payload).status_code == 201
@@ -94,7 +94,7 @@ def test_duplicate_email_conflicts(anon_client: TestClient) -> None:
 def test_short_password_rejected(anon_client: TestClient) -> None:
     resp = anon_client.post(
         "/api/v1/auth/demo-workspace",
-        json={"full_name": "Shorty", "email": "short@example.test", "password": "abc"},
+        json={"full_name": "Shorty", "email": "short@evaluator.example", "password": "abc"},
     )
     assert resp.status_code == 422
 
@@ -107,7 +107,7 @@ def test_rate_limited_after_burst(anon_client: TestClient) -> None:
             "/api/v1/auth/demo-workspace",
             json={
                 "full_name": f"Burst {i}",
-                "email": f"burst{i}@example.test",
+                "email": f"burst{i}@evaluator.example",
                 "password": "supersecret1",
             },
         )
