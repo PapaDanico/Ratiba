@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -250,10 +250,29 @@ export function LoginPage() {
                   </Button>
                   <p className="text-xs text-dn-muted">
                     Your workspace is private and comes pre-loaded with sample crew, aircraft, and
-                    flights so you can try the full flow right away.
+                    flights so you can try the full flow right away. By creating a workspace you
+                    agree to our{" "}
+                    <Link to="/terms" className="underline">
+                      Terms of Use
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy" className="underline">
+                      Privacy Policy
+                    </Link>
+                    .
                   </p>
                 </form>
               )}
+
+              <p className="pt-2 text-center text-xs text-dn-muted">
+                <Link to="/privacy" className="underline">
+                  Privacy Policy
+                </Link>{" "}
+                ·{" "}
+                <Link to="/terms" className="underline">
+                  Terms of Use
+                </Link>
+              </p>
             </div>
           </div>
         </div>

@@ -93,6 +93,15 @@ export function AppShell() {
             <polygon points="4,0 8,4 4,8 0,4" />
           </svg>
         </span>
+        <div className="mt-1">
+          <NavLink to="/privacy" className="underline hover:text-dn-dark">
+            Privacy Policy
+          </NavLink>
+          <span className="mx-2">·</span>
+          <NavLink to="/terms" className="underline hover:text-dn-dark">
+            Terms of Use
+          </NavLink>
+        </div>
       </footer>
     </div>
   );

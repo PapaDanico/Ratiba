@@ -18,6 +18,8 @@ import { SwapsPage } from "@/pages/swaps";
 import { NoticesPage } from "@/pages/notices";
 import { FleetPage } from "@/pages/fleet";
 import { ConstraintsPage } from "@/pages/constraints";
+import { PrivacyPage } from "@/pages/legal/privacy";
+import { TermsPage } from "@/pages/legal/terms";
 
 export function App() {
   return (
@@ -25,6 +27,8 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="/crew/me" element={<CrewMePage />} />
           <Route
             element={
