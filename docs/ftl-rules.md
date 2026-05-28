@@ -11,20 +11,37 @@ Each rule below maps 1:1 to a pure function in that module, and to ≥1 test in
   time, flight duty periods (FDP), duty periods and rest, and may permit an
   approved **Fatigue Risk Management System (FRMS)** (ICAO Doc 9966). ICAO
   does **not** prescribe universal numbers.
-- **Kenya — prescriptive limits:** the **KCAA Flight Duty Time Scheme**
-  (Advisory Circular **CAA-AC-OPS033**, a CAP 371-derived scheme), made
-  under the Civil Aviation (Operation of Aircraft) Regulations 2025.
-- **Kenya — FRMS:** the **Civil Aviation (Fatigue Management) Regulations
-  2025** were, at the time of writing, at an advanced stage awaiting
-  publication in the Kenya Gazette. The engine's `REQUIRES_FRMS_DEROGATION`
-  state corresponds to duties acceptable only under an approved FRMS.
+- **Kenya — how the numbers are set:** KCAA Advisory Circular
+  **CAA-AC-OPS033 "Crew Flight and Duty Time Scheme" (June 2018)** is
+  *guidance*. By regulation each **operator** must build its **own Flight &
+  Duty Time scheme, approved by the Authority** and held in the OM-A; that
+  approved scheme — not the AC — carries the binding numeric table. A scheme
+  "may be more restrictive but not less restrictive" than the regulatory
+  factors. Ratiba therefore ships a conservative **default baseline** that an
+  operator overrides with its approved scheme via the OM-A parser
+  (`app.services.constraint_parser` → `ftl_rules`).
+- **Kenya — FRMS:** prescriptive FTLs are always required; FRMS is the
+  performance-based enhancement (ICAO Doc 9966; ICAO/IATA/IFALPA *Fatigue
+  Management Guide*). The engine's `REQUIRES_FRMS_DEROGATION` state marks
+  duties acceptable only under an approved FRMS / fatigue safety case.
 
-> **Status:** working baseline. The numeric limits in `LIMITS` are aligned
-> to CAP 371 / EASA Part-ORO conventions and **must be confirmed against the
-> authoritative CAA-AC-OPS033 tables** (and the gazetted Fatigue Management
-> Regulations 2025) before operational reliance. The rule IDs
-> `KCAR-P8-*` are stable internal identifiers, **not** regulatory section
-> numbers.
+### Explicit figures stated in CAA-AC-OPS033 (baseline honours these)
+
+| AC reference | Provision | Engine |
+|---|---|---|
+| §4.6.3 | Max FDP **14 consecutive hours in 24** | `fdp_scheduled_ceiling_basic_h = 14`, capped in `rule_max_fdp_basic` (band table is more restrictive at ≤13 h) |
+| §4.6.1 | Min rest **typically 10 h**, protecting **8 h sleep opportunity** | `rest_away_floor_h = 10`, `min_sleep_opportunity_h = 8` (home floor 12 h is more restrictive) |
+| §4.6.1 | Rest after an extended FDP **≥ preceding duty period** | `rule_min_rest`: `floor = max(floor, preceding_duty)` |
+| §3.4 / §4.6.7 | Commander's discretion: report each use; **>2 h over limits → report to the Authority**; required rest increased by the overrun | `discretion_max_extension_h = 2`; >2 h flagged not-plannable |
+| §4.6.8 | Reserve: **8 h protected sleep opportunity** in 24 h before the called flight | `min_sleep_opportunity_h` (reserve-specific rule = roadmap) |
+| §4.6.2 | Weekly recovery emphasised (two nights restores alertness) | weekly-rest rule = roadmap (operator scheme value needed) |
+
+> **Status:** working baseline aligned to CAP 371 / EASA conventions and to
+> the explicit CAA-AC-OPS033 figures above. The **FDP table, cumulative
+> caps, standby, split-duty and time-zone numbers are not fixed by the AC** —
+> they come from each operator's approved scheme and must be loaded per
+> operator before operational reliance. Rule IDs `KCAR-P8-*` are stable
+> internal identifiers, **not** regulatory section numbers.
 
 ## Baseline decision
 

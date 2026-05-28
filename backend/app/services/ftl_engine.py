@@ -45,23 +45,32 @@ from app.models.ftl import FdpType, LegalityState
 
 LIMITS: Final[dict[str, Any]] = {
     # Maximum FDP for a 2-pilot basic crew, by local report time band.
-    # Reductions for ≥3 sectors are applied separately.
+    # Reductions for ≥3 sectors are applied separately. All bands stay at or
+    # below the CAA-AC-OPS033 §4.6.3 ceiling of 14 h FDP in any 24 h.
     "fdp_max_basic_by_band": {
         "WOCL": 11.0,  # 17:00–04:59 local
         "EARLY": 12.0,  # 05:00–05:59
         "DAY_PEAK": 13.0,  # 06:00–13:29
         "AFTERNOON": 12.0,  # 13:30–16:59
     },
+    # Hard scheduled ceiling for a basic-crew FDP (CAA-AC-OPS033 §4.6.3:
+    # "14 consecutive hours in 24 consecutive hours"). Caps the band table
+    # and guards against any less-restrictive operator override.
+    "fdp_scheduled_ceiling_basic_h": 14.0,
     # Each sector above 2 reduces the limit by this many hours, down to floor.
     "fdp_sector_reduction_per_extra": 0.5,
     "fdp_sector_floor": 9.0,
-    # Augmented crew extensions over basic limit.
+    # Augmented crew extensions over basic limit (in-flight rest facility).
     "fdp_aug_3_pilot": {1: 3.0, 2: 2.0, 3: 1.0},  # class 1 / 2 / 3 facility
     "fdp_aug_4_pilot": {1: 4.0, 2: 3.0, 3: 2.0},
     "fdp_aug_absolute_cap": 18.0,
-    # Minimum rest before next FDP.
+    # Minimum rest before next FDP. CAA-AC-OPS033 §4.6.1: a scheduled rest of
+    # typically 10 h, protecting 8 h of sleep opportunity; rest after an
+    # extended FDP must be at least as long as the preceding duty period
+    # (enforced in rule_min_rest via max(floor, preceding_duty)).
     "rest_home_floor_h": 12.0,
     "rest_away_floor_h": 10.0,
+    "min_sleep_opportunity_h": 8.0,  # CAA-AC-OPS033 §4.6.1 / §4.6.8
     "rest_at_limit_window_h": 0.5,  # within 0.5 h of floor → AT_LIMIT
     "rest_derogation_window_h": 1.0,  # 0.5 h below floor → REQUIRES_FRMS_DEROGATION
     # Cumulative duty hours.
@@ -258,6 +267,10 @@ def rule_max_fdp_basic(fdp: FdpInput) -> FtlVerdict:
     extra_sectors = max(0, fdp.sectors_count - 2)
     reduction = extra_sectors * float(_active_limits.get()["fdp_sector_reduction_per_extra"])
     limit = max(base_limit - reduction, float(_active_limits.get()["fdp_sector_floor"]))
+    # CAA-AC-OPS033 §4.6.3: a basic-crew FDP may not be scheduled beyond the
+    # 14 h / 24 h ceiling, whatever the band table says.
+    ceiling = float(_active_limits.get().get("fdp_scheduled_ceiling_basic_h", 14.0))
+    limit = min(limit, ceiling)
 
     actual = float(fdp.duty_hours)
     state = _state_for_overshoot(
@@ -713,7 +726,9 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
             legality_state=LegalityState.ILLEGAL,
             rule_id=rule_id,
             reason=(
-                f"discretion extension {extension:.2f}h exceeds maximum {cap:.1f}h — not permitted"
+                f"discretion extension {extension:.2f}h exceeds {cap:.1f}h: exceeding normal "
+                f"limits by more than 2 h must be reported to the Authority "
+                f"(CAA-AC-OPS033 §3.4) and cannot be planned"
             ),
             regulation_ref=REGULATION_REF,
             rules_applied=[rule_id],
