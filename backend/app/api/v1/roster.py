@@ -1,29 +1,29 @@
-"""Roster generation endpoints — Phase 2.
-
-- ``POST /api/v1/roster/generate`` — enqueue an async optimiser run
-- ``GET  /api/v1/roster/jobs/{job_id}`` — fetch status + result
-- ``POST /api/v1/roster/explain`` — return binding constraints for a duty day
-
-Persistence of the resulting roster (and the ``audit_event`` row that
-goes with it) lands later in Phase 2 once the dashboard's publish flow
-is built out in Phase 3.
-"""
+"""Roster endpoints — Phase 2 (generate / jobs / explain) and Phase 3 (get / publish)."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import date
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.dependencies import get_current_user
 from app.core.job_queue import JobQueue, get_job_queue
+from app.models import User
 from app.schemas.roster import (
+    AssignmentOut,
     ConstraintBindingOut,
     ExplainRequest,
     ExplainResponse,
     GenerateRosterAcceptedResponse,
     GenerateRosterRequest,
     JobStatusResponse,
+    PublishRosterRequest,
+    PublishRosterResponse,
     RosterResult,
 )
-from app.services import optimiser
+from app.services import optimiser, roster_service
 from app.tasks.roster_job import payload_to_input
 
 router = APIRouter()
@@ -74,6 +74,41 @@ async def get_job(
         result=result,
         error=record.error,
     )
+
+
+@router.get(
+    "",
+    response_model=list[AssignmentOut],
+    summary="List published duty-day assignments within a date range",
+)
+def get_roster(
+    date_from: date = Query(...),
+    date_to: date = Query(...),
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> list[AssignmentOut]:
+    return roster_service.list_published_assignments(
+        session,
+        operator_id=user.operator_id,
+        date_from=date_from,
+        date_to=date_to,
+    )
+
+
+@router.post(
+    "/publish",
+    response_model=PublishRosterResponse,
+    summary="Publish a roster — writes SectorAssignment + FlightDutyPeriod rows",
+)
+def publish(
+    payload: PublishRosterRequest,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> PublishRosterResponse:
+    try:
+        return roster_service.publish_roster(session, user=user, payload=payload)
+    except roster_service.RosterPersistenceError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post(

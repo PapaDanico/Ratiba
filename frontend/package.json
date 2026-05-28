@@ -12,12 +12,16 @@
     "format": "prettier --write .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest",
-    "e2e:placeholder": "node -e \"console.log('Playwright E2E tests wired in Phase 3.')\""
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium --with-deps",
+    "e2e:placeholder": "node -e \"console.log('Playwright E2E configured; run npm run e2e against a live stack.')\""
   },
   "dependencies": {
+    "clsx": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.27.0"
+    "react-router-dom": "^6.27.0",
+    "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

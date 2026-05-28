@@ -16,7 +16,7 @@ license = { text = "Proprietary" }
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
-    "pydantic>=2.9",
+    "pydantic[email]>=2.9",
     "pydantic-settings>=2.6",
     "sqlalchemy>=2.0",
     "alembic>=1.13",
@@ -82,6 +82,7 @@ ignore = [
 "backend/tests/**/*" = ["B011"]
 # FastAPI's idiomatic `Depends(...)` in default args is the right pattern here.
 "backend/app/api/**/*" = ["B008"]
+"backend/app/core/dependencies.py" = ["B008"]
 
 # -----------------------------------------------------------------------------
 # mypy --strict

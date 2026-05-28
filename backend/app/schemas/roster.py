@@ -102,3 +102,35 @@ class ExplainResponse(BaseModel):
     captain_id: str | None = None
     fo_id: str | None = None
     bindings: list[ConstraintBindingOut]
+
+
+# -- Persistence (publish / amend) --------------------------------------------
+
+
+class PublishRosterRequest(BaseModel):
+    """Persist an optimiser result as a published roster.
+
+    Carries the sectors + assignments produced by the optimiser so that the
+    backend can build the FlightDutyPeriod and SectorAssignment rows
+    transactionally with an audit_event.
+    """
+
+    horizon_from: date
+    horizon_to: date
+    sectors: list[SectorInputIn] = Field(min_length=1)
+    assignments: list[AssignmentOut] = Field(min_length=1)
+
+
+class PublishRosterResponse(BaseModel):
+    roster_version: int
+    sector_assignments_created: int
+    flight_duty_periods_created: int
+
+
+class AmendRosterRequest(BaseModel):
+    """Post-publication amendment. Replaces a single duty day's crew."""
+
+    duty_day_key: str
+    new_captain_employee_no: str
+    new_fo_employee_no: str
+    reason: str
