@@ -110,7 +110,7 @@ function RecurrencySection() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm" data-testid="recurrency-table">
+            <table className="rtable min-w-full text-sm" data-testid="recurrency-table">
               <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
@@ -123,14 +123,20 @@ function RecurrencySection() {
               <tbody className="divide-y divide-dn-steel-lt">
                 {items.map((i, idx) => (
                   <tr key={`${i.crew_id}-${i.label}-${idx}`} className="hover:bg-dn-fog">
-                    <td className="py-2 pr-4">
+                    <td data-label="Crew" className="py-2 pr-4">
                       <span className="text-dn-dark">{i.crew_name}</span>{" "}
                       <span className="font-mono text-xs text-dn-muted">({i.employee_no})</span>
                     </td>
-                    <td className="py-2 pr-4">{i.label}</td>
-                    <td className="py-2 pr-4 font-mono">{i.expires_date}</td>
-                    <td className="py-2 pr-4 font-mono">{i.days_remaining}</td>
-                    <td className="py-2 pr-4">
+                    <td data-label="Item" className="py-2 pr-4">
+                      {i.label}
+                    </td>
+                    <td data-label="Expires" className="py-2 pr-4 font-mono">
+                      {i.expires_date}
+                    </td>
+                    <td data-label="Days left" className="py-2 pr-4 font-mono">
+                      {i.days_remaining}
+                    </td>
+                    <td data-label="State" className="py-2 pr-4">
                       <Badge tone={tone(i.state)}>{i.state}</Badge>
                     </td>
                   </tr>
@@ -314,7 +320,7 @@ function TypeRatingsSection() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm" data-testid="ratings-table">
+            <table className="rtable min-w-full text-sm" data-testid="ratings-table">
               <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
@@ -329,20 +335,26 @@ function TypeRatingsSection() {
               <tbody className="divide-y divide-dn-steel-lt">
                 {ratings.map((r) => (
                   <tr key={r.id} className="hover:bg-dn-fog">
-                    <td className="py-2 pr-4">
+                    <td data-label="Crew" className="py-2 pr-4">
                       <span className="text-dn-dark">{r.crew_name}</span>{" "}
                       <span className="font-mono text-xs text-dn-muted">({r.employee_no})</span>
                     </td>
-                    <td className="py-2 pr-4">
+                    <td data-label="Type" className="py-2 pr-4">
                       <Badge tone="steel">{r.aircraft_type}</Badge>
                     </td>
-                    <td className="py-2 pr-4 font-mono">{r.valid_from}</td>
-                    <td className="py-2 pr-4 font-mono">{r.valid_until}</td>
-                    <td className="py-2 pr-4 font-mono">{r.days_remaining}</td>
-                    <td className="py-2 pr-4">
+                    <td data-label="Valid from" className="py-2 pr-4 font-mono">
+                      {r.valid_from}
+                    </td>
+                    <td data-label="Valid until" className="py-2 pr-4 font-mono">
+                      {r.valid_until}
+                    </td>
+                    <td data-label="Days left" className="py-2 pr-4 font-mono">
+                      {r.days_remaining}
+                    </td>
+                    <td data-label="State" className="py-2 pr-4">
                       <Badge tone={tone(r.state)}>{r.state}</Badge>
                     </td>
-                    <td className="py-2 pr-4">
+                    <td data-label="" className="py-2 pr-4">
                       <button
                         type="button"
                         onClick={() => remove(r.id)}

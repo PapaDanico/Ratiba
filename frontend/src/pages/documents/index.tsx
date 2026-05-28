@@ -241,7 +241,7 @@ export function DocumentsPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm" data-testid="documents-table">
+            <table className="rtable min-w-full text-sm" data-testid="documents-table">
               <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
@@ -257,25 +257,33 @@ export function DocumentsPage() {
               <tbody className="divide-y divide-dn-steel-lt">
                 {docs.map((d) => (
                   <tr key={d.id} className="hover:bg-dn-fog">
-                    <td className="py-2 pr-4">
+                    <td data-label="Crew" className="py-2 pr-4">
                       <span className="text-dn-dark">{d.crew_name}</span>{" "}
                       <span className="font-mono text-xs text-dn-muted">({d.employee_no})</span>
                     </td>
-                    <td className="py-2 pr-4">{label(d.doc_type)}</td>
-                    <td className="py-2 pr-4 font-mono text-xs">{d.document_number ?? "—"}</td>
-                    <td className="py-2 pr-4 text-xs">{d.issuing_authority ?? "—"}</td>
-                    <td className="py-2 pr-4 font-mono">{d.expiry_date ?? "—"}</td>
-                    <td className="py-2 pr-4 font-mono">
+                    <td data-label="Type" className="py-2 pr-4">
+                      {label(d.doc_type)}
+                    </td>
+                    <td data-label="Number" className="py-2 pr-4 font-mono text-xs">
+                      {d.document_number ?? "—"}
+                    </td>
+                    <td data-label="Authority" className="py-2 pr-4 text-xs">
+                      {d.issuing_authority ?? "—"}
+                    </td>
+                    <td data-label="Expires" className="py-2 pr-4 font-mono">
+                      {d.expiry_date ?? "—"}
+                    </td>
+                    <td data-label="Days left" className="py-2 pr-4 font-mono">
                       {d.days_remaining === null ? "—" : d.days_remaining}
                     </td>
-                    <td className="py-2 pr-4">
+                    <td data-label="State" className="py-2 pr-4">
                       {d.state === "NA" ? (
                         <span className="text-xs text-dn-muted">no expiry</span>
                       ) : (
                         <Badge tone={tone(d.state)}>{d.state}</Badge>
                       )}
                     </td>
-                    <td className="py-2 pr-4">
+                    <td data-label="" className="py-2 pr-4">
                       <button
                         type="button"
                         onClick={() => remove(d.id)}

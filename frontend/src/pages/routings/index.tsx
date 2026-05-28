@@ -572,7 +572,7 @@ export function RoutingsPage() {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm" data-testid="routings-table">
+              <table className="rtable min-w-full text-sm" data-testid="routings-table">
                 <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                   <tr>
                     <th className="py-2 pr-4 font-medium">Flight</th>
@@ -589,24 +589,34 @@ export function RoutingsPage() {
                 <tbody className="divide-y divide-dn-steel-lt">
                   {rows.map((s) => (
                     <tr key={s.id} className="hover:bg-dn-fog">
-                      <td className="py-2 pr-4 font-mono text-dn-steel">{s.flight_no}</td>
-                      <td className="py-2 pr-4 font-mono">{s.date}</td>
-                      <td className="py-2 pr-4 font-mono">
+                      <td data-label="Flight" className="py-2 pr-4 font-mono text-dn-steel">
+                        {s.flight_no}
+                      </td>
+                      <td data-label="Date" className="py-2 pr-4 font-mono">
+                        {s.date}
+                      </td>
+                      <td data-label="Route" className="py-2 pr-4 font-mono">
                         {s.origin}→{s.destination}
                       </td>
-                      <td className="py-2 pr-4 font-mono">{utcTime(s.std)}</td>
-                      <td className="py-2 pr-4 font-mono">{utcTime(s.sta)}</td>
-                      <td className="py-2 pr-4 font-mono">{s.block_hours.toFixed(1)}h</td>
-                      <td className="py-2 pr-4">
+                      <td data-label="Dep (UTC)" className="py-2 pr-4 font-mono">
+                        {utcTime(s.std)}
+                      </td>
+                      <td data-label="Arr (UTC)" className="py-2 pr-4 font-mono">
+                        {utcTime(s.sta)}
+                      </td>
+                      <td data-label="Block" className="py-2 pr-4 font-mono">
+                        {s.block_hours.toFixed(1)}h
+                      </td>
+                      <td data-label="Aircraft" className="py-2 pr-4">
                         <span className="font-mono">{s.aircraft_reg}</span>{" "}
                         <Badge tone="steel">{s.aircraft_type}</Badge>
                       </td>
-                      <td className="py-2 pr-4">
+                      <td data-label="Status" className="py-2 pr-4">
                         <Badge tone={s.status === "PUBLISHED" ? "green" : "neutral"}>
                           {s.status}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-4">
+                      <td data-label="" className="py-2 pr-4">
                         {s.status === "PLANNED" && (
                           <button
                             type="button"

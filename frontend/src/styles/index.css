@@ -80,3 +80,55 @@
     );
   }
 }
+
+/*
+ * Responsive data tables: on phones, collapse each row into a labelled
+ * card (label from the cell's data-label, value on the right). Tag a
+ * <table> with `rtable` and give each <td> a data-label.
+ */
+@media (max-width: 640px) {
+  table.rtable thead {
+    display: none;
+  }
+  table.rtable,
+  table.rtable tbody,
+  table.rtable tr,
+  table.rtable td {
+    display: block;
+    width: 100%;
+  }
+  table.rtable tr {
+    border: 1px solid #d0e8f5;
+    border-radius: 10px;
+    padding: 6px 12px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  table.rtable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 5px 0 !important;
+    border: none !important;
+    text-align: right;
+  }
+  table.rtable td::before {
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #6b7280;
+    text-align: left;
+    flex-shrink: 0;
+  }
+  /* Action cells (no label) span the full width, buttons left-aligned. */
+  table.rtable td[data-label=""] {
+    justify-content: flex-start;
+    padding-top: 8px !important;
+  }
+  table.rtable td[data-label=""]::before {
+    content: none;
+  }
+}

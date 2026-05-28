@@ -252,7 +252,7 @@ export function CrewPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm" data-testid="crew-table">
+            <table className="rtable min-w-full text-sm" data-testid="crew-table">
               <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Employee #</th>
@@ -268,24 +268,32 @@ export function CrewPage() {
               <tbody className="divide-y divide-dn-steel-lt">
                 {rows.map((c) => (
                   <tr key={c.id} className="hover:bg-dn-fog">
-                    <td className="py-2 pr-4 font-mono text-dn-steel">{c.employee_no}</td>
-                    <td className="py-2 pr-4 text-dn-dark">
+                    <td data-label="Employee #" className="py-2 pr-4 font-mono text-dn-steel">
+                      {c.employee_no}
+                    </td>
+                    <td data-label="Name" className="py-2 pr-4 text-dn-dark">
                       {c.first_name} {c.last_name}
                     </td>
-                    <td className="py-2 pr-4">
+                    <td data-label="Role" className="py-2 pr-4">
                       <Badge tone="steel">{c.role}</Badge>
                     </td>
-                    <td className="py-2 pr-4 font-mono">{c.base_station}</td>
-                    <td className="py-2 pr-4 text-xs text-dn-muted">{c.email ?? "—"}</td>
-                    <td className="py-2 pr-4 font-mono text-xs">{c.phone_number ?? "—"}</td>
-                    <td className="py-2 pr-4">
+                    <td data-label="Base" className="py-2 pr-4 font-mono">
+                      {c.base_station}
+                    </td>
+                    <td data-label="Email" className="py-2 pr-4 text-xs text-dn-muted">
+                      {c.email ?? "—"}
+                    </td>
+                    <td data-label="Phone" className="py-2 pr-4 font-mono text-xs">
+                      {c.phone_number ?? "—"}
+                    </td>
+                    <td data-label="Status" className="py-2 pr-4">
                       {c.active ? (
                         <Badge tone="green">Active</Badge>
                       ) : (
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td className="py-2 pr-4">
+                    <td data-label="" className="py-2 pr-4">
                       <div className="flex gap-2">
                         <RosterPdfButton crew={c} />
                         <CalendarFeedButton crew={c} />

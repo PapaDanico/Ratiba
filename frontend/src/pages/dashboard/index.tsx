@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { api, ApiError } from "@/lib/api";
@@ -116,6 +117,23 @@ type LeaveRequest = {
   status: string;
 };
 
+type RecurrencyItem = {
+  crew_id: string;
+  employee_no: string;
+  crew_name: string;
+  kind: string;
+  label: string;
+  expires_date: string;
+  days_remaining: number;
+  state: "GREEN" | "AMBER" | "RED";
+};
+
+function attentionTone(state: RecurrencyItem["state"]): "amber" | "red" | "neutral" {
+  if (state === "RED") return "red";
+  if (state === "AMBER") return "amber";
+  return "neutral";
+}
+
 export function DashboardPage() {
   const { user } = useAuth();
   const [pendingLeave, setPendingLeave] = useState<number>(0);
@@ -124,15 +142,17 @@ export function DashboardPage() {
     amber: 0,
     red: 0,
   });
+  const [attention, setAttention] = useState<RecurrencyItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [pending, currencies] = await Promise.all([
+        const [pending, currencies, recurrency] = await Promise.all([
           api<LeaveRequest[]>("/api/v1/leave?status=PENDING"),
           api<CurrencyStatus[]>("/api/v1/crew/currency/dashboard"),
+          api<RecurrencyItem[]>("/api/v1/training/recurrency?within_days=30"),
         ]);
         if (cancelled) return;
         setPendingLeave(pending.length);
@@ -143,6 +163,7 @@ export function DashboardPage() {
           else counts.red++;
         }
         setCurrencyCounts(counts);
+        setAttention(recurrency);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Failed to load");
       }
@@ -206,14 +227,57 @@ export function DashboardPage() {
           <CardBody>
             <p className="text-sm text-dn-muted">
               Roster calendar lives under{" "}
-              <a href="/roster" className="text-dn-steel underline">
+              <Link to="/roster" className="text-dn-steel underline">
                 Roster
-              </a>
+              </Link>
               . FTL violations show inline before publication.
             </p>
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Needs attention — next 30 days</CardTitle>
+            <Link to="/training" className="text-xs text-dn-steel underline">
+              View all
+            </Link>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {attention.length === 0 ? (
+            <p className="text-sm text-dn-muted" data-testid="attention-empty">
+              Nothing expiring in the next 30 days. ✅
+            </p>
+          ) : (
+            <ul className="divide-y divide-dn-steel-lt" data-testid="attention-list">
+              {attention.slice(0, 8).map((i, idx) => (
+                <li
+                  key={`${i.crew_id}-${i.label}-${idx}`}
+                  className="flex items-center justify-between gap-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-dn-dark truncate">
+                      {i.crew_name}{" "}
+                      <span className="font-mono text-xs text-dn-muted">({i.employee_no})</span>
+                    </p>
+                    <p className="text-xs text-dn-muted truncate">{i.label}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-xs text-dn-muted">
+                      {i.days_remaining < 0
+                        ? `${Math.abs(i.days_remaining)}d ago`
+                        : `${i.days_remaining}d`}
+                    </span>
+                    <Badge tone={attentionTone(i.state)}>{i.state}</Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }
