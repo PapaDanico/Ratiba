@@ -652,8 +652,18 @@ def seed_jetways(session: Session) -> dict[str, int]:
             fdp_or_sector_ref=f"5Y-CAR|{(today + timedelta(days=4)).isoformat()}",
         )
 
+    # Commit the core workspace (operator, users, fleet, crew, currencies,
+    # documents, FTL scheme, notices, leave/swap) up front so login and the
+    # browseable demo survive even if the heavier roster-publish or audit-pack
+    # steps below fail or run out of memory on a small free-tier instance.
+    session.commit()
+
     # ── Published roster: 28 days, night cargo + daytime pax ──
-    assignments_created = _publish_roster(session, officer, today)
+    assignments_created = 0
+    try:
+        assignments_created = _publish_roster(session, officer, today)
+    except Exception:  # roster is best-effort — never block the demo on it
+        session.rollback()
 
     # ── 90-day audit pack ──
     try:

@@ -12,6 +12,8 @@ fi
 alembic upgrade head
 
 # Load demo data on first run (idempotent — safe to run every startup).
-PYTHONPATH=/app python scripts/seed.py --demo
+# Non-fatal: a seeding hiccup must never stop the API from booting and
+# serving login. Any already-committed demo data remains available.
+PYTHONPATH=/app python scripts/seed.py --demo || echo "WARN: demo seed step failed; starting API anyway"
 
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
