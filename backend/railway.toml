@@ -1,6 +1,6 @@
 [build]
 # Self-contained: build context is backend/ only, no repo-root files needed.
-dockerfilePath = "Dockerfile.prod"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 # alembic.ini is at /app/alembic.ini (WORKDIR in Dockerfile.prod)

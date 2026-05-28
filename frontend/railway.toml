@@ -1,6 +1,6 @@
 [build]
 # Use the production multi-stage Dockerfile, not the dev one.
-dockerfilePath = "Dockerfile.prod"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/"

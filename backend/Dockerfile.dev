@@ -5,7 +5,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# System deps (WeasyPrint, psycopg, build tools)
+# System deps:
+#  - WeasyPrint: pango, cairo, gdk-pixbuf
+#  - psycopg: libpq
+#  - build-essential for any source wheels
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
@@ -17,18 +20,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /workspace
+
+# Install python deps from root pyproject.toml. We copy only the project metadata
+# first to keep this layer cacheable.
+COPY pyproject.toml ./
+COPY backend ./backend
+
+RUN pip install -e ".[dev]"
+
 WORKDIR /app
-
-# Install Python deps first (cached layer)
-COPY requirements.txt ./
-RUN pip install -r requirements.txt
-
-# Copy application source
-COPY app ./app
-COPY alembic ./alembic
-COPY alembic.ini ./
 
 EXPOSE 8000
 
-# Railway overrides CMD via startCommand in railway.toml (runs migrations first)
+# Default CMD overridden by docker-compose for dev with --reload.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
