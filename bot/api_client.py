@@ -110,6 +110,15 @@ class RatibaApi:
     async def currency(self, chat_id: int) -> dict[str, Any]:
         return await self._get(chat_id, "/api/v1/crew/me/currency")
 
+    async def notices(self, chat_id: int) -> list[dict[str, Any]]:
+        resp = await self._client.get("/api/v1/crew/me/notices", headers=self._headers(chat_id))
+        body = resp.json() if resp.content else []
+        if resp.status_code >= 400:
+            if resp.status_code == 401:
+                self.store.clear(chat_id)
+            raise BackendError(resp.status_code, body)
+        return cast("list[dict[str, Any]]", body)
+
     async def submit_leave(
         self,
         chat_id: int,

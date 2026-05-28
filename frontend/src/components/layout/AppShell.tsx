@@ -7,9 +7,11 @@ const NAV: Array<{ to: string; label: string; end?: boolean }> = [
   { to: "/", label: "Overview", end: true },
   { to: "/roster", label: "Roster" },
   { to: "/crew", label: "Crew" },
+  { to: "/fleet", label: "Fleet" },
   { to: "/currency", label: "Currency" },
   { to: "/leave", label: "Leave" },
   { to: "/swaps", label: "Swaps" },
+  { to: "/notices", label: "Notices" },
   { to: "/audit", label: "Audit packs" },
   { to: "/settings", label: "Settings" },
 ];

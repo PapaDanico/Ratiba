@@ -31,7 +31,19 @@ type CurrencyResponse = {
   }[];
 };
 
-type Tab = "today" | "roster" | "currency";
+type PilotNotice = {
+  id: string;
+  category: "OPERATIONAL" | "FLEET" | "SAFETY" | "SOCIAL";
+  severity: "INFO" | "IMPORTANT" | "CRITICAL";
+  title: string;
+  body: string;
+  image_url: string | null;
+  requires_ack: boolean;
+  pinned: boolean;
+  acknowledged: boolean;
+};
+
+type Tab = "today" | "roster" | "currency" | "notices";
 
 function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void }) {
   const [code, setCode] = useState("");
@@ -258,6 +270,82 @@ function Currency() {
   );
 }
 
+function Notices() {
+  const [rows, setRows] = useState<PilotNotice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function reload() {
+    setLoading(true);
+    try {
+      const data = await pilotApi<PilotNotice[]>("/api/v1/crew/me/notices");
+      setRows(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void reload();
+  }, []);
+
+  async function ack(id: string) {
+    try {
+      await pilotApi(`/api/v1/crew/me/notices/${id}/ack`, { method: "POST" });
+      await reload();
+    } catch {
+      /* surfaced on next reload */
+    }
+  }
+
+  if (loading) return <p className="text-sm text-dn-muted">Loading…</p>;
+  if (error) return <p className="text-sm text-dn-red">{error}</p>;
+  if (!rows.length) return <p className="text-sm text-dn-muted">No notices right now.</p>;
+
+  return (
+    <ul className="space-y-3" data-testid="me-notices-list">
+      {rows.map((n) => (
+        <li key={n.id} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {n.pinned && <Badge tone="gold">📌</Badge>}
+            <Badge tone="steel">{n.category}</Badge>
+            <Badge
+              tone={n.severity === "INFO" ? "steel" : n.severity === "IMPORTANT" ? "amber" : "red"}
+            >
+              {n.severity}
+            </Badge>
+          </div>
+          <p className="mt-1 font-medium text-dn-dark">{n.title}</p>
+          <p className="mt-1 text-sm text-dn-muted whitespace-pre-line">{n.body}</p>
+          {n.image_url && (
+            <img
+              src={n.image_url}
+              alt=""
+              className="mt-2 max-h-48 rounded border border-dn-steel-lt"
+            />
+          )}
+          {n.requires_ack &&
+            (n.acknowledged ? (
+              <p className="mt-2 text-xs text-dn-green">✓ Acknowledged</p>
+            ) : (
+              <Button
+                size="sm"
+                className="mt-2"
+                onClick={() => ack(n.id)}
+                data-testid={`ack-${n.id}`}
+              >
+                Acknowledge
+              </Button>
+            ))}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function CrewMePage() {
   const [profile, setProfile] = useState<PilotProfile | null>(() => pilotStore.getProfile());
   const [tab, setTab] = useState<Tab>("today");
@@ -289,7 +377,7 @@ export function CrewMePage() {
           </Button>
         </div>
         <nav className="mx-auto max-w-md px-4 flex gap-1 -mb-px">
-          {(["today", "roster", "currency"] as Tab[]).map((t) => (
+          {(["today", "roster", "currency", "notices"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -314,6 +402,7 @@ export function CrewMePage() {
             {tab === "today" && <DutyToday />}
             {tab === "roster" && <Roster />}
             {tab === "currency" && <Currency />}
+            {tab === "notices" && <Notices />}
           </CardBody>
         </Card>
       </section>

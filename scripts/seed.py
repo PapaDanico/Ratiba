@@ -30,16 +30,19 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.core.security import hash_password
 from app.models import (
+    Aircraft,
     Crew,
     CrewCurrency,
     CrewTypeRating,
     LeaveRequest,
+    Notice,
     Operator,
     SwapRequest,
     User,
 )
 from app.models.crew import ContractType, CrewRole
 from app.models.leave import LeaveStatus, LeaveType
+from app.models.notice import NoticeCategory, NoticeSeverity
 from app.models.operator import OperatorTier
 from app.models.swap import SwapStatus
 from app.models.training import CurrencyType
@@ -374,6 +377,89 @@ def _ensure_leave_and_swap(
     session.commit()
 
 
+def _ensure_fleet(
+    session: Session, *, operator_id: uuid.UUID, demo: DemoOperator, user_id: uuid.UUID
+) -> None:
+    for reg in demo.aircraft_regs:
+        existing = session.scalar(
+            select(Aircraft)
+            .where(Aircraft.operator_id == operator_id)
+            .where(Aircraft.registration == reg)
+        )
+        if existing is None:
+            session.add(
+                Aircraft(
+                    operator_id=operator_id,
+                    created_by_user_id=user_id,
+                    registration=reg,
+                    aircraft_type=demo.aircraft_type,
+                    active=True,
+                )
+            )
+    session.commit()
+
+
+def _ensure_notices(session: Session, *, operator_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    if session.scalar(select(Notice).where(Notice.operator_id == operator_id)):
+        return
+    samples = [
+        (
+            NoticeCategory.OPERATIONAL,
+            NoticeSeverity.IMPORTANT,
+            "Revised winter ops procedures",
+            "From Monday, all departures before 07:00 local require a "
+            "de-icing check sign-off. See OM-A 8.4 for the revised checklist.",
+            True,
+            True,
+        ),
+        (
+            NoticeCategory.FLEET,
+            NoticeSeverity.INFO,
+            "5Y-DM2 returns from C-check",
+            "5Y-DM2 is back on line from Thursday. Roster has been updated "
+            "to reflect availability.",
+            False,
+            False,
+        ),
+        (
+            NoticeCategory.SAFETY,
+            NoticeSeverity.CRITICAL,
+            "Bird activity — HKJK approach",
+            "Increased bird activity reported on short final RWY 06. "
+            "Heightened vigilance on approach and landing. Acknowledge receipt.",
+            True,
+            False,
+        ),
+        (
+            NoticeCategory.SOCIAL,
+            NoticeSeverity.INFO,
+            "Crew room: end-of-month get-together 🎉",
+            "Drinks + nyama choma at the crew lounge, last Friday of the "
+            "month from 18:00. All crew + families welcome.",
+            False,
+            False,
+        ),
+    ]
+    from datetime import UTC, datetime
+
+    for category, severity, title, body, requires_ack, pinned in samples:
+        session.add(
+            Notice(
+                operator_id=operator_id,
+                created_by_user_id=user_id,
+                category=category,
+                severity=severity,
+                title=title,
+                body=body,
+                requires_ack=requires_ack,
+                pinned=pinned,
+                published=True,
+                published_at=datetime.now(UTC),
+            )
+        )
+    session.commit()
+
+
 def _generate_demo_audit_pack(session: Session, *, user: User, today: date) -> None:
     audit_pack.generate_pack(
         session,
@@ -452,6 +538,8 @@ def _seed_demo(session: Session) -> None:
             for c in session.scalars(select(Crew).where(Crew.operator_id == op_row.id)).all()
         }
         _ensure_leave_and_swap(session, operator_id=op_row.id, crew_by_emp=crew_by_emp, today=today)
+        _ensure_fleet(session, operator_id=op_row.id, demo=demo, user_id=officer.id)
+        _ensure_notices(session, operator_id=op_row.id, user_id=officer.id)
 
         # Roster publish is idempotent — but generating it twice creates two
         # GENERATE_AUDIT_PACK + PUBLISH_ROSTER audit events, which is the

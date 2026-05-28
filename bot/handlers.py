@@ -59,6 +59,11 @@ async def handle_currency(*, chat_id: int, api: RatibaApi) -> str:
     return formatters.format_currency(payload)
 
 
+async def handle_notices(*, chat_id: int, api: RatibaApi) -> str:
+    rows = await api.notices(chat_id)
+    return formatters.format_notices(rows)
+
+
 async def handle_leave_help(*, chat_id: int, api: RatibaApi) -> str:
     return (
         "To submit a leave request, send:\n"
@@ -117,6 +122,7 @@ _INTENT_TO_HANDLER = {
     "roster": handle_roster,
     "duty_today": handle_duty,
     "currency": handle_currency,
+    "notices": handle_notices,
     "swap_help": handle_swap_help,
     "leave_help": handle_leave_help,
     "help": handle_help,

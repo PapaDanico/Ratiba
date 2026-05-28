@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-type Tone = "green" | "amber" | "red" | "steel" | "neutral";
+type Tone = "green" | "amber" | "red" | "steel" | "gold" | "neutral";
 
 const toneClasses: Record<Tone, string> = {
   green: "bg-dn-green/10 text-dn-green border-dn-green/30",
   amber: "bg-dn-gold-lt text-dn-dark border-dn-gold",
   red: "bg-dn-red/10 text-dn-red border-dn-red/30",
   steel: "bg-dn-steel-lt text-dn-steel border-dn-steel/30",
+  gold: "bg-dn-gold-lt text-dn-dark border-dn-gold",
   neutral: "bg-dn-fog text-dn-muted border-dn-muted/30",
 };
 

@@ -23,6 +23,7 @@ from bot.handlers import (
     handle_free_text,
     handle_help,
     handle_leave_submit,
+    handle_notices,
     handle_roster,
     handle_start,
     handle_swap_submit,
@@ -74,6 +75,10 @@ async def _run_telegram(token: str) -> None:
         chat_id = update.effective_chat.id if update.effective_chat else 0
         await _reply(update, await handle_currency(chat_id=chat_id, api=api))
 
+    async def _cmd_notices(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        await _reply(update, await handle_notices(chat_id=chat_id, api=api))
+
     async def _cmd_leave(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id if update.effective_chat else 0
         await _reply(
@@ -99,6 +104,7 @@ async def _run_telegram(token: str) -> None:
     app.add_handler(CommandHandler("roster", _cmd_roster))
     app.add_handler(CommandHandler("duty", _cmd_duty))
     app.add_handler(CommandHandler("currency", _cmd_currency))
+    app.add_handler(CommandHandler("notices", _cmd_notices))
     app.add_handler(CommandHandler("leave", _cmd_leave))
     app.add_handler(CommandHandler("swap", _cmd_swap))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, _on_text))

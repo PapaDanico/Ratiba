@@ -127,7 +127,41 @@ for?**
 (If `TELEGRAM_BOT_TOKEN` is set in `.env`, the same surface is
 available through your bot's chat — Phase 4 wired all seven commands.)
 
-### 7. Operator settings (30 s) — `/settings`
+### 7. Fleet registry (1 min) — `/fleet`
+
+Register your aircraft by picking the type from a curated dropdown —
+grouped by category (turboprops, light utility, regional jets,
+narrowbodies) and scoped to what sub-scale East & Central African
+operators actually fly. Each option shows the ICAO designator,
+manufacturer + model, and typical seats. Types not on the list can
+still be entered free-form and are flagged as "custom".
+
+Question for feedback: **is your fleet's type in the list? If not,
+which one are we missing?**
+
+### 8. Notices — crew comms (2 min) — `/notices`
+
+Post operational comms, fleet notices, safety bulletins, or crew-room
+/ morale posts. Each notice has a category + severity, can require
+acknowledgement (the dashboard tracks who's ack'd), can be pinned, and
+can carry an image URL (for fleet photos or the occasional meme).
+
+Published notices land in every paired pilot's `/crew/me` **Notices**
+tab and their Telegram `/notices` command — and, when a bot token is
+configured, are pushed straight to their chat.
+
+Try this:
+
+- Post a `SAFETY` / `CRITICAL` notice with "require acknowledgement"
+  on. Then open `/crew/me`, go to the Notices tab, and acknowledge it.
+  Back on `/notices`, the ack count ticks up.
+- Post a `SOCIAL` / `INFO` notice with an image URL — that's the
+  crew-room / morale channel.
+
+Question for feedback: **would this replace your current WhatsApp
+broadcast group, or live alongside it?**
+
+### 9. Operator settings (30 s) — `/settings`
 
 Tweak the optimiser's soft-constraint weights:
 

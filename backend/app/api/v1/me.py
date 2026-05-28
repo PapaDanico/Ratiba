@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+import uuid
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -15,6 +16,8 @@ from app.models import (
     CrewCurrency,
     FlightDutyPeriod,
     LeaveRequest,
+    Notice,
+    NoticeAcknowledgement,
     Sector,
     SectorAssignment,
     SwapRequest,
@@ -22,6 +25,7 @@ from app.models import (
 from app.models.leave import LeaveStatus
 from app.models.swap import SwapStatus
 from app.schemas.leave_swap import LeaveRequestOut, SwapRequestOut
+from app.schemas.notice import PilotNoticeOut
 from app.schemas.pilot import (
     PilotCurrencyOut,
     PilotCurrencyResponse,
@@ -236,3 +240,58 @@ def my_swap_submit(
     session.commit()
     session.refresh(row)
     return SwapRequestOut.model_validate(row)
+
+
+@router.get("/notices", response_model=list[PilotNoticeOut])
+def my_notices(
+    session: Session = Depends(get_db),
+    crew: Crew = Depends(get_current_pilot),
+) -> list[PilotNoticeOut]:
+    """Published, non-expired notices for the pilot's operator.
+
+    Pinned first, then newest. Each carries whether this crew member has
+    already acknowledged it.
+    """
+    now = datetime.now(UTC)
+    notices = session.scalars(
+        select(Notice)
+        .where(Notice.operator_id == crew.operator_id)
+        .where(Notice.published.is_(True))
+        .order_by(Notice.pinned.desc(), Notice.created_at.desc())
+    ).all()
+    acked = {
+        a.notice_id
+        for a in session.scalars(
+            select(NoticeAcknowledgement).where(NoticeAcknowledgement.crew_id == crew.id)
+        ).all()
+    }
+    out: list[PilotNoticeOut] = []
+    for n in notices:
+        if n.expires_at is not None and n.expires_at < now:
+            continue
+        item = PilotNoticeOut.model_validate(n)
+        item.acknowledged = n.id in acked
+        out.append(item)
+    return out
+
+
+@router.post("/notices/{notice_id}/ack", status_code=200)
+def acknowledge_notice(
+    notice_id: uuid.UUID,
+    session: Session = Depends(get_db),
+    crew: Crew = Depends(get_current_pilot),
+) -> dict[str, bool]:
+    notice = session.scalar(
+        select(Notice).where(Notice.id == notice_id).where(Notice.operator_id == crew.operator_id)
+    )
+    if notice is None:
+        raise HTTPException(status_code=404, detail="notice not found")
+    existing = session.scalar(
+        select(NoticeAcknowledgement)
+        .where(NoticeAcknowledgement.notice_id == notice_id)
+        .where(NoticeAcknowledgement.crew_id == crew.id)
+    )
+    if existing is None:
+        session.add(NoticeAcknowledgement(notice_id=notice_id, crew_id=crew.id))
+        session.commit()
+    return {"acknowledged": True}

@@ -59,15 +59,45 @@ def format_currency(payload: dict[str, Any]) -> str:
     return "Currency:\n" + body
 
 
+_NOTICE_ICON = {"INFO": "ℹ️", "IMPORTANT": "❗", "CRITICAL": "🚨"}
+_NOTICE_CATEGORY = {
+    "OPERATIONAL": "Operational",
+    "FLEET": "Fleet",
+    "SAFETY": "Safety",
+    "SOCIAL": "Crew room",
+}
+
+
+def format_notices(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return "📭 No notices right now."
+    blocks = []
+    for n in rows:
+        icon = _NOTICE_ICON.get(n.get("severity", "INFO"), "ℹ️")
+        cat = _NOTICE_CATEGORY.get(n.get("category", ""), n.get("category", ""))
+        pin = "📌 " if n.get("pinned") else ""
+        ack = (
+            " — please acknowledge in the app"
+            if n.get("requires_ack") and not n.get("acknowledged")
+            else ""
+        )
+        block = f"{pin}{icon} [{cat}] {n.get('title')}{ack}\n{n.get('body')}"
+        if n.get("image_url"):
+            block += f"\n{n['image_url']}"
+        blocks.append(block)
+    return "Notices:\n\n" + "\n\n".join(blocks)
+
+
 HELP_TEXT = (
     "Ratiba — pilot bot. Commands I understand:\n"
     "  /start <code>  — pair this chat with your crew record\n"
     "  /roster        — your duty days for the next 14 days\n"
     "  /duty          — today's duty (if any)\n"
     "  /currency      — your currency / recency status\n"
+    "  /notices       — fleet notices + operational comms\n"
     "  /leave         — submit a leave request (guided)\n"
     "  /swap          — request a duty swap (guided)\n"
     "  /help          — show this list\n\n"
     "You can also just ask me in plain language —\n"
-    '  e.g. "do I fly tuesday?" or "when does my OPC expire?"'
+    '  e.g. "do I fly tuesday?" or "any notices?"'
 )

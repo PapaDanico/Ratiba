@@ -4,6 +4,7 @@ Importing this package registers every model with the declarative ``Base``
 metadata, which Alembic's autogenerate relies on.
 """
 
+from app.models.aircraft import Aircraft
 from app.models.audit import AuditEvent
 from app.models.audit_pack import AuditPack
 from app.models.base import TimestampMixin, UUIDMixin
@@ -11,6 +12,12 @@ from app.models.crew import ContractType, Crew, CrewRole
 from app.models.ftl import FdpType, FlightDutyPeriod, FtlRule, LegalityState, RuleSource
 from app.models.leave import LeaveRequest, LeaveStatus, LeaveType
 from app.models.llm_usage import LlmUsageEvent
+from app.models.notice import (
+    Notice,
+    NoticeAcknowledgement,
+    NoticeCategory,
+    NoticeSeverity,
+)
 from app.models.operator import Operator, OperatorTier
 from app.models.pairing import PairingToken
 from app.models.roster import Sector, SectorAssignment, SectorStatus
@@ -19,6 +26,7 @@ from app.models.training import CrewCurrency, CrewTypeRating, CurrencyType
 from app.models.user import User, UserRole
 
 __all__ = [
+    "Aircraft",
     "AuditEvent",
     "AuditPack",
     "ContractType",
@@ -35,6 +43,10 @@ __all__ = [
     "LeaveType",
     "LegalityState",
     "LlmUsageEvent",
+    "Notice",
+    "NoticeAcknowledgement",
+    "NoticeCategory",
+    "NoticeSeverity",
     "Operator",
     "OperatorTier",
     "PairingToken",

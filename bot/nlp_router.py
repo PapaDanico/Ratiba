@@ -21,7 +21,16 @@ from app.services import llm_client
 
 log = logging.getLogger("ratiba.bot.nlp")
 
-Intent = Literal["roster", "duty_today", "currency", "swap_help", "leave_help", "help", "unknown"]
+Intent = Literal[
+    "roster",
+    "duty_today",
+    "currency",
+    "notices",
+    "swap_help",
+    "leave_help",
+    "help",
+    "unknown",
+]
 
 
 @dataclass(frozen=True)
@@ -38,6 +47,7 @@ Classify the user's message into ONE of these intents:
 - "roster"       — they want their upcoming roster / schedule
 - "duty_today"   — they want today's specific duty
 - "currency"     — they're asking about recency / OPC / LPC / line check
+- "notices"      — they want fleet notices / operational comms / announcements
 - "swap_help"    — they want to swap a duty with another pilot
 - "leave_help"   — they want to request leave / time off
 - "help"         — they're confused, asking for help, saying hi
@@ -58,6 +68,7 @@ _KEYWORD_FALLBACK: tuple[tuple[re.Pattern[str], Intent], ...] = (
     (re.compile(r"\b(leave|holiday|time off|annual|sick)\b", re.I), "leave_help"),
     (re.compile(r"\b(swap|switch|trade)\b", re.I), "swap_help"),
     (re.compile(r"\b(opc|lpc|currency|recency|line check|landings?)\b", re.I), "currency"),
+    (re.compile(r"\b(notice|notices|announcement|memo|bulletin|comms)\b", re.I), "notices"),
     (re.compile(r"\b(today|do i fly|tonight)\b", re.I), "duty_today"),
     (re.compile(r"\b(roster|schedule|next\s+week|14\s*days?)\b", re.I), "roster"),
     (re.compile(r"\b(help|hi|hello|hey|how\b|what can)", re.I), "help"),
@@ -75,6 +86,7 @@ _VALID_INTENTS = {
     "roster",
     "duty_today",
     "currency",
+    "notices",
     "swap_help",
     "leave_help",
     "help",

@@ -12,6 +12,8 @@ import { SettingsPage } from "@/pages/settings";
 import { AuditPage } from "@/pages/audit";
 import { CrewMePage } from "@/pages/me";
 import { SwapsPage } from "@/pages/swaps";
+import { NoticesPage } from "@/pages/notices";
+import { FleetPage } from "@/pages/fleet";
 
 export function App() {
   return (
@@ -33,6 +35,8 @@ export function App() {
             <Route path="currency" element={<CurrencyPage />} />
             <Route path="leave" element={<LeavePage />} />
             <Route path="swaps" element={<SwapsPage />} />
+            <Route path="notices" element={<NoticesPage />} />
+            <Route path="fleet" element={<FleetPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

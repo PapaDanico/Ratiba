@@ -26,6 +26,7 @@ class FakeRatibaApi:
         }
         self.duty_payload: dict[str, Any] = {"has_duty": False}
         self.currency_payload: dict[str, Any] = {"currencies": []}
+        self.notices_payload: list[dict[str, Any]] = []
         self.fail_with_401: bool = False
 
     async def pair(self, *, code: str, chat_id: int) -> dict[str, Any]:
@@ -52,6 +53,10 @@ class FakeRatibaApi:
     async def currency(self, chat_id: int) -> dict[str, Any]:
         self._check_paired(chat_id)
         return self.currency_payload
+
+    async def notices(self, chat_id: int) -> list[dict[str, Any]]:
+        self._check_paired(chat_id)
+        return self.notices_payload
 
     async def submit_leave(
         self,
@@ -191,6 +196,44 @@ async def test_roster_empty(api: FakeRatibaApi) -> None:
     api.store.set(1, "x")
     reply = await handlers.handle_roster(chat_id=1, api=api)  # type: ignore[arg-type]
     assert "No duty days" in reply
+
+
+async def test_notices_empty(api: FakeRatibaApi) -> None:
+    api.store.set(1, "x")
+    api.notices_payload = []
+    reply = await handlers.handle_notices(chat_id=1, api=api)  # type: ignore[arg-type]
+    assert "No notices" in reply
+
+
+async def test_notices_render(api: FakeRatibaApi) -> None:
+    api.store.set(1, "x")
+    api.notices_payload = [
+        {
+            "category": "SAFETY",
+            "severity": "CRITICAL",
+            "title": "Bird activity",
+            "body": "Vigilance on approach.",
+            "pinned": True,
+            "requires_ack": True,
+            "acknowledged": False,
+            "image_url": None,
+        }
+    ]
+    reply = await handlers.handle_notices(chat_id=1, api=api)  # type: ignore[arg-type]
+    assert "Bird activity" in reply
+    assert "Safety" in reply
+    assert "acknowledge" in reply.lower()
+
+
+async def test_free_text_routes_to_notices(api: FakeRatibaApi, disable_llm: None) -> None:
+    api.store.set(7, "x")
+    api.notices_payload = []
+    reply = await handlers.handle_free_text(
+        text="any notices today?",
+        chat_id=7,
+        api=api,  # type: ignore[arg-type]
+    )
+    assert "No notices" in reply
 
 
 async def test_currency_renders_traffic_light(api: FakeRatibaApi) -> None:
