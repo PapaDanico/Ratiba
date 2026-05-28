@@ -8,8 +8,8 @@ type Phase = {
 
 const PHASES: Phase[] = [
   { id: "0", title: "Project setup", status: "done" },
-  { id: "1", title: "FTL engine + core data model", status: "in-progress" },
-  { id: "2", title: "Optimiser MVP", status: "todo" },
+  { id: "1", title: "FTL engine + core data model", status: "done" },
+  { id: "2", title: "Optimiser MVP", status: "in-progress" },
   { id: "3", title: "Crewing Officer dashboard", status: "todo" },
   { id: "4", title: "Telegram bot + crew web view", status: "todo" },
   { id: "5", title: "KCAA audit pack generation", status: "todo" },

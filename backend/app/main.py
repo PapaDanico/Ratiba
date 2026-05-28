@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.api.v1 import api_router
 from app.core.config import get_settings
+from app.core.job_queue import use_redis_queue
 from app.core.logging import configure_logging
 from app.schemas.health import HealthResponse, VersionResponse
 
@@ -26,6 +27,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             traces_sample_rate=0.0,
             send_default_pii=False,
         )
+    # Wire the Redis-backed job queue when Redis is actually reachable. The
+    # in-process queue (default) stays the fallback for local dev without
+    # Redis and for tests.
+    if settings.redis_url:
+        try:
+            import redis
+
+            redis.from_url(settings.redis_url, socket_connect_timeout=1).ping()
+            use_redis_queue(settings.redis_url)
+        except Exception:
+            pass
     yield
 
 
@@ -54,7 +66,7 @@ def create_app() -> FastAPI:
 
     @app.get("/version", response_model=VersionResponse, tags=["meta"])
     async def version() -> VersionResponse:
-        return VersionResponse(name="ratiba", version=__version__, phase="1")
+        return VersionResponse(name="ratiba", version=__version__, phase="2")
 
     app.include_router(api_router)
     return app

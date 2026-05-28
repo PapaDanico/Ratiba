@@ -16,7 +16,7 @@ def test_version_reports_current_phase(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["name"] == "ratiba"
-    assert body["phase"] == "1"
+    assert body["phase"] == "2"
     assert "version" in body
 
 

@@ -80,6 +80,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "backend/alembic/versions/*" = ["E402", "F401"]
 "backend/tests/**/*" = ["B011"]
+# FastAPI's idiomatic `Depends(...)` in default args is the right pattern here.
+"backend/app/api/**/*" = ["B008"]
 
 # -----------------------------------------------------------------------------
 # mypy --strict
@@ -102,8 +104,11 @@ module = [
     "weasyprint.*",
     "rq.*",
     "passlib.*",
+    "redis.*",
+    "fakeredis.*",
 ]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = "backend.alembic.versions.*"
