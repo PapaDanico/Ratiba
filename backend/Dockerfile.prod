@@ -30,5 +30,7 @@ COPY alembic.ini ./
 
 EXPOSE 8000
 
-# Railway overrides CMD via startCommand in railway.toml (runs migrations first)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY start.sh ./
+RUN chmod +x start.sh
+
+CMD ["./start.sh"]
