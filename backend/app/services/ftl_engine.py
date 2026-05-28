@@ -16,6 +16,7 @@ frequency without DB round-trips.
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
 from decimal import Decimal
@@ -76,6 +77,10 @@ LIMITS: Final[dict[str, Any]] = {
 }
 
 REGULATION_REF: Final[str] = "KCARs 2025 Part 8 §8.X.Y"
+
+# ContextVar holding the active limits dict for the current check_fdp call.
+# Defaults to the module-level baseline so all existing callers work unchanged.
+_active_limits: ContextVar[dict[str, Any]] = ContextVar("_active_limits", default=LIMITS)
 
 # State precedence for aggregation (higher index wins).
 _STATE_ORDER: Final[tuple[LegalityState, ...]] = (
@@ -234,18 +239,18 @@ def rule_max_fdp_basic(fdp: FdpInput) -> FtlVerdict:
     """Maximum FDP for basic (2-pilot) crew, by local report band and sectors."""
     rule_id = "KCAR-P8-FDP-MAX-BASIC"
     band = _report_band(fdp.local_report_time)
-    base_limit = float(LIMITS["fdp_max_basic_by_band"][band])
+    base_limit = float(_active_limits.get()["fdp_max_basic_by_band"][band])
 
     extra_sectors = max(0, fdp.sectors_count - 2)
-    reduction = extra_sectors * float(LIMITS["fdp_sector_reduction_per_extra"])
-    limit = max(base_limit - reduction, float(LIMITS["fdp_sector_floor"]))
+    reduction = extra_sectors * float(_active_limits.get()["fdp_sector_reduction_per_extra"])
+    limit = max(base_limit - reduction, float(_active_limits.get()["fdp_sector_floor"]))
 
     actual = float(fdp.duty_hours)
     state = _state_for_overshoot(
         actual,
         limit,
-        at_limit_margin_h=float(LIMITS["at_limit_margin_h"]),
-        derogation_margin_h=float(LIMITS["discretion_max_extension_h"]),
+        at_limit_margin_h=float(_active_limits.get()["at_limit_margin_h"]),
+        derogation_margin_h=float(_active_limits.get()["discretion_max_extension_h"]),
     )
 
     return FtlVerdict(
@@ -288,17 +293,17 @@ def rule_max_fdp_augmented(fdp: FdpInput) -> FtlVerdict:
         )
 
     if cc.pilots_on_flight_deck == 3:
-        extension = float(LIMITS["fdp_aug_3_pilot"].get(cc.rest_facility_class, 0.0))
+        extension = float(_active_limits.get()["fdp_aug_3_pilot"].get(cc.rest_facility_class, 0.0))
     else:
-        extension = float(LIMITS["fdp_aug_4_pilot"].get(cc.rest_facility_class, 0.0))
+        extension = float(_active_limits.get()["fdp_aug_4_pilot"].get(cc.rest_facility_class, 0.0))
 
-    limit = min(basic_limit + extension, float(LIMITS["fdp_aug_absolute_cap"]))
+    limit = min(basic_limit + extension, float(_active_limits.get()["fdp_aug_absolute_cap"]))
     actual = float(fdp.duty_hours)
     state = _state_for_overshoot(
         actual,
         limit,
-        at_limit_margin_h=float(LIMITS["at_limit_margin_h"]),
-        derogation_margin_h=float(LIMITS["discretion_max_extension_h"]),
+        at_limit_margin_h=float(_active_limits.get()["at_limit_margin_h"]),
+        derogation_margin_h=float(_active_limits.get()["discretion_max_extension_h"]),
     )
 
     return FtlVerdict(
@@ -342,15 +347,15 @@ def rule_min_rest(fdp: FdpInput) -> FtlVerdict:
     rest_h = _hours_between(prior.off_duty_time, fdp.report_time)
     preceding_duty_h = float(prior.duty_hours)
     floor_base = float(
-        LIMITS["rest_home_floor_h"] if fdp.at_home_base else LIMITS["rest_away_floor_h"]
+        _active_limits.get()["rest_home_floor_h"] if fdp.at_home_base else _active_limits.get()["rest_away_floor_h"]
     )
     floor = max(floor_base, preceding_duty_h)
 
     state = _state_for_undershoot(
         rest_h,
         floor,
-        at_limit_margin_h=float(LIMITS["rest_at_limit_window_h"]),
-        derogation_margin_h=float(LIMITS["rest_derogation_window_h"]),
+        at_limit_margin_h=float(_active_limits.get()["rest_at_limit_window_h"]),
+        derogation_margin_h=float(_active_limits.get()["rest_derogation_window_h"]),
     )
 
     location = "home base" if fdp.at_home_base else "away from base"
@@ -397,8 +402,8 @@ def _cumulative_verdict(
     state = _state_for_overshoot(
         actual_h,
         limit_h,
-        at_limit_margin_h=float(LIMITS["at_limit_margin_h"]),
-        derogation_margin_h=float(LIMITS["discretion_max_extension_h"]),
+        at_limit_margin_h=float(_active_limits.get()["at_limit_margin_h"]),
+        derogation_margin_h=float(_active_limits.get()["discretion_max_extension_h"]),
     )
     return FtlVerdict(
         legality_state=state,
@@ -418,7 +423,7 @@ def _cumulative_verdict(
 def rule_cumulative_duty_7d(fdp: FdpInput) -> FtlVerdict:
     return _cumulative_verdict(
         _cumulative_duty_in_window(fdp, 7),
-        float(LIMITS["cumul_duty_7d_h"]),
+        float(_active_limits.get()["cumul_duty_7d_h"]),
         "KCAR-P8-CUMUL-DUTY-7D",
         "duty hours in trailing 7 days",
     )
@@ -427,7 +432,7 @@ def rule_cumulative_duty_7d(fdp: FdpInput) -> FtlVerdict:
 def rule_cumulative_duty_28d(fdp: FdpInput) -> FtlVerdict:
     return _cumulative_verdict(
         _cumulative_duty_in_window(fdp, 28),
-        float(LIMITS["cumul_duty_28d_h"]),
+        float(_active_limits.get()["cumul_duty_28d_h"]),
         "KCAR-P8-CUMUL-DUTY-28D",
         "duty hours in trailing 28 days",
     )
@@ -436,7 +441,7 @@ def rule_cumulative_duty_28d(fdp: FdpInput) -> FtlVerdict:
 def rule_cumulative_duty_365d(fdp: FdpInput) -> FtlVerdict:
     return _cumulative_verdict(
         _cumulative_duty_in_window(fdp, 365),
-        float(LIMITS["cumul_duty_365d_h"]),
+        float(_active_limits.get()["cumul_duty_365d_h"]),
         "KCAR-P8-CUMUL-DUTY-365D",
         "duty hours in trailing 365 days",
     )
@@ -445,7 +450,7 @@ def rule_cumulative_duty_365d(fdp: FdpInput) -> FtlVerdict:
 def rule_cumulative_block_28d(fdp: FdpInput) -> FtlVerdict:
     return _cumulative_verdict(
         _cumulative_block_in_window(fdp, 28),
-        float(LIMITS["cumul_block_28d_h"]),
+        float(_active_limits.get()["cumul_block_28d_h"]),
         "KCAR-P8-CUMUL-BLOCK-28D",
         "block hours in trailing 28 days",
     )
@@ -454,7 +459,7 @@ def rule_cumulative_block_28d(fdp: FdpInput) -> FtlVerdict:
 def rule_cumulative_block_365d(fdp: FdpInput) -> FtlVerdict:
     return _cumulative_verdict(
         _cumulative_block_in_window(fdp, 365),
-        float(LIMITS["cumul_block_365d_h"]),
+        float(_active_limits.get()["cumul_block_365d_h"]),
         "KCAR-P8-CUMUL-BLOCK-365D",
         "block hours in trailing 365 days",
     )
@@ -474,7 +479,7 @@ def rule_standby_short_call(fdp: FdpInput) -> FtlVerdict:
         )
 
     standby_h = float(fdp.standby_hours_before_call)
-    standby_limit = float(LIMITS["standby_short_call_max_h"])
+    standby_limit = float(_active_limits.get()["standby_short_call_max_h"])
     if standby_h > standby_limit:
         return FtlVerdict(
             legality_state=LegalityState.ILLEGAL,
@@ -497,8 +502,8 @@ def rule_standby_short_call(fdp: FdpInput) -> FtlVerdict:
     state = _state_for_overshoot(
         combined,
         basic_limit,
-        at_limit_margin_h=float(LIMITS["at_limit_margin_h"]),
-        derogation_margin_h=float(LIMITS["discretion_max_extension_h"]),
+        at_limit_margin_h=float(_active_limits.get()["at_limit_margin_h"]),
+        derogation_margin_h=float(_active_limits.get()["discretion_max_extension_h"]),
     )
     return FtlVerdict(
         legality_state=state,
@@ -532,12 +537,12 @@ def rule_standby_long_call(fdp: FdpInput) -> FtlVerdict:
         )
 
     standby_h = float(fdp.standby_hours_before_call)
-    standby_limit = float(LIMITS["standby_long_call_max_h"])
+    standby_limit = float(_active_limits.get()["standby_long_call_max_h"])
     state = _state_for_overshoot(
         standby_h,
         standby_limit,
-        at_limit_margin_h=float(LIMITS["at_limit_margin_h"]),
-        derogation_margin_h=float(LIMITS["discretion_max_extension_h"]),
+        at_limit_margin_h=float(_active_limits.get()["at_limit_margin_h"]),
+        derogation_margin_h=float(_active_limits.get()["discretion_max_extension_h"]),
     )
     return FtlVerdict(
         legality_state=state,
@@ -556,7 +561,7 @@ def rule_split_duty(fdp: FdpInput) -> FtlVerdict:
     """A qualifying break extends the maximum FDP by up to a cap."""
     rule_id = "KCAR-P8-SPLIT-DUTY"
     break_h = float(fdp.split_duty_break_h)
-    threshold = float(LIMITS["split_duty_qualifying_break_h"])
+    threshold = float(_active_limits.get()["split_duty_qualifying_break_h"])
 
     if break_h < threshold:
         return FtlVerdict(
@@ -571,8 +576,8 @@ def rule_split_duty(fdp: FdpInput) -> FtlVerdict:
         )
 
     extension = min(
-        break_h * float(LIMITS["split_duty_extension_factor"]),
-        float(LIMITS["split_duty_extension_cap_h"]),
+        break_h * float(_active_limits.get()["split_duty_extension_factor"]),
+        float(_active_limits.get()["split_duty_extension_cap_h"]),
     )
     basic = rule_max_fdp_basic(fdp)
     basic_limit = float(basic.metadata["limit_h"])
@@ -581,8 +586,8 @@ def rule_split_duty(fdp: FdpInput) -> FtlVerdict:
     state = _state_for_overshoot(
         actual,
         effective_limit,
-        at_limit_margin_h=float(LIMITS["at_limit_margin_h"]),
-        derogation_margin_h=float(LIMITS["discretion_max_extension_h"]),
+        at_limit_margin_h=float(_active_limits.get()["at_limit_margin_h"]),
+        derogation_margin_h=float(_active_limits.get()["discretion_max_extension_h"]),
     )
 
     return FtlVerdict(
@@ -619,18 +624,18 @@ def rule_timezone_recovery(fdp: FdpInput) -> FtlVerdict:
         )
 
     zones = fdp.prior_fdp.timezones_crossed
-    floor = float(LIMITS["tz_recovery"][4])
+    floor = float(_active_limits.get()["tz_recovery"][4])
     if zones >= 8:
-        floor = float(LIMITS["tz_recovery"][8])
+        floor = float(_active_limits.get()["tz_recovery"][8])
     elif zones >= 6:
-        floor = float(LIMITS["tz_recovery"][6])
+        floor = float(_active_limits.get()["tz_recovery"][6])
 
     rest_h = _hours_between(fdp.prior_fdp.off_duty_time, fdp.report_time)
     state = _state_for_undershoot(
         rest_h,
         floor,
-        at_limit_margin_h=float(LIMITS["rest_at_limit_window_h"]),
-        derogation_margin_h=float(LIMITS["rest_derogation_window_h"]),
+        at_limit_margin_h=float(_active_limits.get()["rest_at_limit_window_h"]),
+        derogation_margin_h=float(_active_limits.get()["rest_derogation_window_h"]),
     )
     return FtlVerdict(
         legality_state=state,
@@ -653,11 +658,11 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
     """Commander's discretion: bounded extension, with audit trail."""
     rule_id = "KCAR-P8-DISCRETION"
     extension = float(fdp.discretion_extension_h)
-    cap = float(LIMITS["discretion_max_extension_h"])
+    cap = float(_active_limits.get()["discretion_max_extension_h"])
 
     if extension <= 0:
         # Repeated-use check still applies — if many recent uses, flag.
-        if fdp.discretion_uses_last_90d >= int(LIMITS["discretion_repeated_use_90d_threshold"]):
+        if fdp.discretion_uses_last_90d >= int(_active_limits.get()["discretion_repeated_use_90d_threshold"]):
             return FtlVerdict(
                 legality_state=LegalityState.AT_LIMIT,
                 rule_id=rule_id,
@@ -671,7 +676,7 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
                 metadata={
                     "extension_h": 0.0,
                     "uses_last_90d": fdp.discretion_uses_last_90d,
-                    "repeated_use_threshold": int(LIMITS["discretion_repeated_use_90d_threshold"]),
+                    "repeated_use_threshold": int(_active_limits.get()["discretion_repeated_use_90d_threshold"]),
                 },
             )
         return FtlVerdict(
@@ -696,7 +701,7 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
         )
 
     state = LegalityState.REQUIRES_FRMS_DEROGATION
-    if fdp.discretion_uses_last_90d >= int(LIMITS["discretion_repeated_use_90d_threshold"]):
+    if fdp.discretion_uses_last_90d >= int(_active_limits.get()["discretion_repeated_use_90d_threshold"]):
         state = LegalityState.AT_LIMIT if state == LegalityState.LEGAL else state
 
     return FtlVerdict(
@@ -738,12 +743,18 @@ _ALL_RULES: Final[tuple[Any, ...]] = (
 )
 
 
-def check_fdp(fdp: FdpInput) -> list[FtlVerdict]:
+def check_fdp(fdp: FdpInput, *, limits: dict[str, Any] | None = None) -> list[FtlVerdict]:
     """Run every applicable rule against ``fdp`` and return individual verdicts.
 
+    Pass ``limits`` to override the module-level baseline for this call only
+    (operator-specific constraint sets resolved via ``ftl_limits.resolve_limits``).
     The list order is stable across runs so audit packs can rely on it.
     """
-    return [rule(fdp) for rule in _ALL_RULES]
+    token = _active_limits.set(limits if limits is not None else LIMITS)
+    try:
+        return [rule(fdp) for rule in _ALL_RULES]
+    finally:
+        _active_limits.reset(token)
 
 
 def aggregate_verdicts(verdicts: list[FtlVerdict]) -> FtlVerdict:
