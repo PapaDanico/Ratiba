@@ -60,11 +60,16 @@ AIRCRAFT_TYPES: tuple[AircraftType, ...] = (
     AircraftType("CRJ2", "Bombardier", "CRJ200", "regional_jet", 50),
     AircraftType("CRJ9", "Bombardier", "CRJ900", "regional_jet", 90),
     AircraftType("F100", "Fokker", "100", "regional_jet", 100),
+    AircraftType("F70", "Fokker", "70", "regional_jet", 79),
     AircraftType("F28", "Fokker", "F28 Fellowship", "regional_jet", 65),
     # --- Narrowbody (top of the sub-scale range / charter) ---
     AircraftType("B733", "Boeing", "737-300", "narrowbody", 140),
     AircraftType("B738", "Boeing", "737-800", "narrowbody", 162),
+    AircraftType("B737", "Boeing", "737-700", "narrowbody", 130),
     AircraftType("B732", "Boeing", "737-200", "narrowbody", 120),
+    AircraftType("A319", "Airbus", "A319", "narrowbody", 128),
+    AircraftType("A320", "Airbus", "A320", "narrowbody", 150),
+    AircraftType("A321", "Airbus", "A321", "narrowbody", 180),
 )
 
 _BY_ICAO = {t.icao: t for t in AIRCRAFT_TYPES}
