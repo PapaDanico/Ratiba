@@ -1,9 +1,8 @@
 #!/bin/sh
 set -e
 
-# Render (and many PaaS) inject DATABASE_URL as postgres:// or postgresql://,
-# which SQLAlchemy routes to the psycopg2 driver. We ship psycopg v3, which
-# requires the postgresql+psycopg:// scheme. Rewrite before anything runs.
+# Render injects DATABASE_URL as postgres:// (psycopg2 dialect).
+# Rewrite to postgresql+psycopg:// for the psycopg v3 driver we ship.
 if [ -n "$DATABASE_URL" ]; then
     DATABASE_URL=$(echo "$DATABASE_URL" | sed \
         's|^postgres://|postgresql+psycopg://|; s|^postgresql://|postgresql+psycopg://|')
@@ -11,4 +10,8 @@ if [ -n "$DATABASE_URL" ]; then
 fi
 
 alembic upgrade head
+
+# Load demo data on first run (idempotent — safe to run every startup).
+python scripts/seed.py --demo
+
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
