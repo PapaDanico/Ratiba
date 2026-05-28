@@ -9,10 +9,14 @@ and keep prompt caching consistent across the bot's intent router
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from app.core.config import get_settings
+from app.models.llm_usage import LlmUsageEvent
 
 log = logging.getLogger("ratiba.llm")
 
@@ -27,6 +31,43 @@ class LlmResponse:
 
 class LlmClientNotConfigured(RuntimeError):
     """Raised when ANTHROPIC_API_KEY is missing — callers should fall back."""
+
+
+def _log_usage(
+    *,
+    call_site: str,
+    response: LlmResponse,
+    session: Session | None,
+    operator_id: uuid.UUID | None,
+    crew_id: uuid.UUID | None,
+) -> None:
+    """Always emit a structured log line; persist a row if a session is given.
+
+    Backend-side callers (Phase 7 parser) pass a session and persist. The
+    bot has no DB connection — it relies on the structured log + Phase 6's
+    log-aggregation pipeline.
+    """
+    log.info(
+        "llm_usage",
+        extra={
+            "call_site": call_site,
+            "model": response.model,
+            "input_tokens": response.input_tokens,
+            "output_tokens": response.output_tokens,
+        },
+    )
+    if session is None:
+        return
+    session.add(
+        LlmUsageEvent(
+            operator_id=operator_id,
+            crew_id=crew_id,
+            call_site=call_site,
+            model=response.model,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+        )
+    )
 
 
 def _client() -> Any:
@@ -48,6 +89,9 @@ def conversational_route(
     system: str,
     user_message: str,
     max_tokens: int = 256,
+    session: Session | None = None,
+    operator_id: uuid.UUID | None = None,
+    crew_id: uuid.UUID | None = None,
 ) -> LlmResponse:
     """Light completion via Haiku for bot intent routing.
 
@@ -63,12 +107,20 @@ def conversational_route(
         messages=[{"role": "user", "content": user_message}],
     )
     text = "".join(block.text for block in response.content if getattr(block, "type", "") == "text")
-    return LlmResponse(
+    result = LlmResponse(
         text=text.strip(),
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
         model=response.model,
     )
+    _log_usage(
+        call_site="conversational_route",
+        response=result,
+        session=session,
+        operator_id=operator_id,
+        crew_id=crew_id,
+    )
+    return result
 
 
 def parser_complete(
@@ -76,6 +128,8 @@ def parser_complete(
     system: str,
     user_message: str,
     max_tokens: int = 4096,
+    session: Session | None = None,
+    operator_id: uuid.UUID | None = None,
 ) -> LlmResponse:
     """Heavy completion via Sonnet — Phase 7 OM-A parser entry point."""
     settings = get_settings()
@@ -86,9 +140,17 @@ def parser_complete(
         messages=[{"role": "user", "content": user_message}],
     )
     text = "".join(block.text for block in response.content if getattr(block, "type", "") == "text")
-    return LlmResponse(
+    result = LlmResponse(
         text=text.strip(),
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
         model=response.model,
     )
+    _log_usage(
+        call_site="parser_complete",
+        response=result,
+        session=session,
+        operator_id=operator_id,
+        crew_id=None,
+    )
+    return result

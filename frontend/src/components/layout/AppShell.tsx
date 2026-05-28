@@ -9,6 +9,7 @@ const NAV: Array<{ to: string; label: string; end?: boolean }> = [
   { to: "/crew", label: "Crew" },
   { to: "/currency", label: "Currency" },
   { to: "/leave", label: "Leave" },
+  { to: "/swaps", label: "Swaps" },
   { to: "/settings", label: "Settings" },
 ];
 

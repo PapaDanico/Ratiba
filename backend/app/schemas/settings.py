@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.operator import OperatorTier
 
@@ -18,6 +18,7 @@ class OperatorOut(BaseModel):
     base: str
     contact_email: str
     tier: OperatorTier
+    default_soft_weights: dict[str, float] = Field(default_factory=dict)
 
 
 class OperatorPatch(BaseModel):
@@ -25,3 +26,4 @@ class OperatorPatch(BaseModel):
     base: str | None = None
     contact_email: str | None = None
     tier: OperatorTier | None = None
+    default_soft_weights: dict[str, float] | None = None

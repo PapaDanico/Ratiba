@@ -61,6 +61,10 @@ class AssignmentOut(BaseModel):
     sector_ids: list[str]
     captain_id: str
     fo_id: str
+    # Populated when persisted FlightDutyPeriod rows are available for the
+    # date (i.e. after ``publish_roster`` or ``amend_roster``). Empty in
+    # raw optimiser output where no DB lookup has happened yet.
+    legality_state: str | None = None
 
 
 class RosterResult(BaseModel):
@@ -128,9 +132,21 @@ class PublishRosterResponse(BaseModel):
 
 
 class AmendRosterRequest(BaseModel):
-    """Post-publication amendment. Replaces a single duty day's crew."""
+    """Post-publication amendment. Replaces a single duty day's crew.
+
+    Both new crew slots are required so the caller commits to a complete
+    state. The dashboard's amend modal pre-fills these from the existing
+    assignment.
+    """
 
     duty_day_key: str
     new_captain_employee_no: str
     new_fo_employee_no: str
-    reason: str
+    reason: str = Field(min_length=1, max_length=512)
+
+
+class AmendRosterResponse(BaseModel):
+    duty_day_key: str
+    captain_id: str
+    fo_id: str
+    legality_state: str

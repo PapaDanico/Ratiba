@@ -131,8 +131,11 @@ def publish_roster(
 ) -> PublishRosterResponse:
     """Persist every assignment in ``payload`` transactionally.
 
-    Idempotency is left for Phase 6 (with a roster-version table); Phase 3
-    publish is single-use per horizon.
+    Idempotent: re-publishing onto the same horizon replaces existing
+    ``SectorAssignment`` + ``FlightDutyPeriod`` rows for the touched
+    sectors/dates instead of duplicating them. Crewing-officer-driven
+    surgical edits go through :func:`amend_roster` (with a reason) so
+    the audit trail distinguishes a full re-publish from a single swap.
     """
     sector_by_id: dict[str, SectorInputIn] = {s.sector_id: s for s in payload.sectors}
     sectors_persisted: dict[str, Sector] = {}
@@ -140,6 +143,40 @@ def publish_roster(
         sectors_persisted[s.sector_id] = _ensure_sector(
             session, operator_id=user.operator_id, user_id=user.id, s=s
         )
+
+    # Drop any prior SectorAssignment / FlightDutyPeriod rows that this
+    # republish supersedes so re-runs are idempotent. We delete-and-rewrite
+    # rather than upsert because (sector_id, role) is the natural key but
+    # the row's identity (UUID) is fresh on every publish.
+    touched_sector_ids = [sectors_persisted[sid].id for sid in sectors_persisted]
+    touched_dates = {a.date_local for a in payload.assignments}
+    if touched_sector_ids:
+        existing_assignments = session.scalars(
+            select(SectorAssignment).where(SectorAssignment.sector_id.in_(touched_sector_ids))
+        ).all()
+        for sa in existing_assignments:
+            session.delete(sa)
+    crew_in_payload = {a.captain_id for a in payload.assignments} | {
+        a.fo_id for a in payload.assignments
+    }
+    if crew_in_payload and touched_dates:
+        crew_ids = [
+            c.id
+            for c in session.scalars(
+                select(Crew)
+                .where(Crew.operator_id == user.operator_id)
+                .where(Crew.employee_no.in_(crew_in_payload))
+            ).all()
+        ]
+        if crew_ids:
+            existing_fdps = session.scalars(
+                select(FlightDutyPeriod)
+                .where(FlightDutyPeriod.crew_id.in_(crew_ids))
+                .where(FlightDutyPeriod.date.in_(touched_dates))
+            ).all()
+            for fdp in existing_fdps:
+                session.delete(fdp)
+    session.flush()
 
     sa_count = 0
     fdp_count = 0
@@ -253,6 +290,18 @@ def list_published_assignments(
     crews = session.scalars(select(Crew).where(Crew.id.in_(crew_ids))).all()
     crews_by_id = {c.id: c for c in crews}
 
+    # Index FlightDutyPeriod rows so we can stamp legality on each duty day.
+    fdps = session.scalars(
+        select(FlightDutyPeriod)
+        .where(FlightDutyPeriod.operator_id == operator_id)
+        .where(FlightDutyPeriod.crew_id.in_(crew_ids))
+        .where(FlightDutyPeriod.date >= date_from)
+        .where(FlightDutyPeriod.date <= date_to)
+    ).all()
+    fdp_legality: dict[tuple[uuid.UUID, date], LegalityState] = {
+        (f.crew_id, f.date): f.legality_state for f in fdps
+    }
+
     # Group by (aircraft_reg, date).
     by_dd: dict[tuple[str, date], dict[str, object]] = defaultdict(
         lambda: {"sector_ids": set(), "CAPT": None, "FO": None, "aircraft_type": ""}
@@ -267,6 +316,7 @@ def list_published_assignments(
         crew = crews_by_id.get(sa.crew_id)
         if crew is not None:
             bucket[sa.role_on_sector] = crew.employee_no
+            bucket.setdefault(f"{sa.role_on_sector}_id", crew.id)
 
     out: list[AssignmentOut] = []
     for (reg, day), bucket in sorted(by_dd.items()):
@@ -274,6 +324,15 @@ def list_published_assignments(
         capt = bucket["CAPT"]
         fo = bucket["FO"]
         if capt and fo:
+            # Worst-state-wins across the two crew members' FDPs for the day.
+            crew_id_capt = bucket.get("CAPT_id")
+            crew_id_fo = bucket.get("FO_id")
+            states = [
+                fdp_legality.get((cid, day))
+                for cid in (crew_id_capt, crew_id_fo)
+                if isinstance(cid, uuid.UUID)
+            ]
+            worst = _worst_state([s for s in states if s is not None])
             out.append(
                 AssignmentOut(
                     duty_day_key=f"{reg}|{day.isoformat()}",
@@ -283,6 +342,170 @@ def list_published_assignments(
                     sector_ids=sorted(sector_ids_set),
                     captain_id=str(capt),
                     fo_id=str(fo),
+                    legality_state=worst.value if worst is not None else None,
                 )
             )
     return out
+
+
+_STATE_PRECEDENCE = (
+    LegalityState.LEGAL,
+    LegalityState.AT_LIMIT,
+    LegalityState.REQUIRES_FRMS_DEROGATION,
+    LegalityState.ILLEGAL,
+)
+
+
+def _worst_state(states: list[LegalityState]) -> LegalityState | None:
+    if not states:
+        return None
+    return max(states, key=_STATE_PRECEDENCE.index)
+
+
+# -----------------------------------------------------------------------------
+# Amendments — post-publication targeted edits
+# -----------------------------------------------------------------------------
+
+
+def amend_roster(
+    session: Session,
+    *,
+    user: User,
+    duty_day_key: str,
+    new_captain_employee_no: str,
+    new_fo_employee_no: str,
+    reason: str,
+) -> tuple[uuid.UUID, uuid.UUID, LegalityState]:
+    """Swap (CAPT, FO) on a single published duty day.
+
+    Returns (captain_id, fo_id, recomputed_legality). The before/after
+    state is captured in an ``AMEND_ROSTER`` audit event so the audit
+    pack can reconstruct the full change history.
+    """
+    try:
+        aircraft_reg, day_iso = duty_day_key.split("|", 1)
+        day = date.fromisoformat(day_iso)
+    except ValueError as exc:
+        raise RosterPersistenceError(f"malformed duty_day_key: {duty_day_key!r}") from exc
+
+    sectors = session.scalars(
+        select(Sector)
+        .where(Sector.operator_id == user.operator_id)
+        .where(Sector.aircraft_reg == aircraft_reg)
+        .where(Sector.date == day)
+        .where(Sector.status == SectorStatus.PUBLISHED)
+    ).all()
+    if not sectors:
+        raise RosterPersistenceError(f"no published sectors found for {duty_day_key!r}")
+
+    new_captain = _crew_lookup(session, user.operator_id, new_captain_employee_no)
+    new_fo = _crew_lookup(session, user.operator_id, new_fo_employee_no)
+    if new_captain.id == new_fo.id:
+        raise RosterPersistenceError("captain and FO must be different crew")
+
+    # Snapshot current assignments for the audit event.
+    sector_ids = [s.id for s in sectors]
+    existing = session.scalars(
+        select(SectorAssignment).where(SectorAssignment.sector_id.in_(sector_ids))
+    ).all()
+    old_crew_ids = {sa.crew_id for sa in existing}
+    before_state = {
+        "assignments": [
+            {
+                "sector_id": str(sa.sector_id),
+                "crew_id": str(sa.crew_id),
+                "role_on_sector": sa.role_on_sector,
+            }
+            for sa in existing
+        ]
+    }
+    for sa in existing:
+        session.delete(sa)
+    session.flush()
+
+    # Recreate the assignment with the new pair.
+    for sector in sectors:
+        for crew, role in ((new_captain, "CAPT"), (new_fo, "FO")):
+            session.add(
+                SectorAssignment(
+                    operator_id=user.operator_id,
+                    created_by_user_id=user.id,
+                    sector_id=sector.id,
+                    crew_id=crew.id,
+                    role_on_sector=role,
+                )
+            )
+
+    # Replace the FDP rows for any crew whose involvement changed (old + new).
+    affected_crew = old_crew_ids | {new_captain.id, new_fo.id}
+    old_fdps = session.scalars(
+        select(FlightDutyPeriod)
+        .where(FlightDutyPeriod.crew_id.in_(affected_crew))
+        .where(FlightDutyPeriod.date == day)
+    ).all()
+    for fdp in old_fdps:
+        session.delete(fdp)
+    session.flush()
+
+    # Build a fresh SectorInputIn list for the FDP computation.
+    day_sector_inputs = [
+        SectorInputIn(
+            sector_id=s.flight_no,
+            date_local=s.date,
+            std=s.std,
+            sta=s.sta,
+            aircraft_reg=s.aircraft_reg,
+            aircraft_type=s.aircraft_type,
+            block_hours=Decimal(str((s.sta - s.std).total_seconds() / 3600.0)),
+        )
+        for s in sectors
+    ]
+    aggregated: LegalityState = LegalityState.LEGAL
+    for crew in (new_captain, new_fo):
+        (
+            report,
+            off,
+            sectors_count,
+            flight_h,
+            duty_h,
+            legality,
+            rules_applied,
+        ) = _compute_fdp_legality(day_sector_inputs, crew.id, day)
+        session.add(
+            FlightDutyPeriod(
+                operator_id=user.operator_id,
+                created_by_user_id=user.id,
+                crew_id=crew.id,
+                date=day,
+                report_time=report,
+                off_duty_time=off,
+                sectors_count=sectors_count,
+                flight_hours=flight_h,
+                duty_hours=duty_h,
+                type=FdpType.FDP,
+                legality_state=legality,
+                ftl_rules_applied=rules_applied,
+            )
+        )
+        if _STATE_PRECEDENCE.index(legality) > _STATE_PRECEDENCE.index(aggregated):
+            aggregated = legality
+    session.flush()
+
+    audit_log.record(
+        session,
+        operator_id=user.operator_id,
+        actor_user_id=user.id,
+        action="AMEND_ROSTER",
+        entity_type="roster",
+        entity_id=None,
+        before_state=before_state,
+        after_state={
+            "duty_day_key": duty_day_key,
+            "captain_employee_no": new_captain_employee_no,
+            "fo_employee_no": new_fo_employee_no,
+            "reason": reason,
+            "recomputed_legality": aggregated.value,
+        },
+    )
+    session.commit()
+    return new_captain.id, new_fo.id, aggregated

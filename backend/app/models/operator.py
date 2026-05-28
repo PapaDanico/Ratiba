@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import enum
+from typing import Any
 
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -29,4 +31,7 @@ class Operator(UUIDMixin, TimestampMixin, Base):
         SAEnum(OperatorTier, name="operator_tier"),
         nullable=False,
         default=OperatorTier.ENTRY,
+    )
+    default_soft_weights: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
     )

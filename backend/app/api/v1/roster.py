@@ -12,6 +12,8 @@ from app.core.dependencies import get_current_user
 from app.core.job_queue import JobQueue, get_job_queue
 from app.models import User
 from app.schemas.roster import (
+    AmendRosterRequest,
+    AmendRosterResponse,
     AssignmentOut,
     ConstraintBindingOut,
     ExplainRequest,
@@ -109,6 +111,35 @@ def publish(
         return roster_service.publish_roster(session, user=user, payload=payload)
     except roster_service.RosterPersistenceError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/amend",
+    response_model=AmendRosterResponse,
+    summary="Replace the crew on a single published duty day, with reason",
+)
+def amend(
+    payload: AmendRosterRequest,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> AmendRosterResponse:
+    try:
+        captain_id, fo_id, legality = roster_service.amend_roster(
+            session,
+            user=user,
+            duty_day_key=payload.duty_day_key,
+            new_captain_employee_no=payload.new_captain_employee_no,
+            new_fo_employee_no=payload.new_fo_employee_no,
+            reason=payload.reason,
+        )
+    except roster_service.RosterPersistenceError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return AmendRosterResponse(
+        duty_day_key=payload.duty_day_key,
+        captain_id=str(captain_id),
+        fo_id=str(fo_id),
+        legality_state=legality.value,
+    )
 
 
 @router.post(

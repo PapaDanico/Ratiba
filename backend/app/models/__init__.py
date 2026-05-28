@@ -9,6 +9,7 @@ from app.models.base import TimestampMixin, UUIDMixin
 from app.models.crew import ContractType, Crew, CrewRole
 from app.models.ftl import FdpType, FlightDutyPeriod, FtlRule, LegalityState, RuleSource
 from app.models.leave import LeaveRequest, LeaveStatus, LeaveType
+from app.models.llm_usage import LlmUsageEvent
 from app.models.operator import Operator, OperatorTier
 from app.models.pairing import PairingToken
 from app.models.roster import Sector, SectorAssignment, SectorStatus
@@ -31,6 +32,7 @@ __all__ = [
     "LeaveStatus",
     "LeaveType",
     "LegalityState",
+    "LlmUsageEvent",
     "Operator",
     "OperatorTier",
     "PairingToken",

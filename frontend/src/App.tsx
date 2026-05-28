@@ -11,6 +11,7 @@ import { RosterPage } from "@/pages/roster";
 import { SettingsPage } from "@/pages/settings";
 import { AuditPage } from "@/pages/audit";
 import { CrewMePage } from "@/pages/me";
+import { SwapsPage } from "@/pages/swaps";
 
 export function App() {
   return (
@@ -31,6 +32,7 @@ export function App() {
             <Route path="crew" element={<CrewPage />} />
             <Route path="currency" element={<CurrencyPage />} />
             <Route path="leave" element={<LeavePage />} />
+            <Route path="swaps" element={<SwapsPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
