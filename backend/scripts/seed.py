@@ -17,6 +17,7 @@ Idempotent in both modes — safe to re-run.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import uuid
 from dataclasses import dataclass
@@ -552,11 +553,16 @@ def _seed_demo(session: Session) -> None:
         except Exception as exc:
             print(f"  Roster publish skipped for {demo.name}: {exc}")
 
-        try:
-            _generate_demo_audit_pack(session, user=officer, today=today)
-            print(f"  Generated 90-day audit pack for {demo.name}.")
-        except Exception as exc:
-            print(f"  Audit pack generation skipped for {demo.name}: {exc}")
+        # Audit-pack PDFs (WeasyPrint) are memory-heavy; generating one per
+        # operator on every boot can OOM a small free-tier instance. Skip by
+        # default — they're generated on demand from the Audit packs page.
+        # Opt in for a fully-populated seed with RATIBA_SEED_AUDIT_PACKS=1.
+        if os.getenv("RATIBA_SEED_AUDIT_PACKS") == "1":
+            try:
+                _generate_demo_audit_pack(session, user=officer, today=today)
+                print(f"  Generated 90-day audit pack for {demo.name}.")
+            except Exception as exc:
+                print(f"  Audit pack generation skipped for {demo.name}: {exc}")
 
     # The flagship Jetways Airlines demo (dual-Fokker fleet, night cargo,
     # 27-pilot establishment) lives in its own module — richer than the

@@ -19,6 +19,7 @@ source brief; corrected here for accuracy.
 
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -666,12 +667,16 @@ def seed_jetways(session: Session) -> dict[str, int]:
         session.rollback()
 
     # ── 90-day audit pack ──
-    try:
-        audit_pack.generate_pack(
-            session, user=officer, period_from=today - timedelta(days=89), period_to=today
-        )
-    except Exception:  # audit pack is best-effort in the seed
-        session.rollback()
+    # WeasyPrint PDF generation is memory-heavy; skip on boot by default so a
+    # small free-tier instance can't OOM mid-seed. Generated on demand from the
+    # Audit packs page; opt in with RATIBA_SEED_AUDIT_PACKS=1.
+    if os.getenv("RATIBA_SEED_AUDIT_PACKS") == "1":
+        try:
+            audit_pack.generate_pack(
+                session, user=officer, period_from=today - timedelta(days=89), period_to=today
+            )
+        except Exception:  # audit pack is best-effort in the seed
+            session.rollback()
 
     session.commit()
     return {
