@@ -42,22 +42,29 @@ from app.services import audit_log, audit_pack_storage, branding, ftl_engine
 GENERATOR_VERSION = f"ratiba-audit-pack/{__version__}"
 AMBER_THRESHOLD_DAYS = 30
 
-# Rule-family → KCARs citation map. Single source of truth alongside
-# ``docs/ftl-rules.md``; per-operator overrides land in Phase 6.
+# Rule-family → regulatory citation map. Kenya's prescriptive flight- and
+# duty-time limits are set out in the KCAA Flight Duty Time Scheme (Advisory
+# Circular CAA-AC-OPS033, a CAP 371-derived scheme) made under the Civil
+# Aviation (Operation of Aircraft) Regulations 2025, implementing the
+# fatigue-management framework of ICAO Annex 6, Part I, 4.10. FRMS-based
+# derogations follow ICAO Doc 9966. Exact article/table numbers are pending
+# confirmation against the gazetted scheme — keep in lockstep with
+# docs/ftl-rules.md.
+_SCHEME = "KCAA Flight Duty Time Scheme (CAA-AC-OPS033)"
 RULE_CITATIONS: dict[str, str] = {
-    "KCAR-P8-FDP-MAX-BASIC": "KCARs 2025 Part 8 §8.X.Y — Maximum FDP (basic crew)",
-    "KCAR-P8-FDP-MAX-AUG": "KCARs 2025 Part 8 §8.X.Y — Maximum FDP (augmented crew)",
-    "KCAR-P8-REST-MIN": "KCARs 2025 Part 8 §8.X.Y — Minimum rest before next FDP",
-    "KCAR-P8-CUMUL-DUTY-7D": "KCARs 2025 Part 8 §8.X.Y — Cumulative duty (7 days)",
-    "KCAR-P8-CUMUL-DUTY-28D": "KCARs 2025 Part 8 §8.X.Y — Cumulative duty (28 days)",
-    "KCAR-P8-CUMUL-DUTY-365D": "KCARs 2025 Part 8 §8.X.Y — Cumulative duty (365 days)",
-    "KCAR-P8-CUMUL-BLOCK-28D": "KCARs 2025 Part 8 §8.X.Y — Cumulative block (28 days)",
-    "KCAR-P8-CUMUL-BLOCK-365D": "KCARs 2025 Part 8 §8.X.Y — Cumulative block (365 days)",
-    "KCAR-P8-STANDBY-SHORT-CALL": "KCARs 2025 Part 8 §8.X.Y — Standby (short-call)",
-    "KCAR-P8-STANDBY-LONG-CALL": "KCARs 2025 Part 8 §8.X.Y — Standby (long-call)",
-    "KCAR-P8-SPLIT-DUTY": "KCARs 2025 Part 8 §8.X.Y — Split-duty extension",
-    "KCAR-P8-TZ-RECOVERY": "KCARs 2025 Part 8 §8.X.Y — Time-zone crossing recovery",
-    "KCAR-P8-DISCRETION": "KCARs 2025 Part 8 §8.X.Y — Commander's discretion",
+    "KCAR-P8-FDP-MAX-BASIC": f"{_SCHEME} — Maximum FDP, basic (2-pilot) crew",
+    "KCAR-P8-FDP-MAX-AUG": f"{_SCHEME} — Maximum FDP, augmented crew + in-flight rest",
+    "KCAR-P8-REST-MIN": f"{_SCHEME} — Minimum rest period before next FDP",
+    "KCAR-P8-CUMUL-DUTY-7D": f"{_SCHEME} — Cumulative duty hours (7 days)",
+    "KCAR-P8-CUMUL-DUTY-28D": f"{_SCHEME} — Cumulative duty hours (28 days)",
+    "KCAR-P8-CUMUL-DUTY-365D": f"{_SCHEME} — Cumulative duty hours (12 months)",
+    "KCAR-P8-CUMUL-BLOCK-28D": f"{_SCHEME} — Cumulative flying (block) hours (28 days)",
+    "KCAR-P8-CUMUL-BLOCK-365D": f"{_SCHEME} — Cumulative flying (block) hours (12 months)",
+    "KCAR-P8-STANDBY-SHORT-CALL": f"{_SCHEME} — Standby (short-call)",
+    "KCAR-P8-STANDBY-LONG-CALL": f"{_SCHEME} — Standby (long-call)",
+    "KCAR-P8-SPLIT-DUTY": f"{_SCHEME} — Split-duty extension",
+    "KCAR-P8-TZ-RECOVERY": f"{_SCHEME} — Time-zone crossing recovery rest",
+    "KCAR-P8-DISCRETION": f"{_SCHEME} — Commander's discretion",
 }
 
 
@@ -402,8 +409,9 @@ def _render_html(data: PackData) -> str:
 
   <p class="footer-note">
     This pack is generated automatically from Ratiba's audit-trail and
-    flight-duty-period tables. Every assertion is traceable to a
-    KCARs 2025 Part 8 rule (see the methodology page).
+    flight-duty-period tables. Every assertion is traceable to a rule in
+    the KCAA Flight Duty Time Scheme (CAA-AC-OPS033), implementing ICAO
+    Annex 6 Part I (see the methodology page).
   </p>
 </section>
 
@@ -479,7 +487,7 @@ def _render_html(data: PackData) -> str:
   touched a roster-relevant entity in the period.
 </p>
 <table>
-  <thead><tr><th>Rule ID</th><th>KCARs 2025 Part 8 citation</th></tr></thead>
+  <thead><tr><th>Rule ID</th><th>Regulatory citation</th></tr></thead>
   <tbody>{methodology_rows}</tbody>
 </table>
 

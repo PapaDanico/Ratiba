@@ -1,17 +1,28 @@
-"""KCARs 2025 Part 8 FTL engine.
+"""Flight & duty time (FTL) engine for the KCAA Flight Duty Time Scheme.
+
+Kenya's prescriptive flight- and duty-time limits are set out in the KCAA
+Flight Duty Time Scheme (Advisory Circular CAA-AC-OPS033, a CAP 371-derived
+scheme) made under the Civil Aviation (Operation of Aircraft) Regulations
+2025, which implement the fatigue-management framework of ICAO Annex 6,
+Part I, 4.10. ICAO permits two routes: prescriptive limits, and an approved
+Fatigue Risk Management System (FRMS, ICAO Doc 9966). The
+``REQUIRES_FRMS_DEROGATION`` verdict marks duties only acceptable under an
+approved FRMS.
 
 Every rule is a pure function returning :class:`FtlVerdict`. The numeric
-limits in :data:`LIMITS` are the single source of truth for the generic
-baseline; operator overrides land in Phase 6 via the ``ftl_rules`` table
-(keyed by ``rule_id``).
+limits in :data:`LIMITS` are a CAP 371 / EASA Part-ORO-aligned baseline and
+must be confirmed against the authoritative CAA-AC-OPS033 tables and the
+forthcoming Civil Aviation (Fatigue Management) Regulations 2025 before
+operational reliance. Operator-specific overrides load via the ``ftl_rules``
+table (keyed by ``rule_id``).
 
-See ``docs/ftl-rules.md`` for the human-readable rule documentation —
+Rule IDs (``KCAR-P8-*``) are stable internal identifiers, not regulatory
+section numbers. See ``docs/ftl-rules.md`` for the human-readable rules —
 keep that document in lockstep with this module.
 
-This module is deliberately framework-free: rules take dataclass inputs and
-return dataclass verdicts, no SQLAlchemy / FastAPI dependencies. That keeps
-unit tests fast and the optimiser (Phase 2) able to call rules at high
-frequency without DB round-trips.
+Framework-free by design: rules take dataclass inputs and return dataclass
+verdicts (no SQLAlchemy / FastAPI), so unit tests stay fast and the
+optimiser can call rules at high frequency without DB round-trips.
 """
 
 from __future__ import annotations
@@ -27,8 +38,9 @@ from app.models.crew import CrewRole
 from app.models.ftl import FdpType, LegalityState
 
 # -----------------------------------------------------------------------------
-# Numeric limits — generic KCARs 2025 Part 8 baseline (pending Dan's review).
-# Edit these together with docs/ftl-rules.md.
+# Numeric limits — CAP 371 / EASA Part-ORO-aligned baseline for the KCAA
+# Flight Duty Time Scheme (CAA-AC-OPS033). Pending confirmation against the
+# authoritative scheme tables. Edit these together with docs/ftl-rules.md.
 # -----------------------------------------------------------------------------
 
 LIMITS: Final[dict[str, Any]] = {
@@ -76,7 +88,9 @@ LIMITS: Final[dict[str, Any]] = {
     "at_limit_margin_h": 0.5,
 }
 
-REGULATION_REF: Final[str] = "KCARs 2025 Part 8 §8.X.Y"
+REGULATION_REF: Final[str] = (
+    "KCAA Flight Duty Time Scheme (CAA-AC-OPS033); ICAO Annex 6 Part I, 4.10"
+)
 
 # ContextVar holding the active limits dict for the current check_fdp call.
 # Defaults to the module-level baseline so all existing callers work unchanged.

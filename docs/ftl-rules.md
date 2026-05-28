@@ -1,21 +1,37 @@
-# FTL rules — KCARs 2025 Part 8 baseline
+# FTL rules — KCAA Flight Duty Time Scheme baseline
 
 Single source of truth for the rule set enforced by `app.services.ftl_engine`.
 Each rule below maps 1:1 to a pure function in that module, and to ≥1 test in
 `backend/tests/ftl/`.
 
-> **Status:** Phase 1 working baseline. Numeric limits in `LIMITS` are
-> modelled on ICAO Annex 6 Part I / EASA Part-ORO FTL conventions and are
-> awaiting confirmation against the authoritative KCARs 2025 Part 8 text.
-> Where a regulation citation is shown as `§8.X.Y` the article number is
-> a placeholder for Dan to fill in during review.
+## Regulatory framework
+
+- **ICAO Annex 6, Part I, §4.10** sets the *framework*: each State must
+  establish fatigue-management regulations with defined limits for flight
+  time, flight duty periods (FDP), duty periods and rest, and may permit an
+  approved **Fatigue Risk Management System (FRMS)** (ICAO Doc 9966). ICAO
+  does **not** prescribe universal numbers.
+- **Kenya — prescriptive limits:** the **KCAA Flight Duty Time Scheme**
+  (Advisory Circular **CAA-AC-OPS033**, a CAP 371-derived scheme), made
+  under the Civil Aviation (Operation of Aircraft) Regulations 2025.
+- **Kenya — FRMS:** the **Civil Aviation (Fatigue Management) Regulations
+  2025** were, at the time of writing, at an advanced stage awaiting
+  publication in the Kenya Gazette. The engine's `REQUIRES_FRMS_DEROGATION`
+  state corresponds to duties acceptable only under an approved FRMS.
+
+> **Status:** working baseline. The numeric limits in `LIMITS` are aligned
+> to CAP 371 / EASA Part-ORO conventions and **must be confirmed against the
+> authoritative CAA-AC-OPS033 tables** (and the gazetted Fatigue Management
+> Regulations 2025) before operational reliance. The rule IDs
+> `KCAR-P8-*` are stable internal identifiers, **not** regulatory section
+> numbers.
 
 ## Baseline decision
 
 **Decided 2026-05-27** (Capt. Dan / Claude Code, Plan §11 Q3):
-Phase 1 builds the **generic KCARs 2025 Part 8** baseline. Operator-specific
-OM-A deltas will be layered in Phase 6 once the first operator is confirmed
-and their OM-A FTL chapter is in hand.
+build the generic Kenyan baseline now; operator-specific OM-A / FTDS deltas
+layer in via the `ftl_rules` table once an operator's approved scheme is in
+hand.
 
 ## How to read this document
 

@@ -48,7 +48,7 @@ def test_basic_fdp_states(
     assert verdict.legality_state == expected_state, verdict.reason
     assert verdict.rule_id == "KCAR-P8-FDP-MAX-BASIC"
     assert verdict.metadata["band"] == expected_band
-    assert verdict.regulation_ref.startswith("KCARs 2025 Part 8")
+    assert verdict.regulation_ref.startswith("KCAA Flight Duty Time Scheme")
 
 
 def test_basic_fdp_metadata_carries_limit_and_margin() -> None:
