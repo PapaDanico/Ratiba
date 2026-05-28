@@ -1,0 +1,55 @@
+services:
+  # ── Backend API ────────────────────────────────────────────────────────────
+  - type: web
+    name: ratiba-api
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    healthCheckPath: /healthz
+    # Render injects $PORT; run migrations before starting the server.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ratiba-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ratiba-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      # Set this to the frontend URL after the first deploy:
+      #   https://ratiba-app.onrender.com  (or your custom domain)
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  # ── Frontend (nginx + Vite SPA) ────────────────────────────────────────────
+  - type: web
+    name: ratiba-app
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: frontend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      # Set this to the backend URL after the first deploy:
+      #   https://ratiba-api.onrender.com
+      - key: BACKEND_URL
+        sync: false
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  - type: redis
+    name: ratiba-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+databases:
+  # ── Postgres ───────────────────────────────────────────────────────────────
+  - name: ratiba-db
+    databaseName: ratiba
+    user: ratiba
+    plan: free
