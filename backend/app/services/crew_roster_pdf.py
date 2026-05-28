@@ -23,6 +23,7 @@ from app.models import FlightDutyPeriod as FDP
 from app.models.ftl import FdpType, LegalityState
 from app.models.leave import LeaveRequest, LeaveStatus
 from app.models.operator import Operator
+from app.services import branding
 
 
 class CrewRosterPdfError(Exception):
@@ -192,6 +193,11 @@ html, body {
   letter-spacing: 2pt;
   text-transform: uppercase;
   color: #4A7FA5;
+}
+.brand-logo {
+  width: 84px;
+  height: auto;
+  margin-bottom: 4pt;
 }
 .month-title {
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -430,7 +436,8 @@ def _render_html(
 
 <div class="header">
   <div class="header-left">
-    <p class="eyebrow">DN Consultancy · Ratiba · crew roster card</p>
+    <img class="brand-logo" src="{branding.logo_data_uri()}" alt="DN Consultancy" />
+    <p class="eyebrow">Ratiba · crew roster card</p>
     <h1>{_esc(crew.first_name)} {_esc(crew.last_name)}</h1>
     <div class="sub">
       {_esc(crew.role.value)} · Employee {_esc(crew.employee_no)} · Base {_esc(crew.base_station)}
