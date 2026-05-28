@@ -18,7 +18,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Crew, FlightDutyPeriod as FDP, Sector, SectorAssignment
+from app.models import Crew, Sector, SectorAssignment
+from app.models import FlightDutyPeriod as FDP
 from app.models.ftl import FdpType, LegalityState
 from app.models.leave import LeaveRequest, LeaveStatus
 from app.models.operator import Operator

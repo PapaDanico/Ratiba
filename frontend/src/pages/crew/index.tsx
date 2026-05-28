@@ -61,8 +61,18 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
   }
 
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const years = [curYear - 1, curYear, curYear + 1];
 
@@ -86,7 +96,9 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
               className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
             >
               {months.map((m, i) => (
-                <option key={i} value={i + 1}>{m}</option>
+                <option key={i} value={i + 1}>
+                  {m}
+                </option>
               ))}
             </select>
             <select
@@ -95,7 +107,9 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
               className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
             >
               {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
+                <option key={y} value={y}>
+                  {y}
+                </option>
               ))}
             </select>
           </div>

@@ -251,7 +251,9 @@ export function RosterPage() {
                   data-testid="holiday-country-select"
                 >
                   {COUNTRY_OPTIONS.map((c) => (
-                    <option key={c.code} value={c.code}>{c.label}</option>
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -273,9 +275,7 @@ export function RosterPage() {
                     key={d}
                     className={[
                       "rounded-md border p-2 min-h-[100px]",
-                      holidayName
-                        ? "bg-amber-50 border-amber-200"
-                        : "bg-dn-fog border-dn-steel-lt",
+                      holidayName ? "bg-amber-50 border-amber-200" : "bg-dn-fog border-dn-steel-lt",
                     ].join(" ")}
                   >
                     <div className="font-mono text-xs text-dn-steel mb-1">{d}</div>
