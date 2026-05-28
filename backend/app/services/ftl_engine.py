@@ -347,7 +347,9 @@ def rule_min_rest(fdp: FdpInput) -> FtlVerdict:
     rest_h = _hours_between(prior.off_duty_time, fdp.report_time)
     preceding_duty_h = float(prior.duty_hours)
     floor_base = float(
-        _active_limits.get()["rest_home_floor_h"] if fdp.at_home_base else _active_limits.get()["rest_away_floor_h"]
+        _active_limits.get()["rest_home_floor_h"]
+        if fdp.at_home_base
+        else _active_limits.get()["rest_away_floor_h"]
     )
     floor = max(floor_base, preceding_duty_h)
 
@@ -662,7 +664,9 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
 
     if extension <= 0:
         # Repeated-use check still applies — if many recent uses, flag.
-        if fdp.discretion_uses_last_90d >= int(_active_limits.get()["discretion_repeated_use_90d_threshold"]):
+        if fdp.discretion_uses_last_90d >= int(
+            _active_limits.get()["discretion_repeated_use_90d_threshold"]
+        ):
             return FtlVerdict(
                 legality_state=LegalityState.AT_LIMIT,
                 rule_id=rule_id,
@@ -676,7 +680,9 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
                 metadata={
                     "extension_h": 0.0,
                     "uses_last_90d": fdp.discretion_uses_last_90d,
-                    "repeated_use_threshold": int(_active_limits.get()["discretion_repeated_use_90d_threshold"]),
+                    "repeated_use_threshold": int(
+                        _active_limits.get()["discretion_repeated_use_90d_threshold"]
+                    ),
                 },
             )
         return FtlVerdict(
@@ -701,7 +707,9 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
         )
 
     state = LegalityState.REQUIRES_FRMS_DEROGATION
-    if fdp.discretion_uses_last_90d >= int(_active_limits.get()["discretion_repeated_use_90d_threshold"]):
+    if fdp.discretion_uses_last_90d >= int(
+        _active_limits.get()["discretion_repeated_use_90d_threshold"]
+    ):
         state = LegalityState.AT_LIMIT if state == LegalityState.LEGAL else state
 
     return FtlVerdict(
