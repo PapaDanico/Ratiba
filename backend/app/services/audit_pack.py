@@ -21,14 +21,12 @@ import hashlib
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import __version__
-from app.core.config import get_settings
 from app.models import (
     AuditEvent,
     AuditPack,
@@ -39,7 +37,7 @@ from app.models import (
     User,
 )
 from app.models.ftl import LegalityState
-from app.services import audit_log, ftl_engine
+from app.services import audit_log, audit_pack_storage, ftl_engine
 
 GENERATOR_VERSION = f"ratiba-audit-pack/{__version__}"
 AMBER_THRESHOLD_DAYS = 30
@@ -520,21 +518,17 @@ def generate_pack(
     pdf_bytes = _render_pdf(html)
     sha256_hex = hashlib.sha256(pdf_bytes).hexdigest()
 
-    settings = get_settings()
-    out_dir = Path(settings.audit_pack_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
     filename = (
         f"{operator.aoc_number}_{period_from.isoformat()}_"
         f"{period_to.isoformat()}_{sha256_hex[:12]}.pdf"
     )
-    storage_path = out_dir / filename
-    storage_path.write_bytes(pdf_bytes)
+    storage_path = audit_pack_storage.write(filename, pdf_bytes)
 
     pack = AuditPack(
         operator_id=operator.id,
         period_from=period_from,
         period_to=period_to,
-        storage_path=str(storage_path),
+        storage_path=storage_path,
         sha256_hex=sha256_hex,
         byte_size=len(pdf_bytes),
         generator_version=GENERATOR_VERSION,
@@ -571,19 +565,19 @@ def verify_pack(session: Session, *, pack_id: uuid.UUID, operator_id: uuid.UUID)
     pack = session.get(AuditPack, pack_id)
     if pack is None or pack.operator_id != operator_id:
         raise AuditPackError("audit pack not found")
-    path = Path(pack.storage_path)
-    if not path.exists():
+    body = audit_pack_storage.read_bytes(pack.storage_path)
+    if body is None:
         return {
             "verified": False,
             "reason": "storage file missing",
             "expected_sha256": pack.sha256_hex,
         }
-    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    actual = hashlib.sha256(body).hexdigest()
     return {
         "verified": actual == pack.sha256_hex,
         "expected_sha256": pack.sha256_hex,
         "actual_sha256": actual,
-        "byte_size": path.stat().st_size,
+        "byte_size": len(body),
     }
 
 
@@ -593,7 +587,7 @@ def read_pack_bytes(
     pack = session.get(AuditPack, pack_id)
     if pack is None or pack.operator_id != operator_id:
         raise AuditPackError("audit pack not found")
-    path = Path(pack.storage_path)
-    if not path.exists():
+    body = audit_pack_storage.read_bytes(pack.storage_path)
+    if body is None:
         raise AuditPackError("storage file missing")
-    return path.read_bytes(), pack
+    return body, pack

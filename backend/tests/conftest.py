@@ -42,6 +42,13 @@ def _test_database_url() -> str:
 
 @pytest.fixture(scope="session")
 def db_engine():  # type: ignore[no-untyped-def]
+    """Build the test schema by applying the real Alembic migration chain.
+
+    Phase 6 closes the Phase 3 risk where conftest used
+    ``Base.metadata.create_all`` — a column added to a model but not
+    migrated would have still passed tests. We now run the same migrations
+    production runs.
+    """
     url = _test_database_url()
     try:
         engine = create_engine(url, future=True)
@@ -49,34 +56,33 @@ def db_engine():  # type: ignore[no-untyped-def]
             c.execute(text("SELECT 1"))
     except Exception as exc:
         pytest.skip(f"PostgreSQL not reachable at {url}: {exc!r}")
-    Base.metadata.drop_all(engine)
+
+    # Drop everything (tables, types, functions) so each test session
+    # starts from a clean slate.
     with engine.begin() as c:
-        c.execute(text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
-    Base.metadata.create_all(engine)
-    # Install the append-only trigger production uses on audit_events.
-    with engine.begin() as c:
-        c.execute(
-            text(
-                "CREATE OR REPLACE FUNCTION audit_events_append_only() "
-                "RETURNS trigger AS $$ BEGIN RAISE EXCEPTION "
-                "'audit_events is append-only (operation: %)', TG_OP; END; "
-                "$$ LANGUAGE plpgsql"
-            )
-        )
-        c.execute(
-            text(
-                "CREATE TRIGGER audit_events_no_update BEFORE UPDATE ON audit_events "
-                "FOR EACH ROW EXECUTE FUNCTION audit_events_append_only()"
-            )
-        )
-        c.execute(
-            text(
-                "CREATE TRIGGER audit_events_no_delete BEFORE DELETE ON audit_events "
-                "FOR EACH ROW EXECUTE FUNCTION audit_events_append_only()"
-            )
-        )
+        c.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        c.execute(text("CREATE SCHEMA public"))
+
+    # Apply the migration chain. Alembic picks up the URL from settings,
+    # which in CI is TEST_DATABASE_URL, in local dev it's
+    # postgresql+psycopg://...localhost.
+    from pathlib import Path
+
+    from alembic.config import Config
+
+    from alembic import command
+
+    backend_dir = Path(__file__).resolve().parents[1]
+    cfg = Config(str(backend_dir / "alembic.ini"))
+    cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+    cfg.set_main_option("sqlalchemy.url", url)
+    command.upgrade(cfg, "head")
+
     yield engine
-    Base.metadata.drop_all(engine)
+
+    with engine.begin() as c:
+        c.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        c.execute(text("CREATE SCHEMA public"))
 
 
 @pytest.fixture

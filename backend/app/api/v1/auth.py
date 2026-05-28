@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
+from app.core.rate_limit import PAIRING_LIMITER
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -100,6 +101,7 @@ def me(user: User = Depends(get_current_user)) -> CurrentUserOut:
 @router.post("/pilot-pair", response_model=PilotPairResponse)
 def pilot_pair(
     payload: PilotPairRequest,
+    request: Request,
     session: Session = Depends(get_db),
 ) -> PilotPairResponse:
     """Exchange a pairing code (issued by the dashboard) for a pilot JWT.
@@ -107,7 +109,21 @@ def pilot_pair(
     Public endpoint — anyone with a valid, unredeemed, unexpired code can
     redeem. Used by the Telegram bot's ``/start`` handler and by the
     ``/crew/me`` web view's pairing screen.
+
+    Rate-limited to 5 attempts per minute per ``telegram_chat_id`` or
+    per source IP when no chat id is supplied — blunts brute-force
+    enumeration of the 8-character code space.
     """
+    rate_key = (
+        f"chat:{payload.telegram_chat_id}"
+        if payload.telegram_chat_id is not None
+        else f"ip:{request.client.host if request.client else 'unknown'}"
+    )
+    if not PAIRING_LIMITER.hit(rate_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="too many pairing attempts — try again in a minute",
+        )
     try:
         crew, token = pairing.redeem_pairing_code(
             session,

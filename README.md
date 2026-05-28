@@ -92,8 +92,8 @@ npm run build
 | 2     | Optimiser MVP                              | Done          |
 | 3     | Crewing Officer dashboard                  | Done          |
 | 4     | Telegram bot + crew web view               | Done          |
-| 5     | KCAA audit pack generation                 | In progress   |
-| 6     | Pilot deployment + 30-day stability        | Not started   |
+| 5     | KCAA audit pack generation                 | Done          |
+| 6     | Pilot deployment + 30-day stability        | In progress   |
 | 7     | LLM constraint parser (post-pilot)         | Not started   |
 
 ---

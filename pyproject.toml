@@ -107,6 +107,8 @@ module = [
     "passlib.*",
     "redis.*",
     "fakeredis.*",
+    "boto3.*",
+    "botocore.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

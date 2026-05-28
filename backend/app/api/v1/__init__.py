@@ -9,6 +9,7 @@ from app.api.v1 import (
     ftl,
     leave,
     me,
+    onboarding,
     roster,
     swap,
     training,
@@ -29,6 +30,7 @@ api_router.include_router(training.router, prefix="/training", tags=["training"]
 api_router.include_router(leave.router, prefix="/leave", tags=["leave"])
 api_router.include_router(swap.router, prefix="/swap", tags=["swap"])
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
+api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
 
 __all__ = ["api_router"]

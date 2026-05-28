@@ -1,4 +1,4 @@
-"""Schemas for /healthz and /version."""
+"""Schemas for /healthz, /readyz and /version."""
 
 from __future__ import annotations
 
@@ -15,3 +15,10 @@ class VersionResponse(BaseModel):
     name: str
     version: str
     phase: str
+
+
+class ReadyResponse(BaseModel):
+    """Liveness response for orchestrator readiness probes."""
+
+    status: Literal["ready", "degraded", "not_ready"]
+    checks: dict[str, str]

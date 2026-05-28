@@ -65,8 +65,11 @@ class Settings(BaseSettings):
     frontend_url: str = Field(default="http://localhost:3000", alias="FRONTEND_URL")
     backend_url: str = Field(default="http://localhost:8000", alias="BACKEND_URL")
 
-    # Audit pack storage (Phase 5 — local FS; Phase 6 swaps to S3)
+    # Audit pack storage (Phase 5 — local FS; Phase 6 — S3 if bucket set)
     audit_pack_dir: str = Field(default="/app/audit_packs", alias="AUDIT_PACK_DIR")
+    audit_pack_s3_bucket: str = Field(default="", alias="AUDIT_PACK_S3_BUCKET")
+    audit_pack_s3_endpoint: str = Field(default="", alias="AUDIT_PACK_S3_ENDPOINT")
+    audit_pack_s3_region: str = Field(default="", alias="AUDIT_PACK_S3_REGION")
 
 
 @lru_cache(maxsize=1)
