@@ -14,6 +14,7 @@ import { CrewMePage } from "@/pages/me";
 import { SwapsPage } from "@/pages/swaps";
 import { NoticesPage } from "@/pages/notices";
 import { FleetPage } from "@/pages/fleet";
+import { ConstraintsPage } from "@/pages/constraints";
 
 export function App() {
   return (
@@ -37,6 +38,7 @@ export function App() {
             <Route path="swaps" element={<SwapsPage />} />
             <Route path="notices" element={<NoticesPage />} />
             <Route path="fleet" element={<FleetPage />} />
+            <Route path="constraints" element={<ConstraintsPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

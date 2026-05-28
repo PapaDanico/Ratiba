@@ -8,6 +8,13 @@ from app.models.aircraft import Aircraft
 from app.models.audit import AuditEvent
 from app.models.audit_pack import AuditPack
 from app.models.base import TimestampMixin, UUIDMixin
+from app.models.constraint import (
+    ConstraintReviewComment,
+    ConstraintReviewStatus,
+    ConstraintRule,
+    ConstraintSet,
+    ConstraintSetStatus,
+)
 from app.models.crew import ContractType, Crew, CrewRole
 from app.models.ftl import FdpType, FlightDutyPeriod, FtlRule, LegalityState, RuleSource
 from app.models.leave import LeaveRequest, LeaveStatus, LeaveType
@@ -29,6 +36,11 @@ __all__ = [
     "Aircraft",
     "AuditEvent",
     "AuditPack",
+    "ConstraintReviewComment",
+    "ConstraintReviewStatus",
+    "ConstraintRule",
+    "ConstraintSet",
+    "ConstraintSetStatus",
     "ContractType",
     "Crew",
     "CrewCurrency",

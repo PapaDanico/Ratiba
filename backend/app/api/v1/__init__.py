@@ -6,6 +6,7 @@ from app.api.v1 import (
     aircraft,
     audit,
     auth,
+    constraints,
     crew,
     ftl,
     leave,
@@ -37,6 +38,7 @@ api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboar
 api_router.include_router(notices.router, prefix="/notices", tags=["notices"])
 api_router.include_router(aircraft.router, prefix="/fleet", tags=["fleet"])
 api_router.include_router(reference.router, prefix="/reference", tags=["reference"])
+api_router.include_router(constraints.router, prefix="/constraints", tags=["constraints"])
 api_router.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
 
 __all__ = ["api_router"]
