@@ -24,6 +24,8 @@ class CrewOut(BaseModel):
     active: bool
     languages: list[str]
     faith_observance_flags: dict[str, bool]
+    email: str | None = None
+    phone_number: str | None = None
 
 
 class CrewIn(BaseModel):
@@ -38,6 +40,8 @@ class CrewIn(BaseModel):
     active: bool = True
     languages: list[str] = Field(default_factory=list)
     faith_observance_flags: dict[str, bool] = Field(default_factory=dict)
+    email: str | None = Field(default=None, max_length=255)
+    phone_number: str | None = Field(default=None, max_length=32)
 
 
 class CrewPatch(BaseModel):
@@ -48,6 +52,8 @@ class CrewPatch(BaseModel):
     active: bool | None = None
     languages: list[str] | None = None
     faith_observance_flags: dict[str, bool] | None = None
+    email: str | None = Field(default=None, max_length=255)
+    phone_number: str | None = Field(default=None, max_length=32)
 
 
 class CurrencyOut(BaseModel):

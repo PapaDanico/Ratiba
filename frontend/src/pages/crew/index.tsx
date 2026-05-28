@@ -12,6 +12,8 @@ type Crew = {
   base_station: string;
   contract_type: string;
   active: boolean;
+  email: string | null;
+  phone_number: string | null;
 };
 
 export function CrewPage() {
@@ -59,6 +61,8 @@ export function CrewPage() {
                   <th className="py-2 pr-4 font-medium">Name</th>
                   <th className="py-2 pr-4 font-medium">Role</th>
                   <th className="py-2 pr-4 font-medium">Base</th>
+                  <th className="py-2 pr-4 font-medium">Email</th>
+                  <th className="py-2 pr-4 font-medium">Phone</th>
                   <th className="py-2 pr-4 font-medium">Status</th>
                 </tr>
               </thead>
@@ -73,6 +77,8 @@ export function CrewPage() {
                       <Badge tone="steel">{c.role}</Badge>
                     </td>
                     <td className="py-2 pr-4 font-mono">{c.base_station}</td>
+                    <td className="py-2 pr-4 text-xs text-dn-muted">{c.email ?? "—"}</td>
+                    <td className="py-2 pr-4 font-mono text-xs">{c.phone_number ?? "—"}</td>
                     <td className="py-2 pr-4">
                       {c.active ? (
                         <Badge tone="green">Active</Badge>

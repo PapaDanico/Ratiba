@@ -1,16 +1,24 @@
-"""Best-effort Telegram push for published notices.
+"""Best-effort outbound notice delivery across Telegram, email, and SMS.
 
-When ``TELEGRAM_BOT_TOKEN`` is set, a published notice is pushed to every
-paired crew member's Telegram chat via the Bot API's ``sendMessage``.
-Pure best-effort: failures are logged, never raised — a notice is
-persisted regardless of whether the push succeeds. Crew who aren't
-paired (no ``telegram_chat_id``) simply see the notice in the
-``/crew/me`` web view + the bot's ``/notices`` command instead.
+All channels are optional — a channel is skipped when its credentials are not
+configured.  Failures are logged but never raised; a notice is always
+persisted before any push is attempted.
+
+Channels:
+- **Telegram** (existing): crew who completed /pair receive push messages.
+- **Email** (SMTP): crew with an ``email`` field get a formatted email.
+- **SMS** (Africa's Talking): crew with a ``phone_number`` in E.164 format
+  receive a condensed SMS — useful for critical ops comms in regions with
+  intermittent data coverage.
 """
 
 from __future__ import annotations
 
 import logging
+import smtplib
+import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import httpx
 from sqlalchemy import select
@@ -31,7 +39,8 @@ _CATEGORY_LABEL = {
 }
 
 
-def _format(notice: Notice) -> str:
+def _format_long(notice: Notice) -> str:
+    """Full formatted body for Telegram + email."""
     icon = _SEVERITY_ICON.get(notice.severity.value, "ℹ️")
     cat = _CATEGORY_LABEL.get(notice.category.value, notice.category.value)
     lines = [f"{icon} {cat}: {notice.title}", "", notice.body]
@@ -42,29 +51,21 @@ def _format(notice: Notice) -> str:
     return "\n".join(lines)
 
 
-def push_notice(session: Session, notice: Notice) -> int:
-    """Push ``notice`` to all paired crew. Returns the number of sends attempted.
+def _format_sms(notice: Notice) -> str:
+    """Condensed SMS — 160 char target."""
+    icon = _SEVERITY_ICON.get(notice.severity.value, "ℹ️")
+    body = f"{icon} {notice.title}: {notice.body}"
+    if len(body) > 155:
+        body = body[:152] + "…"
+    return body
 
-    No-op (returns 0) when no bot token is configured.
-    """
-    settings = get_settings()
-    token = settings.telegram_bot_token.strip()
-    if not token:
-        return 0
 
-    chat_ids = [
-        cid
-        for cid in session.scalars(
-            select(Crew.telegram_chat_id)
-            .where(Crew.operator_id == notice.operator_id)
-            .where(Crew.telegram_chat_id.is_not(None))
-        ).all()
-        if cid is not None
-    ]
-    if not chat_ids:
-        return 0
+# ---------------------------------------------------------------------------
+# Telegram
+# ---------------------------------------------------------------------------
 
-    text = _format(notice)
+
+def _push_telegram(chat_ids: list[int], text: str, token: str) -> int:
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     sent = 0
     with httpx.Client(timeout=10.0) as client:
@@ -78,3 +79,132 @@ def push_notice(session: Session, notice: Notice) -> int:
             except Exception as exc:
                 log.warning("telegram push failed for %s: %r", chat_id, exc)
     return sent
+
+
+# ---------------------------------------------------------------------------
+# Email (SMTP)
+# ---------------------------------------------------------------------------
+
+
+def _push_email(addresses: list[str], notice: Notice, from_addr: str) -> int:
+    settings = get_settings()
+    host = settings.smtp_host.strip()
+    if not host or not from_addr:
+        return 0
+
+    subject = (
+        f"[Ratiba] {_CATEGORY_LABEL.get(notice.category.value, notice.category.value)}: "
+        f"{notice.title}"
+    )
+    body = _format_long(notice)
+    sent = 0
+    try:
+        context = ssl.create_default_context()
+        if settings.smtp_use_tls:
+            server: smtplib.SMTP = smtplib.SMTP(host, settings.smtp_port, timeout=15)
+            server.ehlo()
+            server.starttls(context=context)
+        else:
+            server = smtplib.SMTP(host, settings.smtp_port, timeout=15)
+        if settings.smtp_user:
+            server.login(settings.smtp_user, settings.smtp_password)
+        for addr in addresses:
+            try:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = subject
+                msg["From"] = from_addr
+                msg["To"] = addr
+                msg.attach(MIMEText(body, "plain", "utf-8"))
+                server.sendmail(from_addr, addr, msg.as_string())
+                sent += 1
+            except Exception as exc:
+                log.warning("email send failed for %s: %r", addr, exc)
+        server.quit()
+    except Exception as exc:
+        log.warning("smtp connection failed: %r", exc)
+    return sent
+
+
+# ---------------------------------------------------------------------------
+# Africa's Talking SMS
+# ---------------------------------------------------------------------------
+
+_AT_SMS_URL = "https://api.africastalking.com/version1/messaging"
+
+
+def _push_sms(phone_numbers: list[str], text: str) -> int:
+    settings = get_settings()
+    api_key = settings.at_api_key.strip()
+    username = settings.at_username.strip()
+    if not api_key or not username:
+        return 0
+
+    recipients = ",".join(phone_numbers)
+    sent = 0
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.post(
+                _AT_SMS_URL,
+                headers={
+                    "Accept": "application/json",
+                    "apiKey": api_key,
+                },
+                data={
+                    "username": username,
+                    "to": recipients,
+                    "message": text,
+                    "from": settings.at_sender_id,
+                },
+            )
+            if resp.status_code == 201:
+                body = resp.json()
+                result = body.get("SMSMessageData", {})
+                recipients_data = result.get("Recipients", [])
+                sent = sum(1 for r in recipients_data if r.get("status") == "Success")
+                failed = len(recipients_data) - sent
+                if failed:
+                    log.warning("AT SMS: %d/%d failed", failed, len(recipients_data))
+            else:
+                log.warning("AT SMS API → %s: %s", resp.status_code, resp.text[:200])
+    except Exception as exc:
+        log.warning("AT SMS request failed: %r", exc)
+    return sent
+
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
+
+def push_notice(session: Session, notice: Notice) -> int:
+    """Push ``notice`` to all crew via every configured channel.
+
+    Returns the total number of successful individual deliveries across
+    all channels.  Partial failures (one channel down) never block others.
+    """
+    settings = get_settings()
+    text_long = _format_long(notice)
+    text_sms = _format_sms(notice)
+
+    crew_rows = session.scalars(
+        select(Crew).where(Crew.operator_id == notice.operator_id).where(Crew.active.is_(True))
+    ).all()
+
+    telegram_ids: list[int] = [
+        c.telegram_chat_id for c in crew_rows if c.telegram_chat_id is not None
+    ]
+    email_addrs: list[str] = [c.email for c in crew_rows if c.email]
+    phone_numbers: list[str] = [c.phone_number for c in crew_rows if c.phone_number]
+
+    total = 0
+
+    if telegram_ids and settings.telegram_bot_token.strip():
+        total += _push_telegram(telegram_ids, text_long, settings.telegram_bot_token.strip())
+
+    if email_addrs and settings.smtp_host.strip():
+        total += _push_email(email_addrs, notice, settings.smtp_from.strip())
+
+    if phone_numbers and settings.at_api_key.strip():
+        total += _push_sms(phone_numbers, text_sms)
+
+    return total

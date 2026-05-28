@@ -49,3 +49,5 @@ class Crew(UUIDMixin, TimestampMixin, OperatorScopedMixin, Base):
         JSONB, nullable=False, default=dict
     )
     telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    phone_number: Mapped[str | None] = mapped_column(String(32), nullable=True)

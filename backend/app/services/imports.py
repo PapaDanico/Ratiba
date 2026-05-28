@@ -133,6 +133,8 @@ def import_crew(
                     if "=" in token:
                         k, v = token.split("=", 1)
                         faith_flags[k.strip()] = v.strip().lower() in ("1", "true", "yes")
+            email = (row.get("email") or "").strip() or None
+            phone = (row.get("phone_number") or "").strip() or None
             if emp in existing:
                 crew = existing[emp]
                 crew.first_name = row["first_name"].strip()
@@ -146,6 +148,10 @@ def import_crew(
                     crew.languages = languages
                 if faith_flags:
                     crew.faith_observance_flags = faith_flags
+                if email is not None:
+                    crew.email = email
+                if phone is not None:
+                    crew.phone_number = phone
                 result.updated += 1
             else:
                 session.add(
@@ -163,6 +169,8 @@ def import_crew(
                         active=True,
                         languages=languages,
                         faith_observance_flags=faith_flags,
+                        email=email,
+                        phone_number=phone,
                     )
                 )
                 result.inserted += 1
