@@ -51,6 +51,24 @@ def test_refresh_issues_new_access_token(auth_client: tuple[TestClient, User]) -
     refreshed = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh})
     assert refreshed.status_code == 200
     assert "access_token" in refreshed.json()
+    # Rotation: a new refresh token is issued, and the old one is now dead.
+    new_refresh = refreshed.json()["refresh_token"]
+    assert new_refresh and new_refresh != refresh
+    reused = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh})
+    assert reused.status_code == 401
+    # The rotated token still works.
+    again = client.post("/api/v1/auth/refresh", json={"refresh_token": new_refresh})
+    assert again.status_code == 200
+
+
+def test_logout_revokes_refresh_token(auth_client: tuple[TestClient, User]) -> None:
+    client, user = auth_client
+    refresh = client.post(
+        "/api/v1/auth/login", json={"email": user.email, "password": "hunter2pass"}
+    ).json()["refresh_token"]
+    # Logout revokes it; afterwards it can no longer mint tokens.
+    assert client.post("/api/v1/auth/logout", json={"refresh_token": refresh}).status_code == 204
+    assert client.post("/api/v1/auth/refresh", json={"refresh_token": refresh}).status_code == 401
 
 
 def test_refresh_rejects_access_token() -> None:
