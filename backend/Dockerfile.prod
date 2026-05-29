@@ -32,6 +32,7 @@ COPY scripts ./scripts
 EXPOSE 8000
 
 COPY start.sh ./
-RUN chmod +x start.sh
+COPY worker.sh ./
+RUN chmod +x start.sh worker.sh
 
 CMD ["./start.sh"]
