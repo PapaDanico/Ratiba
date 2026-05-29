@@ -7,6 +7,7 @@ self-calibration value that modern bcrypt hard-rejects).
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 import bcrypt
 from jose import jwt
@@ -63,6 +64,7 @@ def create_refresh_token(subject: str) -> str:
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
         "type": "refresh",
+        "jti": uuid4().hex,  # unique id so the token can be rotated/revoked
     }
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.jwt_algorithm)
 

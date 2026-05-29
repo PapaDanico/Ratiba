@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
@@ -20,7 +21,6 @@ from app.core.security import (
 )
 from app.models import User
 from app.schemas.auth import (
-    AccessTokenOnly,
     CurrentUserOut,
     DemoWorkspaceRequest,
     DemoWorkspaceResponse,
@@ -29,7 +29,7 @@ from app.schemas.auth import (
     TokenPair,
 )
 from app.schemas.pilot import PilotPairRequest, PilotPairResponse
-from app.services import demo_workspace, pairing
+from app.services import demo_workspace, pairing, tokens
 
 router = APIRouter()
 
@@ -70,8 +70,11 @@ def login(payload: LoginRequest, request: Request, session: Session = Depends(ge
     )
 
 
-@router.post("/refresh", response_model=AccessTokenOnly)
-def refresh(payload: RefreshRequest, session: Session = Depends(get_db)) -> AccessTokenOnly:
+@router.post("/refresh", response_model=TokenPair)
+def refresh(payload: RefreshRequest, session: Session = Depends(get_db)) -> TokenPair:
+    """Rotate the refresh token: validate it, revoke it, and issue a fresh
+    access + refresh pair. A previously-used (or logged-out) refresh token is
+    rejected, so a leaked token is single-use."""
     try:
         decoded = decode_token(payload.refresh_token)
         if decoded.get("type") != "refresh":
@@ -79,16 +82,27 @@ def refresh(payload: RefreshRequest, session: Session = Depends(get_db)) -> Acce
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="not a refresh token"
             )
         user_id = uuid.UUID(decoded["sub"])
+        jti = str(decoded["jti"])
     except (JWTError, KeyError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid refresh token"
         ) from exc
 
+    if tokens.is_revoked(session, jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="refresh token already used or revoked"
+        )
+
     user = session.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="user not found")
-    return AccessTokenOnly(
-        access_token=create_access_token(str(user.id), extra={"operator_id": str(user.operator_id)})
+
+    tokens.revoke(session, jti, datetime.fromtimestamp(int(decoded["exp"]), tz=UTC))
+    session.commit()
+    sub = str(user.id)
+    return TokenPair(
+        access_token=create_access_token(sub, extra={"operator_id": str(user.operator_id)}),
+        refresh_token=create_refresh_token(sub),
     )
 
 
@@ -133,8 +147,18 @@ def create_demo_workspace(
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout() -> None:
-    """Stateless JWT — client discards tokens. Phase 4+: token revocation list."""
+def logout(payload: RefreshRequest, session: Session = Depends(get_db)) -> None:
+    """Revoke the presented refresh token so it can't mint new access tokens.
+    Best-effort: a malformed/expired token still yields 204 (the client clears
+    its tokens regardless). The current access token lapses at its own expiry."""
+    try:
+        decoded = decode_token(payload.refresh_token)
+        jti = decoded.get("jti")
+        if decoded.get("type") == "refresh" and jti:
+            tokens.revoke(session, str(jti), datetime.fromtimestamp(int(decoded["exp"]), tz=UTC))
+            session.commit()
+    except (JWTError, KeyError, ValueError):
+        pass  # logout is idempotent/best-effort
     return None
 
 

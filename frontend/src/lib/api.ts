@@ -59,8 +59,9 @@ async function refreshAccess(): Promise<string | null> {
     body: JSON.stringify({ refresh_token: refresh }),
   });
   if (!resp.ok) return null;
-  const body = (await resp.json()) as { access_token: string };
-  tokenStore.set(body.access_token);
+  // Refresh tokens rotate: store the new pair (the old refresh is now revoked).
+  const body = (await resp.json()) as { access_token: string; refresh_token?: string };
+  tokenStore.set(body.access_token, body.refresh_token);
   return body.access_token;
 }
 
@@ -113,5 +114,15 @@ export async function login(
 }
 
 export function logout(): void {
+  // Best-effort server-side revocation of the refresh token, then clear locally.
+  const refresh = tokenStore.getRefresh();
+  if (refresh) {
+    void fetch("/api/v1/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refresh }),
+      keepalive: true,
+    }).catch(() => {});
+  }
   tokenStore.clear();
 }

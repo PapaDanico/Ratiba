@@ -29,6 +29,7 @@ from app.models.notice import (
 from app.models.operator import Operator, OperatorTier
 from app.models.pairing import PairingToken
 from app.models.posting import Posting, PostingAssignment, PostingType
+from app.models.revoked_token import RevokedToken
 from app.models.roster import Sector, SectorAssignment, SectorStatus
 from app.models.swap import SwapRequest, SwapStatus
 from app.models.training import CrewCurrency, CrewTypeRating, CurrencyType
@@ -69,6 +70,7 @@ __all__ = [
     "Posting",
     "PostingAssignment",
     "PostingType",
+    "RevokedToken",
     "RuleSource",
     "Sector",
     "SectorAssignment",
