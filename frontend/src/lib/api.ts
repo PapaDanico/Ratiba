@@ -21,16 +21,31 @@ export const tokenStore = {
   },
 };
 
+function messageFromBody(status: number, body: unknown): string {
+  if (typeof body === "object" && body !== null && "detail" in body) {
+    const detail = (body as { detail: unknown }).detail;
+    if (typeof detail === "string") return detail;
+    // FastAPI validation errors return `detail` as a list of {loc, msg, ...}.
+    if (Array.isArray(detail)) {
+      const msgs = detail
+        .map((d) =>
+          typeof d === "object" && d !== null && "msg" in d
+            ? String((d as { msg: unknown }).msg)
+            : String(d),
+        )
+        .filter(Boolean);
+      if (msgs.length) return msgs.join("; ");
+    }
+  }
+  return `HTTP ${status}`;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     public body: unknown,
   ) {
-    super(
-      typeof body === "object" && body && "detail" in body
-        ? String((body as { detail: unknown }).detail)
-        : `HTTP ${status}`,
-    );
+    super(messageFromBody(status, body));
     this.name = "ApiError";
   }
 }
