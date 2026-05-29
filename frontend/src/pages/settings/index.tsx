@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { api, ApiError, tokenStore } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import { TeamPanel } from "./TeamPanel";
 import { AccountPanel } from "./AccountPanel";
 
@@ -63,6 +64,7 @@ export function SettingsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const [tab, setTab] = useState<Tab>("operator");
+  const toast = useToast();
   const [op, setOp] = useState<Operator | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -102,8 +104,11 @@ export function SettingsPage() {
       });
       setOp(updated);
       setSaved(true);
+      toast.show("Operator settings saved", "success");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Save failed");
+      const msg = err instanceof ApiError ? err.message : "Save failed";
+      setError(msg);
+      toast.show(msg, "error");
     } finally {
       setSaving(false);
     }
