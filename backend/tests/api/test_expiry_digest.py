@@ -38,7 +38,7 @@ def _crew(db: Session, operator_id, emp: str) -> Crew:
 def test_expiry_digest_emails_staff_when_items_due(
     auth_client: tuple[TestClient, User], db_session: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    client, user = auth_client
+    _client, user = auth_client
     crew = _crew(db_session, user.operator_id, "DIG-1")
     # A landing currency lapsing in 10 days → within the 30-day digest window.
     db_session.add(
@@ -60,11 +60,12 @@ def test_expiry_digest_emails_staff_when_items_due(
 
     monkeypatch.setattr(notify, "notify_staff", _spy)
 
-    resp = client.post("/api/v1/reports/expiry-digest", params={"within_days": 30})
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["status"] in {"FINISHED", "QUEUED", "RUNNING"}
+    # Invoke the task directly so the assertion is independent of the queue
+    # backend (inline in-process locally vs. deferred rq in CI).
+    from app.tasks.notifications import notify_expiry_digest
 
-    # In-process queue ran the task inline; it found the lapsing currency.
+    result = notify_expiry_digest({"operator_id": str(user.operator_id), "within_days": 30})
+    assert result["items"] >= 1
     assert len(captured) == 1
     assert "DIG-1" in captured[0]["body"]
     assert "LANDINGS_90D" in captured[0]["body"]

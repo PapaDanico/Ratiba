@@ -91,19 +91,16 @@ def test_publish_creates_sectors_assignments_and_fdps(
     assert db_session.query(FlightDutyPeriod).count() == 2
 
 
-def test_publish_notifies_assigned_crew(
+def test_roster_published_task_notifies_assigned_crew(
     auth_client: tuple[TestClient, User], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    client, _ = auth_client
+    """The enqueued notify task re-reads the published FDPs and messages each
+    assigned crew member. Invoked directly so the assertion is independent of
+    the queue backend (inline in-process locally vs. deferred rq in CI)."""
+    from app.tasks.notifications import notify_roster_published
+
+    client, user = auth_client
     cap_emp, fo_emp = _create_two_crew(client)
-
-    notified: list[str] = []
-
-    def _spy(session, *, crew_id, subject, body):  # type: ignore[no-untyped-def]
-        notified.append(str(crew_id))
-        return 0
-
-    monkeypatch.setattr(notify, "notify_crew_member", _spy)
 
     day = date(2026, 7, 1)
     std = datetime(2026, 7, 1, 6, 0, tzinfo=UTC)
@@ -133,10 +130,22 @@ def test_publish_notifies_assigned_crew(
             }
         ],
     }
-    resp = client.post("/api/v1/roster/publish", json=payload)
-    assert resp.status_code == 200, resp.text
-    # The publish enqueues a notify job; the in-process queue runs it inline and
-    # re-reads the two published FDPs (CAPT + FO).
+    assert client.post("/api/v1/roster/publish", json=payload).status_code == 200
+
+    notified: list[str] = []
+    monkeypatch.setattr(
+        notify,
+        "notify_crew_member",
+        lambda session, *, crew_id, subject, body: notified.append(str(crew_id)) or 0,
+    )
+    result = notify_roster_published(
+        {
+            "operator_id": str(user.operator_id),
+            "horizon_from": day.isoformat(),
+            "horizon_to": day.isoformat(),
+        }
+    )
+    assert result["crew_notified"] == 2
     assert len(notified) == 2
 
 
