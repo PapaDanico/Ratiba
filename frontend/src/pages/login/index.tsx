@@ -74,7 +74,9 @@ export function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-16 relative">
         {/* DN Consultancy logo — top */}
         <div className="relative z-10">
-          <DnLogo variant="light" showText={true} width={240} />
+          <div className="inline-block rounded-2xl bg-white/95 px-7 py-6 shadow-xl">
+            <DnLogo showText={true} width={220} />
+          </div>
         </div>
 
         {/* Ratiba product identity — bottom */}
@@ -97,7 +99,9 @@ export function LoginPage() {
             {/* Card header strip */}
             <div className="bg-dn-lava px-8 pt-8 pb-0">
               <div className="flex items-center gap-3 mb-4">
-                <DnLogo variant="light" showText={false} width={28} />
+                <span className="inline-flex items-center justify-center rounded-md bg-white/95 p-1.5 shadow">
+                  <DnLogo showText={false} width={26} />
+                </span>
                 <span className="font-mono text-xs uppercase tracking-widest text-dn-gold/50">
                   DN Consultancy
                 </span>
