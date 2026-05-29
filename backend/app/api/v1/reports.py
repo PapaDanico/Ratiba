@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models import Crew, FlightDutyPeriod, Operator, User
+from app.models import Crew, FlightDutyPeriod, Operator, Posting, PostingAssignment, User
 from app.models.ftl import FdpType
 from app.services import fatigue, payroll
 
@@ -93,6 +93,29 @@ def fatigue_report(
         .where(FlightDutyPeriod.type == FdpType.FDP)
     ).all()
 
+    # Per-duty timezone: a duty flown while on an outstation posting is
+    # acclimatised to that posting's base; otherwise the operator home tz.
+    posting_spans: dict[uuid.UUID, list[tuple[date, date, str]]] = {}
+    for r in session.execute(
+        select(
+            PostingAssignment.crew_id.label("p_crew"),
+            Posting.start_date.label("p_start"),
+            Posting.end_date.label("p_end"),
+            Posting.base_tz.label("p_tz"),
+        )
+        .join(Posting, Posting.id == PostingAssignment.posting_id)
+        .where(Posting.operator_id == user.operator_id)
+        .where(Posting.start_date <= date_to)
+        .where(Posting.end_date >= date_from)
+    ).all():
+        posting_spans.setdefault(r.p_crew, []).append((r.p_start, r.p_end, r.p_tz))
+
+    def tz_for(crew_id: uuid.UUID, on_date: date) -> str:
+        for start, end, tz in posting_spans.get(crew_id, ()):
+            if start <= on_date <= end:
+                return tz
+        return base_tz
+
     duties_by_crew: dict[uuid.UUID, list[fatigue.DutyFacts]] = {}
     for f in fdps:
         duties_by_crew.setdefault(f.crew_id, []).append(
@@ -102,6 +125,7 @@ def fatigue_report(
                 off_duty_time=f.off_duty_time,
                 duty_hours=float(f.duty_hours or 0),
                 sectors_count=f.sectors_count,
+                tz=tz_for(f.crew_id, f.date),
             )
         )
 

@@ -131,6 +131,9 @@ class DutyFacts:
     off_duty_time: datetime
     duty_hours: float
     sectors_count: int
+    # IANA zone the crew member was acclimatised to for this duty (e.g. an
+    # outstation posting's base). Falls back to the summary's base_tz.
+    tz: str | None = None
 
 
 @dataclass(frozen=True)
@@ -152,8 +155,10 @@ def summarise_duties(
     duties: list[DutyFacts], *, base_tz: str = "Africa/Nairobi"
 ) -> CrewFatigueSummary:
     """Aggregate a crew member's duties into fatigue indicators, threading prior
-    rest, consecutive-day streaks and 28-day cumulative duty into each score."""
-    tz = ZoneInfo(base_tz)
+    rest, consecutive-day streaks and 28-day cumulative duty into each score.
+    Circadian (WOCL) timing uses each duty's own ``tz`` when set — so duties
+    flown on an outstation posting score against the local clock there — and
+    otherwise falls back to ``base_tz``."""
     ordered = sorted(duties, key=lambda d: d.report_time)
     if not ordered:
         return CrewFatigueSummary(0, 0, 0.0, 0, 0, 0, 0)
@@ -183,12 +188,13 @@ def summarise_duties(
             e.duty_hours for e in ordered[:i] if window_start <= e.report_time < d.report_time
         )
 
+        duty_tz = d.tz or base_tz
         result = score_fdp(
             report_time=d.report_time,
             off_duty_time=d.off_duty_time,
             duty_hours=d.duty_hours,
             sectors_count=d.sectors_count,
-            base_tz=base_tz,
+            base_tz=duty_tz,
             prior_rest_h=prior_rest_h,
             consecutive_days=streak,
             cumulative_duty_28d_h=cumulative_28d,
@@ -198,7 +204,7 @@ def summarise_duties(
             high += 1
         elif result.band == "ELEVATED":
             elevated += 1
-        if _is_night(d, tz):
+        if _is_night(d, ZoneInfo(duty_tz)):
             night += 1
         prev = d
 
