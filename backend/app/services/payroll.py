@@ -11,12 +11,12 @@ from __future__ import annotations
 import csv
 import io
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Crew, FlightDutyPeriod
+from app.models import Crew, FlightDutyPeriod, Posting, PostingAssignment
 from app.models.ftl import FdpType
 from app.models.leave import LeaveRequest, LeaveStatus
 
@@ -29,6 +29,7 @@ _HEADERS = [
     "duty_hours",
     "block_hours",
     "standby_days",
+    "outstation_days",
     "leave_days",
     "sick_days",
 ]
@@ -80,6 +81,24 @@ def build_rows(
         else:
             leave_days_by_crew[lr.crew_id] = leave_days_by_crew.get(lr.crew_id, 0) + days
 
+    # Outstation (posting) days within the window, per crew — distinct calendar
+    # days, so overlapping postings aren't double-counted.
+    posting_spans = session.execute(
+        select(PostingAssignment.crew_id, Posting.start_date, Posting.end_date)
+        .join(Posting, Posting.id == PostingAssignment.posting_id)
+        .where(Posting.operator_id == operator_id)
+        .where(Posting.start_date <= date_to)
+        .where(Posting.end_date >= date_from)
+    ).all()
+    outstation_days_by_crew: dict[uuid.UUID, set[date]] = {}
+    for crew_id, p_start, p_end in posting_spans:
+        covered = outstation_days_by_crew.setdefault(crew_id, set())
+        day = max(p_start, date_from)
+        last = min(p_end, date_to)
+        while day <= last:
+            covered.add(day)
+            day += timedelta(days=1)
+
     rows: list[dict[str, object]] = []
     for c in crew:
         crew_fdps = fdps_by_crew.get(c.id, [])
@@ -99,6 +118,7 @@ def build_rows(
                 "duty_hours": round(duty_h, 2),
                 "block_hours": round(block_h, 2),
                 "standby_days": standby_days,
+                "outstation_days": len(outstation_days_by_crew.get(c.id, set())),
                 "leave_days": leave_days_by_crew.get(c.id, 0),
                 "sick_days": sick_days_by_crew.get(c.id, 0),
             }

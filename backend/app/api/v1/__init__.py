@@ -11,16 +11,19 @@ from app.api.v1 import (
     documents,
     duties,
     ftl,
+    irop,
     leave,
     me,
     notices,
     onboarding,
+    postings,
     reference,
     reports,
     roster,
     sectors,
     swap,
     training,
+    users,
 )
 from app.api.v1 import (
     settings as settings_routes,
@@ -44,9 +47,12 @@ api_router.include_router(swap.router, prefix="/swap", tags=["swap"])
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(notices.router, prefix="/notices", tags=["notices"])
+api_router.include_router(postings.router, prefix="/postings", tags=["postings"])
+api_router.include_router(irop.router, prefix="/irop", tags=["irop"])
 api_router.include_router(aircraft.router, prefix="/fleet", tags=["fleet"])
 api_router.include_router(reference.router, prefix="/reference", tags=["reference"])
 api_router.include_router(constraints.router, prefix="/constraints", tags=["constraints"])
 api_router.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
 
 __all__ = ["api_router"]

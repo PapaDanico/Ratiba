@@ -21,16 +21,19 @@ from app.models.user import UserRole
 
 @pytest.fixture(autouse=True)
 def _reset_rate_limiter() -> Iterator[None]:
-    """Reset the in-process pairing rate limiter between tests.
+    """Reset the in-process rate limiters between tests.
 
-    It's process-global state; without this, tests reusing the same
-    telegram_chat_id exhaust the 5/min budget and later ones 429.
+    They're process-global state; without this, tests sharing a key
+    (the constant TestClient host, or a reused telegram_chat_id) exhaust
+    the per-window budget and later ones spuriously 429.
     """
-    from app.core.rate_limit import PAIRING_LIMITER
+    from app.core.rate_limit import LOGIN_LIMITER, PAIRING_LIMITER
 
     PAIRING_LIMITER.reset()
+    LOGIN_LIMITER.reset()
     yield
     PAIRING_LIMITER.reset()
+    LOGIN_LIMITER.reset()
 
 
 @pytest.fixture(scope="session")

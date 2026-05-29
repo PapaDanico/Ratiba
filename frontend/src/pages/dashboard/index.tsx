@@ -143,19 +143,23 @@ export function DashboardPage() {
     red: 0,
   });
   const [attention, setAttention] = useState<RecurrencyItem[]>([]);
+  const [schemeSource, setSchemeSource] = useState<"operator" | "baseline" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [pending, currencies, recurrency] = await Promise.all([
+        const [pending, currencies, recurrency, limits] = await Promise.all([
           api<LeaveRequest[]>("/api/v1/leave?status=PENDING"),
           api<CurrencyStatus[]>("/api/v1/crew/currency/dashboard"),
           api<RecurrencyItem[]>("/api/v1/training/recurrency?within_days=30"),
+          // Cosmetic only — never let it fail the dashboard load.
+          api<{ source: "operator" | "baseline" }>("/api/v1/ftl/limits").catch(() => null),
         ]);
         if (cancelled) return;
         setPendingLeave(pending.length);
+        if (limits) setSchemeSource(limits.source);
         const counts = { green: 0, amber: 0, red: 0 };
         for (const c of currencies) {
           if (c.state === "GREEN") counts.green++;
@@ -180,7 +184,9 @@ export function DashboardPage() {
           Welcome back, {user?.full_name.split(" ")[0]}
         </h1>
         <p className="mt-1 text-dn-muted text-sm">
-          Operations overview — KCAA Flight Duty Time Scheme baseline.
+          {schemeSource === "operator"
+            ? "Operations overview — your operator FTL scheme (over the KCAA baseline)."
+            : "Operations overview — KCAA Flight Duty Time Scheme (generic baseline)."}
         </p>
       </div>
       {error && (

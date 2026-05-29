@@ -31,7 +31,7 @@ const KINDS: ImportKind[] = [
     optional: ["languages", "faith_observance_flags", "email", "phone_number"],
     sample:
       "EMP001,Amani,Mwangi,CAPT,2020-01-15,1985-06-01,HKJK,FULL_TIME,en;sw,,amani@example.aero,+254700000000",
-    note: "role = CAPT | FO | SO · contract_type = FULL_TIME | CONTRACT | FREELANCE · languages ;-separated.",
+    note: "role = CAPT | FO | SO | PURSER | CABIN_CREW | ENGINEER · contract_type = FULL_TIME | CONTRACT | FREELANCE · languages ;-separated.",
   },
   {
     key: "type-ratings",

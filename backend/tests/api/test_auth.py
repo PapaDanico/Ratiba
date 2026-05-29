@@ -64,3 +64,23 @@ def test_invalid_token_is_401(auth_client: tuple[TestClient, User]) -> None:
         headers={"Authorization": "Bearer garbage"},
     )
     assert resp.status_code == 401
+
+
+def test_login_is_rate_limited(auth_client: tuple[TestClient, User]) -> None:
+    """After the per-IP budget is exhausted, login returns 429 (brute-force guard)."""
+    from app.core.rate_limit import LOGIN_LIMITER
+
+    client, user = auth_client
+    body = {"email": user.email, "password": "wrong"}
+    # Burn the whole window with failed attempts.
+    statuses = {client.post("/api/v1/auth/login", json=body).status_code for _ in range(11)}
+    assert 429 in statuses, statuses
+    # A correct password is still throttled while the window is saturated.
+    blocked = client.post(
+        "/api/v1/auth/login", json={"email": user.email, "password": "hunter2pass"}
+    )
+    assert blocked.status_code == 429
+    # Once the limiter resets, login works again.
+    LOGIN_LIMITER.reset()
+    ok = client.post("/api/v1/auth/login", json={"email": user.email, "password": "hunter2pass"})
+    assert ok.status_code == 200, ok.text

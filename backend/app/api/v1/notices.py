@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import Crew, Notice, NoticeAcknowledgement, User
 from app.models.notice import NoticeCategory
 from app.schemas.notice import NoticeIn, NoticeOut, NoticePatch, NoticeWithAckStats
@@ -19,7 +19,12 @@ from app.services import audit_log, notify
 router = APIRouter()
 
 
-@router.post("", response_model=NoticeOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=NoticeOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def create_notice(
     payload: NoticeIn,
     user: User = Depends(get_current_user),
@@ -116,7 +121,7 @@ def list_notices(
     return out
 
 
-@router.patch("/{notice_id}", response_model=NoticeOut)
+@router.patch("/{notice_id}", response_model=NoticeOut, dependencies=[Depends(require_writer)])
 def update_notice(
     notice_id: uuid.UUID,
     payload: NoticePatch,

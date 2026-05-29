@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import (
     ConstraintReviewComment,
     ConstraintReviewStatus,
@@ -63,7 +63,12 @@ def _load_rule(
     return rule
 
 
-@router.post("/parse", response_model=ConstraintSetDetail, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/parse",
+    response_model=ConstraintSetDetail,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def parse_constraint_set(
     payload: ConstraintParseIn,
     user: User = Depends(get_current_user),
@@ -183,7 +188,11 @@ def get_constraint_rule(
     return detail
 
 
-@router.patch("/{set_id}/rules/{rule_id}", response_model=ConstraintRuleOut)
+@router.patch(
+    "/{set_id}/rules/{rule_id}",
+    response_model=ConstraintRuleOut,
+    dependencies=[Depends(require_writer)],
+)
 def review_constraint_rule(
     set_id: uuid.UUID,
     rule_id: uuid.UUID,
@@ -226,6 +235,7 @@ def review_constraint_rule(
     "/{set_id}/rules/{rule_id}/comments",
     response_model=ConstraintCommentOut,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
 )
 def add_rule_comment(
     set_id: uuid.UUID,
@@ -246,7 +256,9 @@ def add_rule_comment(
     return comment
 
 
-@router.post("/{set_id}/accept", response_model=ConstraintSetDetail)
+@router.post(
+    "/{set_id}/accept", response_model=ConstraintSetDetail, dependencies=[Depends(require_writer)]
+)
 def accept_constraint_set(
     set_id: uuid.UUID,
     user: User = Depends(get_current_user),

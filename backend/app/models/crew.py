@@ -16,9 +16,44 @@ from app.models.base import OperatorScopedMixin, TimestampMixin, UUIDMixin
 
 
 class CrewRole(enum.StrEnum):
+    # Flight deck
     CAPT = "CAPT"
     FO = "FO"
     SO = "SO"
+    # Cabin
+    PURSER = "PURSER"
+    CABIN_CREW = "CABIN_CREW"
+    # Maintenance (accompanying engineer/mechanic — e.g. on ACMI detachments)
+    ENGINEER = "ENGINEER"
+
+
+class CrewCategory(enum.StrEnum):
+    """Discipline a crew member belongs to — drives FTL applicability and the
+    crew complement an operation requires. Derived from ``role`` (the single
+    source of truth) via :func:`category_for_role`."""
+
+    FLIGHT_DECK = "FLIGHT_DECK"
+    CABIN = "CABIN"
+    ENGINEERING = "ENGINEERING"
+
+
+_ROLE_CATEGORY: dict[CrewRole, CrewCategory] = {
+    CrewRole.CAPT: CrewCategory.FLIGHT_DECK,
+    CrewRole.FO: CrewCategory.FLIGHT_DECK,
+    CrewRole.SO: CrewCategory.FLIGHT_DECK,
+    CrewRole.PURSER: CrewCategory.CABIN,
+    CrewRole.CABIN_CREW: CrewCategory.CABIN,
+    CrewRole.ENGINEER: CrewCategory.ENGINEERING,
+}
+
+# Roles the FTL engine and the pilot-pairing optimiser operate on. Cabin and
+# engineering crew are tracked + qualified but not auto-paired here (full
+# crew-complement rostering is a later phase); engineers carry no flight FDP.
+FLIGHT_DECK_ROLES: tuple[CrewRole, ...] = (CrewRole.CAPT, CrewRole.FO, CrewRole.SO)
+
+
+def category_for_role(role: CrewRole) -> CrewCategory:
+    return _ROLE_CATEGORY[role]
 
 
 class ContractType(enum.StrEnum):
@@ -51,3 +86,13 @@ class Crew(UUIDMixin, TimestampMixin, OperatorScopedMixin, Base):
     telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     phone_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Stable cross-operator identity for the same human (e.g. licence number).
+    # Lets a pilot shared across operators be linked for cumulative-FTL
+    # aggregation (opt-in, later phase). Indexed; not unique (distinct operators
+    # may legitimately reference the same person).
+    person_ref: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
+    @property
+    def crew_category(self) -> CrewCategory:
+        """Discipline derived from ``role`` — no separate column to drift."""
+        return category_for_role(self.role)

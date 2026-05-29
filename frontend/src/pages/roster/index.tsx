@@ -58,6 +58,8 @@ const COUNTRY_OPTIONS = [
   { code: "UG", label: "Uganda" },
   { code: "TZ", label: "Tanzania" },
   { code: "ET", label: "Ethiopia" },
+  { code: "SO", label: "Somalia" },
+  { code: "SS", label: "South Sudan" },
 ];
 
 function todayIso(): string {

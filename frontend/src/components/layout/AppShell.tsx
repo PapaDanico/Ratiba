@@ -9,6 +9,7 @@ const NAV: Array<{ to: string; label: string; end?: boolean }> = [
   { to: "/routings", label: "Routings" },
   { to: "/roster", label: "Roster" },
   { to: "/crew", label: "Crew" },
+  { to: "/postings", label: "Postings" },
   { to: "/import", label: "Import" },
   { to: "/fleet", label: "Fleet" },
   { to: "/training", label: "Training" },
@@ -18,6 +19,8 @@ const NAV: Array<{ to: string; label: string; end?: boolean }> = [
   { to: "/swaps", label: "Swaps" },
   { to: "/notices", label: "Notices" },
   { to: "/constraints", label: "FTL setup" },
+  { to: "/fatigue", label: "Fatigue" },
+  { to: "/irop", label: "IROP" },
   { to: "/audit", label: "Audit packs" },
   { to: "/settings", label: "Settings" },
 ];

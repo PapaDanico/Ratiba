@@ -39,6 +39,7 @@ from app.schemas.roster import (
     SectorInputIn,
 )
 from app.services import audit_log, ftl_engine, ftl_limits
+from app.services import postings as postings_service
 
 
 class RosterPersistenceError(Exception):
@@ -92,13 +93,28 @@ def _crew_lookup(session: Session, operator_id: uuid.UUID, employee_no: str) -> 
     return crew
 
 
+def _fdp_to_history(fdp: FlightDutyPeriod) -> ftl_engine.FdpHistoryEntry:
+    """Convert a persisted FDP into a history entry for cumulative/rest rules."""
+    return ftl_engine.FdpHistoryEntry(
+        date_local=fdp.date.isoformat(),
+        report_time=fdp.report_time,
+        off_duty_time=fdp.off_duty_time,
+        duty_hours=Decimal(str(fdp.duty_hours)),
+        flight_hours=Decimal(str(fdp.flight_hours)),
+        sectors_count=fdp.sectors_count,
+        fdp_type=fdp.type,
+        at_home_base=True,
+    )
+
+
 def _compute_fdp_legality(
     sectors: list[SectorInputIn],
-    _crew_id: uuid.UUID,
+    crew_id: uuid.UUID,
     date_local: date,
     *,
     session: Session,
     operator_id: uuid.UUID,
+    history: tuple[ftl_engine.FdpHistoryEntry, ...] = (),
 ) -> tuple[datetime, datetime, int, Decimal, Decimal, LegalityState, list[str]]:
     """Group ``sectors`` filtered to ``date_local`` and run them through the FTL engine.
 
@@ -106,6 +122,13 @@ def _compute_fdp_legality(
     set merged over the baseline) so a published roster's legality reflects
     the operator's own Authority-approved Flight & Duty Time scheme, not just
     the generic baseline.
+
+    ``history`` carries the crew member's prior FDPs (earlier roster days plus
+    persisted/imported duties) so the cumulative-hours and rest-minimum rules
+    fire — without it each duty day is judged in isolation. If the crew member
+    is on a posting covering ``date_local`` the duty is away-from-base, so the
+    away rest floor (not the home floor) applies and the posting timezone drives
+    band-based rules.
     """
     day_sectors = sorted(
         [s for s in sectors if s.date_local == date_local],
@@ -119,12 +142,26 @@ def _compute_fdp_legality(
     duty_h = Decimal(str((off - report).total_seconds() / 3600.0))
     flight_h = sum((s.block_hours for s in day_sectors), Decimal("0"))
 
+    # The immediately preceding duty (latest report strictly before this one)
+    # drives the rest-minimum rule.
+    earlier = [h for h in history if h.report_time < report]
+    prior_fdp = max(earlier, key=lambda h: h.report_time) if earlier else None
+
+    # On a posting → away from base: away rest floor + posting timezone.
+    posting = postings_service.active_posting_for(
+        session, operator_id=operator_id, crew_id=crew_id, on_date=date_local
+    )
+
     fdp_in = ftl_engine.FdpInput(
         report_time=report,
         off_duty_time=off,
         sectors_count=len(day_sectors),
         flight_hours=flight_h,
         duty_hours=duty_h,
+        prior_fdp=prior_fdp,
+        history=history,
+        at_home_base=posting is None,
+        base_tz=posting.base_tz if posting is not None else "Africa/Nairobi",
     )
     verdicts = ftl_limits.check_fdp_for_operator(fdp_in, operator_id, session)
     aggregated = ftl_engine.aggregate_verdicts(verdicts)
@@ -216,35 +253,77 @@ def publish_roster(
                 crew_day_sectors[(crew.id, a.date_local)].append(sector_input)
         session.flush()
 
-    for (crew_id, day), day_sectors in crew_day_sectors.items():
-        (
-            report,
-            off,
-            sectors_count,
-            flight_h,
-            duty_h,
-            legality,
-            rules_applied,
-        ) = _compute_fdp_legality(
-            day_sectors, crew_id, day, session=session, operator_id=user.operator_id
-        )
-        session.add(
-            FlightDutyPeriod(
+    # Seed each touched crew's history with persisted FDPs that this publish is
+    # NOT replacing (historical imports + other-horizon publishes), so the
+    # cumulative-hours and rest-minimum rules see real prior duty. The replaced
+    # rows for touched (crew, date) pairs were already deleted + flushed above.
+    touched_crew_ids = {cid for (cid, _d) in crew_day_sectors}
+    history_by_crew: dict[uuid.UUID, list[ftl_engine.FdpHistoryEntry]] = defaultdict(list)
+    if crew_day_sectors:
+        window_start = min(d for (_c, d) in crew_day_sectors) - timedelta(days=365)
+        prior_fdps = session.scalars(
+            select(FlightDutyPeriod)
+            .where(FlightDutyPeriod.crew_id.in_(touched_crew_ids))
+            .where(FlightDutyPeriod.date >= window_start)
+        ).all()
+        for f in prior_fdps:
+            history_by_crew[f.crew_id].append(_fdp_to_history(f))
+
+    # Process each crew's duty days in chronological order, accumulating each
+    # computed day into that crew's history for the days that follow.
+    days_by_crew: dict[uuid.UUID, list[date]] = defaultdict(list)
+    for crew_id, day in crew_day_sectors:
+        days_by_crew[crew_id].append(day)
+
+    for crew_id, days in days_by_crew.items():
+        accumulated = history_by_crew[crew_id]
+        for day in sorted(days):
+            day_sectors = crew_day_sectors[(crew_id, day)]
+            (
+                report,
+                off,
+                sectors_count,
+                flight_h,
+                duty_h,
+                legality,
+                rules_applied,
+            ) = _compute_fdp_legality(
+                day_sectors,
+                crew_id,
+                day,
+                session=session,
                 operator_id=user.operator_id,
-                created_by_user_id=user.id,
-                crew_id=crew_id,
-                date=day,
-                report_time=report,
-                off_duty_time=off,
-                sectors_count=sectors_count,
-                flight_hours=flight_h,
-                duty_hours=duty_h,
-                type=FdpType.FDP,
-                legality_state=legality,
-                ftl_rules_applied=rules_applied,
+                history=tuple(accumulated),
             )
-        )
-        fdp_count += 1
+            session.add(
+                FlightDutyPeriod(
+                    operator_id=user.operator_id,
+                    created_by_user_id=user.id,
+                    crew_id=crew_id,
+                    date=day,
+                    report_time=report,
+                    off_duty_time=off,
+                    sectors_count=sectors_count,
+                    flight_hours=flight_h,
+                    duty_hours=duty_h,
+                    type=FdpType.FDP,
+                    legality_state=legality,
+                    ftl_rules_applied=rules_applied,
+                )
+            )
+            fdp_count += 1
+            accumulated.append(
+                ftl_engine.FdpHistoryEntry(
+                    date_local=day.isoformat(),
+                    report_time=report,
+                    off_duty_time=off,
+                    duty_hours=duty_h,
+                    flight_hours=flight_h,
+                    sectors_count=sectors_count,
+                    fdp_type=FdpType.FDP,
+                    at_home_base=True,
+                )
+            )
     session.flush()
 
     audit_log.record(

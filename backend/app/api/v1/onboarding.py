@@ -13,13 +13,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import User
 from app.services import imports
 
 router = APIRouter()
 
 Importer = Callable[..., imports.ImportResult]
+
+# Reject oversized uploads before reading them fully into memory — protects a
+# small instance from a memory-exhaustion DoS. Generous for any CSV onboarding.
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
 def _run(
@@ -29,7 +33,13 @@ def _run(
     file: UploadFile,
     commit: bool,
 ) -> dict[str, Any]:
-    content = file.file.read()
+    # Read one byte past the cap so we can detect (not just truncate) overflow.
+    content = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"file exceeds the {MAX_UPLOAD_BYTES // (1024 * 1024)} MB limit",
+        )
     try:
         result = importer(session, user=user, content=content, commit=commit)
     except imports.ImportError_ as exc:
@@ -39,7 +49,7 @@ def _run(
     return body
 
 
-@router.post("/crew", status_code=status.HTTP_200_OK)
+@router.post("/crew", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)])
 def upload_crew(
     file: UploadFile,
     user: User = Depends(get_current_user),
@@ -54,7 +64,9 @@ def upload_crew(
     return _run(imports.import_crew, session, user, file, commit)
 
 
-@router.post("/type-ratings", status_code=status.HTTP_200_OK)
+@router.post(
+    "/type-ratings", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)]
+)
 def upload_type_ratings(
     file: UploadFile,
     user: User = Depends(get_current_user),
@@ -67,7 +79,7 @@ def upload_type_ratings(
     return _run(imports.import_type_ratings, session, user, file, commit)
 
 
-@router.post("/currencies", status_code=status.HTTP_200_OK)
+@router.post("/currencies", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)])
 def upload_currencies(
     file: UploadFile,
     user: User = Depends(get_current_user),
@@ -80,7 +92,9 @@ def upload_currencies(
     return _run(imports.import_currencies, session, user, file, commit)
 
 
-@router.post("/historical-fdps", status_code=status.HTTP_200_OK)
+@router.post(
+    "/historical-fdps", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)]
+)
 def upload_historical_fdps(
     file: UploadFile,
     user: User = Depends(get_current_user),

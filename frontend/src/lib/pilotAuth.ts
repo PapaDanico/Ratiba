@@ -8,7 +8,7 @@ const PILOT_PROFILE_KEY = "ratiba.pilot_profile";
 export type PilotProfile = {
   crew_id: string;
   employee_no: string;
-  role: "CAPT" | "FO" | "SO";
+  role: "CAPT" | "FO" | "SO" | "PURSER" | "CABIN_CREW" | "ENGINEER";
   operator_id: string;
 };
 
@@ -37,7 +37,7 @@ type PairResponse = {
   pilot_token: string;
   crew_id: string;
   employee_no: string;
-  role: "CAPT" | "FO" | "SO";
+  role: "CAPT" | "FO" | "SO" | "PURSER" | "CABIN_CREW" | "ENGINEER";
   operator_id: string;
 };
 

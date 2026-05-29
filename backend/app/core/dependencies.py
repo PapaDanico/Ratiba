@@ -13,8 +13,19 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_token
 from app.models import Crew, Operator, User
+from app.models.user import UserRole
 
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+# Roles permitted to perform staff write actions (create/update/delete operator
+# data, approvals, publish, imports). A future restricted ``PILOT`` *user* role
+# is intentionally excluded; crew use their own scoped token via
+# :func:`get_current_pilot`, not a staff login.
+STAFF_WRITER_ROLES: tuple[UserRole, ...] = (
+    UserRole.CREWING_OFFICER,
+    UserRole.CHIEF_PILOT,
+    UserRole.ADMIN,
+)
 
 
 def get_current_user(
@@ -50,6 +61,32 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="user not found or inactive",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+def require_writer(user: User = Depends(get_current_user)) -> User:
+    """Authorise a staff *write* action — 403 unless the user holds a writer role.
+
+    Added as a route ``dependencies=[...]`` entry on mutating endpoints. Reads
+    stay open to any authenticated staff user. ``get_current_user`` is request-
+    cached, so this shares the single user lookup with the endpoint's own param.
+    """
+    if user.role not in STAFF_WRITER_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="your role cannot perform this action",
+        )
+    return user
+
+
+def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Authorise an operator-administration action (team / user management) —
+    403 unless the user is an ADMIN. Stricter than :func:`require_writer`."""
+    if user.role is not UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only an operator administrator can manage users",
         )
     return user
 

@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import Crew, CrewDocument, User
 from app.schemas.document import DocumentIn, DocumentOut
 from app.services import audit_log
@@ -78,6 +78,7 @@ def list_documents(
     "/crew/{crew_id}",
     response_model=DocumentOut,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
 )
 def add_document(
     crew_id: uuid.UUID,
@@ -121,7 +122,9 @@ def add_document(
     return _to_out(doc, crew)
 
 
-@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{document_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_writer)]
+)
 def delete_document(
     document_id: uuid.UUID,
     user: User = Depends(get_current_user),

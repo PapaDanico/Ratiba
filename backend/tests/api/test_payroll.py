@@ -52,12 +52,14 @@ def test_payroll_csv_headers_and_row(auth_client: tuple[TestClient, User]) -> No
         "duty_hours",
         "block_hours",
         "standby_days",
+        "outstation_days",
         "leave_days",
         "sick_days",
     ]
     rows = list(reader)
     p1 = next(r for r in rows if r["employee_no"] == "P1")
     assert p1["name"] == "Pay Roller"
+    assert int(p1["outstation_days"]) == 0
     assert int(p1["fdp_count"]) == 0  # nothing published yet
     assert float(p1["duty_hours"]) == 0.0
     assert float(p1["block_hours"]) == 0.0
@@ -99,3 +101,30 @@ def test_payroll_rejects_reversed_range(auth_client: tuple[TestClient, User]) ->
         params={"date_from": "2025-06-30", "date_to": "2025-06-01"},
     )
     assert resp.status_code == 422
+
+
+def test_payroll_counts_outstation_days(auth_client: tuple[TestClient, User]) -> None:
+    """A crew member on a posting overlapping the pay period accrues outstation days."""
+    client, _ = auth_client
+    crew = _create_crew(client, employee_no="P3")
+    # 6-day domestic detachment inside the June pay window (10th–15th inclusive).
+    pid = client.post(
+        "/api/v1/postings",
+        json={
+            "location_icao": "HKMO",
+            "country": "Kenya",
+            "type": "DETACHMENT",
+            "start_date": "2025-06-10",
+            "end_date": "2025-06-15",
+        },
+    ).json()["id"]
+    client.post(f"/api/v1/postings/{pid}/assign", json={"crew_id": crew["id"]}).raise_for_status()
+
+    resp = client.get(
+        "/api/v1/reports/payroll.csv",
+        params={"date_from": "2025-06-01", "date_to": "2025-06-30"},
+    )
+    assert resp.status_code == 200, resp.text
+    rows = list(csv.DictReader(io.StringIO(resp.text)))
+    p3 = next(r for r in rows if r["employee_no"] == "P3")
+    assert int(p3["outstation_days"]) == 6

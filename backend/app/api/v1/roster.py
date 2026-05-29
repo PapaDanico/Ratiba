@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.core.job_queue import JobQueue, get_job_queue
 from app.models import User
 from app.schemas.roster import (
@@ -62,6 +62,7 @@ async def generate(
     "/auto-generate",
     response_model=AutoGenerateRosterResponse,
     summary="Build a draft roster from stored crew + schedule (one click)",
+    dependencies=[Depends(require_writer)],
 )
 def auto_generate(
     payload: AutoGenerateRosterRequest,
@@ -150,6 +151,7 @@ def get_roster(
     "/publish",
     response_model=PublishRosterResponse,
     summary="Publish a roster — writes SectorAssignment + FlightDutyPeriod rows",
+    dependencies=[Depends(require_writer)],
 )
 def publish(
     payload: PublishRosterRequest,
@@ -166,6 +168,7 @@ def publish(
     "/amend",
     response_model=AmendRosterResponse,
     summary="Replace the crew on a single published duty day, with reason",
+    dependencies=[Depends(require_writer)],
 )
 def amend(
     payload: AmendRosterRequest,

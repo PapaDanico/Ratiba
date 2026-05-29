@@ -7,7 +7,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.crew import ContractType, CrewRole
+from app.models.crew import ContractType, CrewCategory, CrewRole
 from app.models.training import CurrencyType
 
 
@@ -19,6 +19,7 @@ class CrewOut(BaseModel):
     first_name: str
     last_name: str
     role: CrewRole
+    crew_category: CrewCategory
     base_station: str
     contract_type: ContractType
     active: bool
@@ -26,6 +27,7 @@ class CrewOut(BaseModel):
     faith_observance_flags: dict[str, bool]
     email: str | None = None
     phone_number: str | None = None
+    person_ref: str | None = None
 
 
 class CrewIn(BaseModel):
@@ -42,6 +44,7 @@ class CrewIn(BaseModel):
     faith_observance_flags: dict[str, bool] = Field(default_factory=dict)
     email: str | None = Field(default=None, max_length=255)
     phone_number: str | None = Field(default=None, max_length=32)
+    person_ref: str | None = Field(default=None, max_length=64)
 
 
 class CrewPatch(BaseModel):
@@ -54,6 +57,7 @@ class CrewPatch(BaseModel):
     faith_observance_flags: dict[str, bool] | None = None
     email: str | None = Field(default=None, max_length=255)
     phone_number: str | None = Field(default=None, max_length=32)
+    person_ref: str | None = Field(default=None, max_length=64)
 
 
 class CurrencyOut(BaseModel):

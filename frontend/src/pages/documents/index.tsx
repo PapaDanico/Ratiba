@@ -33,6 +33,7 @@ const DOC_TYPES = [
   { value: "LICENCE", label: "Licence (CPL/ATPL)" },
   { value: "MEDICAL", label: "Medical certificate" },
   { value: "TYPE_RATING_CERT", label: "Type rating certificate" },
+  { value: "MAINTENANCE_AUTH", label: "Maintenance authorisation" },
   { value: "PASSPORT", label: "Passport" },
   { value: "VISA", label: "Visa" },
   { value: "WORK_PERMIT", label: "Work permit" },
