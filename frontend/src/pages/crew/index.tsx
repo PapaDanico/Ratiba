@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError, tokenStore } from "@/lib/api";
@@ -386,7 +387,7 @@ export function CrewPage() {
       </CardHeader>
       <CardBody>
         {loading ? (
-          <p className="text-sm text-dn-muted">Loading…</p>
+          <TableSkeleton rows={6} cols={6} />
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : rows.length === 0 ? (
