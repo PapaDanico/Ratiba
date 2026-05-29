@@ -93,14 +93,17 @@ export function IropPage() {
   const [amendFor, setAmendFor] = useState<AltCrew | null>(null);
   const [amended, setAmended] = useState<string | null>(null);
 
-  // A candidate can relieve only when an assessed duty exposes an amend context
-  // and the candidate fills the same seat as the disrupted crew member.
+  // A candidate can relieve only when an assessed duty exposes an amend context,
+  // the candidate fills the same seat as the disrupted crew member, and the
+  // relief search was run for the same date as the assessed duty (otherwise the
+  // candidate's availability was computed for a different day).
   function canRelieve(a: AltCrew): boolean {
     return (
       a.available &&
       !!result?.duty_day_key &&
       result.crew_role_on_duty === a.role &&
-      (a.role === "CAPT" || a.role === "FO")
+      (a.role === "CAPT" || a.role === "FO") &&
+      reliefDate === result.date
     );
   }
 
