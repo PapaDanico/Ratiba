@@ -3,7 +3,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, tokenStore } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { TeamPanel } from "./TeamPanel";
 import { AccountPanel } from "./AccountPanel";
@@ -114,6 +114,34 @@ export function SettingsPage() {
     const num = value === "" ? 0 : Number(value);
     if (Number.isNaN(num)) return;
     setOp({ ...op, default_soft_weights: { ...op.default_soft_weights, [key]: num } });
+  }
+
+  const [exporting, setExporting] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
+  async function exportData() {
+    setExporting(true);
+    setExportErr(null);
+    try {
+      const resp = await fetch("/api/v1/settings/operator/export", {
+        headers: { Authorization: `Bearer ${tokenStore.getAccess() ?? ""}` },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const disposition = resp.headers.get("content-disposition") ?? "";
+      const match = /filename="?([^"]+)"?/.exec(disposition);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = match?.[1] ?? "ratiba_export.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportErr("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   const tabButton = (id: Tab, label: string) => (
@@ -306,6 +334,25 @@ export function SettingsPage() {
             operator&apos;s Authority-approved OM-A scheme remains authoritative; load it under FTL
             setup to override the baseline.
           </p>
+
+          {isAdmin && (
+            <div className="mt-4 border-t border-dn-steel-lt pt-4">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={exportData}
+                disabled={exporting}
+                data-testid="export-data"
+              >
+                {exporting ? "Preparing…" : "Export operator data (JSON)"}
+              </Button>
+              <p className="mt-1 text-xs text-dn-muted">
+                Downloads your operator profile, team logins and crew roster — KDPA 2019
+                data-portability. Credentials are never included.
+              </p>
+              {exportErr && <p className="mt-1 text-sm text-dn-red">{exportErr}</p>}
+            </div>
+          )}
         </CardBody>
       </Card>
     </div>
