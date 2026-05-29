@@ -18,6 +18,7 @@ import { SwapsPage } from "@/pages/swaps";
 import { NoticesPage } from "@/pages/notices";
 import { PostingsPage } from "@/pages/postings";
 import { FatiguePage } from "@/pages/fatigue";
+import { IropPage } from "@/pages/irop";
 import { FleetPage } from "@/pages/fleet";
 import { ConstraintsPage } from "@/pages/constraints";
 import { PrivacyPage } from "@/pages/legal/privacy";
@@ -55,6 +56,7 @@ export function App() {
             <Route path="fleet" element={<FleetPage />} />
             <Route path="constraints" element={<ConstraintsPage />} />
             <Route path="fatigue" element={<FatiguePage />} />
+            <Route path="irop" element={<IropPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
