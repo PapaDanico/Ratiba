@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import LeaveRequest, User
 from app.models.leave import LeaveStatus
 from app.schemas.leave_swap import LeaveDecision, LeaveRequestIn, LeaveRequestOut
@@ -18,7 +18,12 @@ from app.services import audit_log
 router = APIRouter()
 
 
-@router.post("", response_model=LeaveRequestOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=LeaveRequestOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def create_leave(
     payload: LeaveRequestIn,
     user: User = Depends(get_current_user),
@@ -61,7 +66,7 @@ def list_leave(
     return [LeaveRequestOut.model_validate(r) for r in rows]
 
 
-@router.patch("/{leave_id}", response_model=LeaveRequestOut)
+@router.patch("/{leave_id}", response_model=LeaveRequestOut, dependencies=[Depends(require_writer)])
 def decide_leave(
     leave_id: uuid.UUID,
     payload: LeaveDecision,

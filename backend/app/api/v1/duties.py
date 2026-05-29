@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import Crew, FlightDutyPeriod, User
 from app.schemas.duty import DutyIn, DutyOut
 from app.services import duty_service
@@ -53,7 +53,12 @@ def list_duties(
     ]
 
 
-@router.post("", response_model=DutyOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=DutyOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def assign_duty(
     payload: DutyIn,
     user: User = Depends(get_current_user),
@@ -75,7 +80,9 @@ def assign_duty(
     return _to_out(fdp, crew)
 
 
-@router.delete("/{duty_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{duty_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_writer)]
+)
 def delete_duty(
     duty_id: uuid.UUID,
     user: User = Depends(get_current_user),

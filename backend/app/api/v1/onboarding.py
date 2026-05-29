@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import User
 from app.services import imports
 
@@ -49,7 +49,7 @@ def _run(
     return body
 
 
-@router.post("/crew", status_code=status.HTTP_200_OK)
+@router.post("/crew", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)])
 def upload_crew(
     file: UploadFile,
     user: User = Depends(get_current_user),
@@ -64,7 +64,9 @@ def upload_crew(
     return _run(imports.import_crew, session, user, file, commit)
 
 
-@router.post("/type-ratings", status_code=status.HTTP_200_OK)
+@router.post(
+    "/type-ratings", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)]
+)
 def upload_type_ratings(
     file: UploadFile,
     user: User = Depends(get_current_user),
@@ -77,7 +79,7 @@ def upload_type_ratings(
     return _run(imports.import_type_ratings, session, user, file, commit)
 
 
-@router.post("/currencies", status_code=status.HTTP_200_OK)
+@router.post("/currencies", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)])
 def upload_currencies(
     file: UploadFile,
     user: User = Depends(get_current_user),
@@ -90,7 +92,9 @@ def upload_currencies(
     return _run(imports.import_currencies, session, user, file, commit)
 
 
-@router.post("/historical-fdps", status_code=status.HTTP_200_OK)
+@router.post(
+    "/historical-fdps", status_code=status.HTTP_200_OK, dependencies=[Depends(require_writer)]
+)
 def upload_historical_fdps(
     file: UploadFile,
     user: User = Depends(get_current_user),

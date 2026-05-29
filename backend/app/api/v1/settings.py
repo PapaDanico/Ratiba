@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import Operator, User
 from app.schemas.settings import OperatorOut, OperatorPatch
 from app.services import audit_log
@@ -26,7 +26,7 @@ def get_operator(
     return OperatorOut.model_validate(op)
 
 
-@router.patch("/operator", response_model=OperatorOut)
+@router.patch("/operator", response_model=OperatorOut, dependencies=[Depends(require_writer)])
 def update_operator(
     payload: OperatorPatch,
     user: User = Depends(get_current_user),

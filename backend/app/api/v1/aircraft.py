@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import Aircraft, User
 from app.schemas.aircraft import AircraftIn, AircraftOut, AircraftPatch
 from app.services import aircraft_types, audit_log
@@ -36,7 +36,12 @@ def list_fleet(
     return [_to_out(a) for a in rows]
 
 
-@router.post("", response_model=AircraftOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=AircraftOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def add_aircraft(
     payload: AircraftIn,
     user: User = Depends(get_current_user),
@@ -74,7 +79,7 @@ def add_aircraft(
     return _to_out(aircraft)
 
 
-@router.patch("/{aircraft_id}", response_model=AircraftOut)
+@router.patch("/{aircraft_id}", response_model=AircraftOut, dependencies=[Depends(require_writer)])
 def update_aircraft(
     aircraft_id: uuid.UUID,
     payload: AircraftPatch,

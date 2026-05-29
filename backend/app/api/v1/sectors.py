@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import Sector, User
 from app.models.roster import SectorStatus
 from app.schemas.sector import (
@@ -69,7 +69,12 @@ def list_sectors(
     return [_to_out(s) for s in rows]
 
 
-@router.post("", response_model=SectorOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=SectorOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def create_sector(
     payload: SectorIn,
     user: User = Depends(get_current_user),
@@ -111,6 +116,7 @@ def create_sector(
     "/recurring",
     response_model=RecurringSectorResult,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
 )
 def create_recurring_sectors(
     payload: RecurringSectorIn,
@@ -211,7 +217,9 @@ def create_recurring_sectors(
     )
 
 
-@router.delete("/{sector_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{sector_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_writer)]
+)
 def delete_sector(
     sector_id: uuid.UUID,
     user: User = Depends(get_current_user),

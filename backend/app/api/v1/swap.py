@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import SwapRequest, User
 from app.models.swap import SwapStatus
 from app.schemas.leave_swap import SwapDecision, SwapRequestIn, SwapRequestOut
@@ -18,7 +18,12 @@ from app.services import audit_log
 router = APIRouter()
 
 
-@router.post("", response_model=SwapRequestOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=SwapRequestOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def create_swap(
     payload: SwapRequestIn,
     user: User = Depends(get_current_user),
@@ -61,7 +66,7 @@ def list_swaps(
     return [SwapRequestOut.model_validate(r) for r in rows]
 
 
-@router.patch("/{swap_id}", response_model=SwapRequestOut)
+@router.patch("/{swap_id}", response_model=SwapRequestOut, dependencies=[Depends(require_writer)])
 def decide_swap(
     swap_id: uuid.UUID,
     payload: SwapDecision,

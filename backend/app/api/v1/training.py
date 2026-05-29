@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.models import Crew, CrewCurrency, CrewDocument, CrewTypeRating, User
 from app.schemas.training import RecurrencyItem, TypeRatingIn, TypeRatingOut
 from app.services import audit_log
@@ -76,6 +76,7 @@ def list_type_ratings(
     "/crew/{crew_id}/type-ratings",
     response_model=TypeRatingOut,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
 )
 def add_type_rating(
     crew_id: uuid.UUID,
@@ -129,7 +130,11 @@ def add_type_rating(
     )
 
 
-@router.delete("/type-ratings/{rating_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/type-ratings/{rating_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_writer)],
+)
 def delete_type_rating(
     rating_id: uuid.UUID,
     user: User = Depends(get_current_user),

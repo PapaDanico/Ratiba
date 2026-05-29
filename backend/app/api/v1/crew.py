@@ -14,7 +14,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
 from app.core.security import create_ical_token, decode_token
 from app.models import Crew, CrewCurrency, User
 from app.schemas.crew import (
@@ -89,7 +89,12 @@ def list_crew(
     return [CrewOut.model_validate(r) for r in rows]
 
 
-@router.post("", response_model=CrewOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=CrewOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
+)
 def create_crew(
     payload: CrewIn,
     user: User = Depends(get_current_user),
@@ -125,7 +130,7 @@ def get_crew(
     return CrewOut.model_validate(crew)
 
 
-@router.patch("/{crew_id}", response_model=CrewOut)
+@router.patch("/{crew_id}", response_model=CrewOut, dependencies=[Depends(require_writer)])
 def update_crew(
     crew_id: uuid.UUID,
     payload: CrewPatch,
@@ -175,6 +180,7 @@ def list_currency(
     "/{crew_id}/currency",
     response_model=CurrencyOut,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
 )
 def record_currency(
     crew_id: uuid.UUID,
@@ -212,6 +218,7 @@ def record_currency(
     "/{crew_id}/pairing-token",
     response_model=IssuePairingResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_writer)],
 )
 def issue_pairing_token(
     crew_id: uuid.UUID,
@@ -226,7 +233,11 @@ def issue_pairing_token(
     return IssuePairingResponse(code=token.code, expires_at=token.expires_at)
 
 
-@router.post("/{crew_id}/calendar-feed", response_model=CalendarFeedOut)
+@router.post(
+    "/{crew_id}/calendar-feed",
+    response_model=CalendarFeedOut,
+    dependencies=[Depends(require_writer)],
+)
 def issue_calendar_feed(
     crew_id: uuid.UUID,
     user: User = Depends(get_current_user),
