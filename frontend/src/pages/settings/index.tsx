@@ -6,6 +6,13 @@ import { Label } from "@/components/ui/Label";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { TeamPanel } from "./TeamPanel";
+import { AccountPanel } from "./AccountPanel";
+
+const TIER_LABEL: Record<Operator["tier"], string> = {
+  ENTRY: "Entry",
+  STANDARD: "Standard",
+  PLUS: "Plus",
+};
 
 type Operator = {
   id: string;
@@ -50,7 +57,7 @@ const WEIGHT_FIELDS: { key: string; label: string; help: string }[] = [
   },
 ];
 
-type Tab = "operator" | "team";
+type Tab = "operator" | "account" | "team";
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -109,34 +116,37 @@ export function SettingsPage() {
     setOp({ ...op, default_soft_weights: { ...op.default_soft_weights, [key]: num } });
   }
 
-  const tabBar = isAdmin ? (
+  const tabButton = (id: Tab, label: string) => (
+    <button
+      type="button"
+      onClick={() => setTab(id)}
+      className={
+        tab === id
+          ? "px-4 py-2 text-sm border-b-2 border-dn-steel text-dn-dark"
+          : "px-4 py-2 text-sm text-dn-muted hover:text-dn-dark"
+      }
+      data-testid={`tab-${id}`}
+    >
+      {label}
+    </button>
+  );
+
+  const tabBar = (
     <div className="flex gap-1 border-b border-dn-steel-lt" data-testid="settings-tabs">
-      <button
-        type="button"
-        onClick={() => setTab("operator")}
-        className={
-          tab === "operator"
-            ? "px-4 py-2 text-sm border-b-2 border-dn-steel text-dn-dark"
-            : "px-4 py-2 text-sm text-dn-muted hover:text-dn-dark"
-        }
-        data-testid="tab-operator"
-      >
-        Operator
-      </button>
-      <button
-        type="button"
-        onClick={() => setTab("team")}
-        className={
-          tab === "team"
-            ? "px-4 py-2 text-sm border-b-2 border-dn-steel text-dn-dark"
-            : "px-4 py-2 text-sm text-dn-muted hover:text-dn-dark"
-        }
-        data-testid="tab-team"
-      >
-        Team
-      </button>
+      {tabButton("operator", "Operator")}
+      {tabButton("account", "My account")}
+      {isAdmin && tabButton("team", "Team")}
     </div>
-  ) : null;
+  );
+
+  if (tab === "account") {
+    return (
+      <div className="space-y-6">
+        {tabBar}
+        <AccountPanel />
+      </div>
+    );
+  }
 
   if (tab === "team" && isAdmin && user) {
     return (
@@ -257,6 +267,45 @@ export function SettingsPage() {
               {saving ? "Saving…" : "Save changes"}
             </Button>
           </form>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Plan &amp; compliance</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2" data-testid="compliance-info">
+            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+              <dt className="text-dn-muted">Subscription tier</dt>
+              <dd className="text-dn-dark">{TIER_LABEL[op.tier]}</dd>
+            </div>
+            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+              <dt className="text-dn-muted">AOC number</dt>
+              <dd className="font-mono text-dn-dark">{op.aoc_number}</dd>
+            </div>
+            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+              <dt className="text-dn-muted">FTL scheme</dt>
+              <dd className="text-dn-dark">KCAA CAA-AC-OPS033</dd>
+            </div>
+            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+              <dt className="text-dn-muted">Reference standard</dt>
+              <dd className="text-dn-dark">ICAO Annex 6, Part I</dd>
+            </div>
+            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+              <dt className="text-dn-muted">Data residency</dt>
+              <dd className="text-dn-dark">Kenya (KDPA 2019)</dd>
+            </div>
+            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+              <dt className="text-dn-muted">Workspace ID</dt>
+              <dd className="font-mono text-xs text-dn-dark">{op.id}</dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-xs text-dn-muted">
+            Decision-support limits follow the KCAA Flight Duty Time Scheme and ICAO Annex 6. The
+            operator&apos;s Authority-approved OM-A scheme remains authoritative; load it under FTL
+            setup to override the baseline.
+          </p>
         </CardBody>
       </Card>
     </div>
