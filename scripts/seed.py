@@ -602,6 +602,16 @@ def _seed_demo(session: Session) -> None:
             role=UserRole.CHIEF_PILOT,
             password=DEFAULT_USER_PASSWORD,
         )
+        # An administrator login so the Settings → Team management surface is
+        # discoverable in the demo (only ADMINs can manage users).
+        _ensure_user(
+            session,
+            operator=op_row,
+            email=f"admin@{demo.aoc_number.lower()}.example.aero",
+            full_name=f"{demo.name} Administrator",
+            role=UserRole.ADMIN,
+            password=DEFAULT_USER_PASSWORD,
+        )
         for idx, spec in enumerate(demo.crew):
             crew = _ensure_crew(
                 session,
@@ -678,6 +688,10 @@ def _seed_demo(session: Session) -> None:
         )
     print(
         f"  {'Jetways Airlines Ltd':<22} → officer@jetways.example.aero / {DEFAULT_USER_PASSWORD}"
+    )
+    print(
+        f"  (each operator also has chief@… and admin@… logins / {DEFAULT_USER_PASSWORD}; "
+        "admin@ unlocks Settings → Team)"
     )
     print()
     print(

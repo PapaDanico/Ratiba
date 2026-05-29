@@ -11,6 +11,7 @@ Idempotent — safe to run on every deploy. Login after seeding:
 
     officer@jetways.example.aero / hunter2pass   (Crewing Officer)
     chief@jetways.example.aero   / hunter2pass   (Chief Pilot)
+    admin@jetways.example.aero   / hunter2pass   (Administrator)
 
 Airport ICAO codes are the authoritative real-world values (e.g. Mogadishu
 HCMM, Hargeisa HCMH, Galcaio HCMR), which differ from a few codes in the
@@ -66,6 +67,7 @@ EAT = ZoneInfo("Africa/Nairobi")
 OPERATOR_AOC = "JWX-265"
 OFFICER_EMAIL = "officer@jetways.example.aero"
 CHIEF_EMAIL = "chief@jetways.example.aero"
+ADMIN_EMAIL = "admin@jetways.example.aero"
 PASSWORD = "hunter2pass"
 
 
@@ -381,6 +383,19 @@ def seed_jetways(session: Session) -> dict[str, int]:
         },
         operator_id=operator.id,
         email=CHIEF_EMAIL,
+    )
+    # Administrator login — unlocks Settings → Team management in the demo.
+    _get_or_create(
+        session,
+        User,
+        defaults={
+            "hashed_password": hash_password(PASSWORD),
+            "full_name": "Jetways Administrator",
+            "role": UserRole.ADMIN,
+            "is_active": True,
+        },
+        operator_id=operator.id,
+        email=ADMIN_EMAIL,
     )
 
     # ── Fleet ──
@@ -973,6 +988,7 @@ def main() -> int:
     print(f"  Operator : Jetways Airlines Limited (AOC {OPERATOR_AOC})")
     print(f"  Login    : {OFFICER_EMAIL} / {PASSWORD}  (Crewing Officer)")
     print(f"             {CHIEF_EMAIL} / {PASSWORD}  (Chief Pilot)")
+    print(f"             {ADMIN_EMAIL} / {PASSWORD}  (Administrator)")
     print(
         f"  Seeded   : {summary['pilots']} pilots + {summary['cabin_eng']} cabin/eng, "
         f"{summary['aircraft']} aircraft, {summary['assignments']} duty-day assignments"
