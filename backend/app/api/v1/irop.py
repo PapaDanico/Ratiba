@@ -60,6 +60,11 @@ def assess(
             rest_floor_h=a.cascade.rest_floor_h,
             breached=a.cascade.breached,
         ),
+        duty_day_key=a.duty_day_key,
+        aircraft_reg=a.aircraft_reg,
+        captain_employee_no=a.captain_employee_no,
+        fo_employee_no=a.fo_employee_no,
+        crew_role_on_duty=a.crew_role_on_duty,
     )
 
 

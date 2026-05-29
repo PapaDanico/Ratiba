@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { api, ApiError } from "@/lib/api";
+import { AmendModal } from "@/components/roster/AmendModal";
 
 type CrewLite = {
   id: string;
@@ -33,6 +34,11 @@ type Assessment = {
   disrupted_legality: string;
   rules_breached: string[];
   cascade: Cascade;
+  duty_day_key: string | null;
+  aircraft_reg: string | null;
+  captain_employee_no: string | null;
+  fo_employee_no: string | null;
+  crew_role_on_duty: string | null;
 };
 
 type AltCrew = {
@@ -82,6 +88,28 @@ export function IropPage() {
   const [finding, setFinding] = useState(false);
   const [reliefErr, setReliefErr] = useState<string | null>(null);
   const [alts, setAlts] = useState<AltCrew[] | null>(null);
+
+  // Relief hand-off: the assessed duty's amend context + the chosen candidate.
+  const [amendFor, setAmendFor] = useState<AltCrew | null>(null);
+  const [amended, setAmended] = useState<string | null>(null);
+
+  // A candidate can relieve only when an assessed duty exposes an amend context
+  // and the candidate fills the same seat as the disrupted crew member.
+  function canRelieve(a: AltCrew): boolean {
+    return (
+      a.available &&
+      !!result?.duty_day_key &&
+      result.crew_role_on_duty === a.role &&
+      (a.role === "CAPT" || a.role === "FO")
+    );
+  }
+
+  function amendPair(candidate: AltCrew): { captain: string; fo: string } {
+    const cap = result?.captain_employee_no ?? "";
+    const fo = result?.fo_employee_no ?? "";
+    if (result?.crew_role_on_duty === "CAPT") return { captain: candidate.employee_no, fo };
+    return { captain: cap, fo: candidate.employee_no };
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -350,6 +378,14 @@ export function IropPage() {
           </div>
 
           {reliefErr && <p className="text-sm text-dn-red">{reliefErr}</p>}
+          {amended && <p className="text-sm text-dn-green">{amended}</p>}
+          {alts && result?.duty_day_key && result.crew_role_on_duty && (
+            <p className="text-xs text-dn-muted mb-2">
+              Assessed duty <span className="font-mono">{result.duty_day_key}</span> — apply a
+              relief {result.crew_role_on_duty} below to amend it (re-checks FTL &amp; logs the
+              change).
+            </p>
+          )}
 
           {alts &&
             (alts.length === 0 ? (
@@ -365,6 +401,7 @@ export function IropPage() {
                       <th className="py-2 pr-4 font-medium">Landing-current</th>
                       <th className="py-2 pr-4 font-medium">Free</th>
                       <th className="py-2 pr-4 font-medium">Available</th>
+                      <th className="py-2 pr-4 font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dn-steel-lt">
@@ -389,6 +426,20 @@ export function IropPage() {
                         <td data-label="Available" className="py-2 pr-4">
                           <YesNo ok={a.available} yes="Available" no="—" />
                         </td>
+                        <td data-label="Action" className="py-2 pr-4">
+                          {canRelieve(a) ? (
+                            <button
+                              type="button"
+                              onClick={() => setAmendFor(a)}
+                              className="text-dn-steel underline text-xs hover:text-dn-dark"
+                              data-testid={`apply-relief-${a.employee_no}`}
+                            >
+                              Apply relief
+                            </button>
+                          ) : (
+                            <span className="text-dn-muted text-xs">—</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -397,6 +448,21 @@ export function IropPage() {
             ))}
         </CardBody>
       </Card>
+
+      {amendFor && result?.duty_day_key && (
+        <AmendModal
+          dutyDayKey={result.duty_day_key}
+          initialCaptain={amendPair(amendFor).captain}
+          initialFo={amendPair(amendFor).fo}
+          onClose={() => setAmendFor(null)}
+          onAmended={() => {
+            setAmended(
+              `Duty ${result.duty_day_key} amended — ${amendFor.name} (${amendFor.employee_no}) assigned. FTL re-checked and change logged.`,
+            );
+            setAlts(null);
+          }}
+        />
+      )}
     </div>
   );
 }
