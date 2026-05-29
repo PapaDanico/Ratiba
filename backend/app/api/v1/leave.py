@@ -13,7 +13,7 @@ from app.core.dependencies import get_current_user, require_writer
 from app.models import LeaveRequest, User
 from app.models.leave import LeaveStatus
 from app.schemas.leave_swap import LeaveDecision, LeaveRequestIn, LeaveRequestOut
-from app.services import audit_log
+from app.services import audit_log, notify
 
 router = APIRouter()
 
@@ -99,4 +99,16 @@ def decide_leave(
     )
     session.commit()
     session.refresh(row)
+
+    decision = row.status.value.lower()
+    note_suffix = f" Note: {row.note}" if row.note else ""
+    notify.notify_crew_member(
+        session,
+        crew_id=row.crew_id,
+        subject=f"Leave request {decision}",
+        body=(
+            f"Your leave {row.date_from.isoformat()} to {row.date_to.isoformat()} "
+            f"was {decision} by {user.full_name}.{note_suffix}"
+        ),
+    )
     return LeaveRequestOut.model_validate(row)

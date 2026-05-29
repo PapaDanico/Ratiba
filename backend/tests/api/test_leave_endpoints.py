@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.models.user import User
+from app.services import notify
 
 
 def _create_crew(client: TestClient) -> str:
@@ -22,6 +24,36 @@ def _create_crew(client: TestClient) -> str:
         },
     )
     return resp.json()["id"]
+
+
+def test_leave_decision_notifies_crew(
+    auth_client: tuple[TestClient, User], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, _ = auth_client
+    crew_id = _create_crew(client)
+    leave_id = client.post(
+        "/api/v1/leave",
+        json={
+            "crew_id": crew_id,
+            "type": "ANNUAL",
+            "date_from": "2026-07-01",
+            "date_to": "2026-07-07",
+        },
+    ).json()["id"]
+
+    captured: list[dict] = []
+
+    def _spy(session, *, crew_id, subject, body):  # type: ignore[no-untyped-def]
+        captured.append({"crew_id": str(crew_id), "subject": subject, "body": body})
+        return 0
+
+    monkeypatch.setattr(notify, "notify_crew_member", _spy)
+
+    resp = client.patch(f"/api/v1/leave/{leave_id}", json={"status": "APPROVED"})
+    assert resp.status_code == 200, resp.text
+    assert len(captured) == 1
+    assert captured[0]["crew_id"] == crew_id
+    assert "approved" in captured[0]["subject"].lower()
 
 
 def test_submit_list_and_approve_leave(auth_client: tuple[TestClient, User]) -> None:
