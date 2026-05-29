@@ -41,6 +41,29 @@ services:
       - key: BACKEND_URL
         sync: false
 
+  # ── Background worker (rq) ───────────────────────────────────────────────
+  # Consumes the job queue (notifications, recurrency digest, roster-publish
+  # broadcast). Without this, enqueued jobs would never run in production.
+  - type: worker
+    name: ratiba-worker
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    dockerCommand: ./worker.sh
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ratiba-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ratiba-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+
   # ── Redis ──────────────────────────────────────────────────────────────────
   - type: redis
     name: ratiba-redis

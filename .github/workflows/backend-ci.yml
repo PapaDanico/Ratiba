@@ -81,6 +81,21 @@ jobs:
       - name: pytest
         run: pytest --cov=backend/app --cov-report=term --cov-report=xml
 
+      - name: Deploy smoke (boot the built app + login round-trip)
+        run: |
+          set -e
+          cd backend
+          alembic upgrade head
+          PYTHONPATH=. python scripts/seed.py --demo || echo "seed warn (non-fatal)"
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          UVPID=$!
+          cd ..
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/healthz >/dev/null 2>&1 && break || sleep 1
+          done
+          bash scripts/smoke.sh http://127.0.0.1:8000
+          kill "$UVPID" 2>/dev/null || true
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
