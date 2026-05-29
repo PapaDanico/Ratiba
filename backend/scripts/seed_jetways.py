@@ -38,6 +38,7 @@ from app.models import (
     LeaveRequest,
     Notice,
     Operator,
+    Posting,
     SwapRequest,
     User,
 )
@@ -52,11 +53,13 @@ from app.models.document import CrewDocument, DocumentType
 from app.models.leave import LeaveStatus, LeaveType
 from app.models.notice import NoticeCategory, NoticeSeverity
 from app.models.operator import OperatorTier
+from app.models.posting import PostingType
 from app.models.swap import SwapStatus
 from app.models.training import CurrencyType
 from app.models.user import UserRole
 from app.schemas.roster import AssignmentOut, PublishRosterRequest, SectorInputIn
 from app.services import audit_pack, roster_service
+from app.services import postings as postings_service
 
 EAT = ZoneInfo("Africa/Nairobi")
 
@@ -751,6 +754,53 @@ def seed_jetways(session: Session) -> dict[str, int]:
             crew_id_counterparty=crew_by_id["FO-004"].id,
             fdp_or_sector_ref=f"5Y-CAR|{(today + timedelta(days=4)).isoformat()}",
         )
+
+    # ── Outstation / ACMI wet-lease posting (3-week detachment) ──
+    # A team (pilots + cabin + engineer) deployed to Entebbe for a lessee.
+    # Each member gets a Uganda work permit valid through the posting so the
+    # international-posting permit gate passes.
+    if session.scalar(select(Posting).where(Posting.operator_id == operator.id)) is None:
+        posting = postings_service.create_posting(
+            session,
+            operator_id=operator.id,
+            user_id=officer.id,
+            location_icao="HUEN",
+            country="Uganda",
+            type=PostingType.ACMI_WET_LEASE,
+            start_date=today + timedelta(days=7),
+            end_date=today + timedelta(days=27),
+            base_tz="Africa/Kampala",
+            lessee_name="Nile Air (demo lessee)",
+            notes="3-week ACMI wet-lease detachment — F70 5Y-JEA",
+        )
+        for emp in ("CPT-001", "CPT-002", "FO-001", "FO-004", "CC-P01", "CC-01", "ENG-01"):
+            member = session.scalar(
+                select(Crew).where(Crew.operator_id == operator.id).where(Crew.employee_no == emp)
+            )
+            if member is None:
+                continue
+            _get_or_create(
+                session,
+                CrewDocument,
+                defaults={
+                    "document_number": f"UG-WP-{emp}",
+                    "issuing_authority": "Uganda CAA",
+                    "issue_date": today,
+                    "expiry_date": today + timedelta(days=120),
+                    "notes": "Uganda work permit (ACMI detachment)",
+                },
+                operator_id=operator.id,
+                crew_id=member.id,
+                doc_type=DocumentType.WORK_PERMIT,
+            )
+            session.flush()
+            postings_service.assign_crew(
+                session,
+                operator_id=operator.id,
+                user_id=officer.id,
+                posting_id=posting.id,
+                crew_id=member.id,
+            )
 
     # Commit the core workspace (operator, users, fleet, crew, currencies,
     # documents, FTL scheme, notices, leave/swap) up front so login and the
