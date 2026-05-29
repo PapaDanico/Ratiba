@@ -419,11 +419,14 @@ def seed_jetways(session: Session) -> dict[str, int]:
                 "active": True,
                 "languages": ["en", "sw"],
                 "faith_observance_flags": {},
+                "person_ref": f"KE-LIC-{p.pilot_id}",
             },
             operator_id=operator.id,
             employee_no=p.pilot_id,
         )
         crew_by_id[p.pilot_id] = crew
+        if crew.person_ref is None:  # backfill existing crew on re-seed
+            crew.person_ref = f"KE-LIC-{p.pilot_id}"
         if not created:
             continue
 
@@ -557,10 +560,13 @@ def seed_jetways(session: Session) -> dict[str, int]:
                 "active": True,
                 "languages": ["en", "sw"],
                 "faith_observance_flags": {},
+                "person_ref": f"KE-LIC-{emp}",
             },
             operator_id=operator.id,
             employee_no=emp,
         )
+        if crew.person_ref is None:  # backfill existing crew on re-seed
+            crew.person_ref = f"KE-LIC-{emp}"
         if not created:
             continue
         if role is CrewRole.ENGINEER:

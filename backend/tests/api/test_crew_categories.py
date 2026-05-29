@@ -67,3 +67,17 @@ def test_create_and_filter_cabin_and_engineer_crew(
 def test_unknown_category_rejected(auth_client: tuple[TestClient, User]) -> None:
     client, _ = auth_client
     assert client.get("/api/v1/crew?category=NONSENSE").status_code == 422
+
+
+def test_person_ref_create_and_patch(auth_client: tuple[TestClient, User]) -> None:
+    client, _ = auth_client
+    body = _crew_body("PR-1", "CAPT")
+    body["person_ref"] = "KE-LIC-PR1"
+    created = client.post("/api/v1/crew", json=body)
+    assert created.status_code == 201, created.text
+    assert created.json()["person_ref"] == "KE-LIC-PR1"
+
+    cid = created.json()["id"]
+    patched = client.patch(f"/api/v1/crew/{cid}", json={"person_ref": "KE-LIC-NEW"})
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["person_ref"] == "KE-LIC-NEW"
