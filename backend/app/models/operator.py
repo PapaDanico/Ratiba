@@ -26,6 +26,9 @@ class Operator(UUIDMixin, TimestampMixin, Base):
     aoc_number: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     base: Mapped[str] = mapped_column(String(8), nullable=False)
+    timezone: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="Africa/Nairobi", server_default="Africa/Nairobi"
+    )
     contact_email: Mapped[str] = mapped_column(String(255), nullable=False)
     tier: Mapped[OperatorTier] = mapped_column(
         SAEnum(OperatorTier, name="operator_tier"),

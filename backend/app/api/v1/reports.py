@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models import Crew, FlightDutyPeriod, User
+from app.models import Crew, FlightDutyPeriod, Operator, User
 from app.models.ftl import FdpType
 from app.services import fatigue, payroll
 
@@ -78,6 +78,9 @@ def fatigue_report(
     if date_to < date_from:
         raise HTTPException(status_code=422, detail="date_to before date_from")
 
+    operator = session.scalar(select(Operator).where(Operator.id == user.operator_id))
+    base_tz = operator.timezone if operator is not None else "Africa/Nairobi"
+
     crew = {
         c.id: c
         for c in session.scalars(select(Crew).where(Crew.operator_id == user.operator_id)).all()
@@ -107,7 +110,7 @@ def fatigue_report(
         c = crew.get(crew_id)
         if c is None:
             continue
-        s = fatigue.summarise_duties(duties)
+        s = fatigue.summarise_duties(duties, base_tz=base_tz)
         rows.append(
             FatigueRowOut(
                 employee_no=c.employee_no,

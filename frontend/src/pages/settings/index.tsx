@@ -10,10 +10,20 @@ type Operator = {
   aoc_number: string;
   name: string;
   base: string;
+  timezone: string;
   contact_email: string;
   tier: "ENTRY" | "STANDARD" | "PLUS";
   default_soft_weights: Record<string, number>;
 };
+
+const TIMEZONE_OPTIONS = [
+  { value: "Africa/Nairobi", label: "Africa/Nairobi — Kenya (EAT)" },
+  { value: "Africa/Kampala", label: "Africa/Kampala — Uganda (EAT)" },
+  { value: "Africa/Dar_es_Salaam", label: "Africa/Dar_es_Salaam — Tanzania (EAT)" },
+  { value: "Africa/Addis_Ababa", label: "Africa/Addis_Ababa — Ethiopia (EAT)" },
+  { value: "Africa/Mogadishu", label: "Africa/Mogadishu — Somalia (EAT)" },
+  { value: "Africa/Juba", label: "Africa/Juba — South Sudan (CAT)" },
+];
 
 const WEIGHT_FIELDS: { key: string; label: string; help: string }[] = [
   {
@@ -70,6 +80,7 @@ export function SettingsPage() {
         body: JSON.stringify({
           name: op.name,
           base: op.base,
+          timezone: op.timezone,
           contact_email: op.contact_email,
           tier: op.tier,
           default_soft_weights: op.default_soft_weights,
@@ -133,6 +144,29 @@ export function SettingsPage() {
                 onChange={(e) => setOp({ ...op, base: e.target.value.toUpperCase() })}
                 maxLength={4}
               />
+            </div>
+            <div>
+              <Label htmlFor="timezone">Home timezone</Label>
+              <select
+                id="timezone"
+                value={op.timezone}
+                onChange={(e) => setOp({ ...op, timezone: e.target.value })}
+                className="w-full rounded-md border border-dn-steel-lt px-3 py-2 text-sm"
+                data-testid="operator-timezone-select"
+              >
+                {!TIMEZONE_OPTIONS.some((t) => t.value === op.timezone) && (
+                  <option value={op.timezone}>{op.timezone}</option>
+                )}
+                {TIMEZONE_OPTIONS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-dn-muted">
+                Anchors circadian (window-of-circadian-low) fatigue scoring to the operator&apos;s
+                home base.
+              </p>
             </div>
             <div>
               <Label htmlFor="contact">Contact email</Label>
