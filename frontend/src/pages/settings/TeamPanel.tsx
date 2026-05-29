@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Modal } from "@/components/ui/Modal";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 
 type Member = {
   id: string;
@@ -28,6 +29,7 @@ const ROLE_LABEL: Record<Member["role"], string> = {
 };
 
 export function TeamPanel({ currentUserId }: { currentUserId: string }) {
+  const toast = useToast();
   const [members, setMembers] = useState<Member[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -69,13 +71,16 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
         body: JSON.stringify({ email, full_name: fullName, role, password }),
       });
       setInviteOk(`Added ${created.full_name}.`);
+      toast.show(`Added ${created.full_name}`, "success");
       setEmail("");
       setFullName("");
       setRole("CREWING_OFFICER");
       setPassword("");
       setReloadKey((k) => k + 1);
     } catch (err) {
-      setInviteErr(err instanceof ApiError ? err.message : "Could not add user");
+      const msg = err instanceof ApiError ? err.message : "Could not add user";
+      setInviteErr(msg);
+      toast.show(msg, "error");
     } finally {
       setInviting(false);
     }
@@ -89,8 +94,17 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
         body: JSON.stringify(body),
       });
       setReloadKey((k) => k + 1);
+      const what =
+        "role" in body
+          ? "Role updated"
+          : body.is_active
+            ? "Member reactivated"
+            : "Member deactivated";
+      toast.show(what, "success");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Update failed");
+      const msg = err instanceof ApiError ? err.message : "Update failed";
+      setError(msg);
+      toast.show(msg, "error");
     }
   }
 
