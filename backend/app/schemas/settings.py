@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.operator import OperatorTier
+from app.models.user import UserRole
 
 
 class OperatorOut(BaseModel):
@@ -41,3 +42,23 @@ class OperatorPatch(BaseModel):
         except (ZoneInfoNotFoundError, ValueError) as exc:
             raise ValueError(f"unknown timezone {v!r}") from exc
         return v
+
+
+class AccountOut(BaseModel):
+    """The signed-in user's own profile (self-service)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    full_name: str
+    role: UserRole
+
+
+class AccountPatch(BaseModel):
+    full_name: str = Field(min_length=1, max_length=128)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)

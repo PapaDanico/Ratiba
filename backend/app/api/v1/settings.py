@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_writer
+from app.core.security import hash_password, verify_password
 from app.models import Operator, User
-from app.schemas.settings import OperatorOut, OperatorPatch
+from app.schemas.settings import (
+    AccountOut,
+    AccountPatch,
+    OperatorOut,
+    OperatorPatch,
+    PasswordChange,
+)
 from app.services import audit_log
 
 router = APIRouter()
@@ -53,3 +60,39 @@ def update_operator(
     session.commit()
     session.refresh(op)
     return OperatorOut.model_validate(op)
+
+
+# -- Account self-service (any authenticated staff user) ---------------------
+
+
+@router.get("/account", response_model=AccountOut)
+def get_account(user: User = Depends(get_current_user)) -> AccountOut:
+    return AccountOut.model_validate(user)
+
+
+@router.patch("/account", response_model=AccountOut)
+def update_account(
+    payload: AccountPatch,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> AccountOut:
+    user.full_name = payload.full_name
+    session.commit()
+    session.refresh(user)
+    return AccountOut.model_validate(user)
+
+
+@router.post("/account/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    payload: PasswordChange,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> None:
+    if not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="current password is incorrect",
+        )
+    user.hashed_password = hash_password(payload.new_password)
+    session.commit()
+    return None
