@@ -80,3 +80,17 @@ def test_endpoint_unsupported_country_returns_empty(
     )
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+def test_somalia_and_south_sudan_holidays() -> None:
+    so = {h.name: h.date for h in ph.get_holidays("SO", 2026)}
+    assert so["Independence Day"] == date(2026, 6, 26)
+    assert so["Republic Day"] == date(2026, 7, 1)
+    assert "Prophet's Birthday (Mawlid)" in so
+    assert "Christmas Day" not in so  # not a public holiday in Somalia
+
+    ss = {h.name: h.date for h in ph.get_holidays("SS", 2026)}
+    assert ss["Independence Day"] == date(2026, 7, 9)
+    assert ss["Martyrs' Day"] == date(2026, 7, 30)
+    assert ss["SPLA Day"] == date(2026, 5, 16)
+    assert "Christmas Day" in ss

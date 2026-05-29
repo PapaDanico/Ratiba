@@ -54,7 +54,7 @@ class PublicHolidayOut(BaseModel):
     summary="Public holidays for a country within a date range",
 )
 def list_public_holidays(
-    country_code: str = Query(..., description="ISO 3166-1 alpha-2 (KE, UG, TZ, ET)"),
+    country_code: str = Query(..., description="ISO 3166-1 alpha-2 (KE, UG, TZ, ET, SO, SS)"),
     date_from: date = Query(...),
     date_to: date = Query(...),
     _user: User = Depends(get_current_user),

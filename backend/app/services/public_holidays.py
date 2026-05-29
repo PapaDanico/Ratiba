@@ -1,8 +1,8 @@
 """Public holiday data for East/Central African operating countries.
 
-Covers Kenya (KE), Uganda (UG), Tanzania (TZ), and Ethiopia (ET) for
-2025–2030. Fixed holidays are exact; Islamic holidays are approximate
-(East Africa observance typically matches Saudi Arabia ±1 day).
+Covers Kenya (KE), Uganda (UG), Tanzania (TZ), Ethiopia (ET), Somalia (SO),
+and South Sudan (SS) for 2025–2030. Fixed holidays are exact; Islamic holidays
+are approximate (East Africa observance typically matches Saudi Arabia ±1 day).
 
 Used by:
  - /api/v1/reference/public-holidays   (roster calendar shading)
@@ -199,6 +199,46 @@ def _ethiopia_holidays(year: int) -> list[PublicHoliday]:
     return h
 
 
+def _somalia_holidays(year: int) -> list[PublicHoliday]:
+    """Somalia (SO) — predominantly Islamic; Christian holidays are not public.
+    Islamic dates are approximate (governments confirm by moon-sighting)."""
+    so = "SO"
+    h = [
+        PublicHoliday(so, date(year, 1, 1), "New Year's Day"),
+        PublicHoliday(so, date(year, 5, 1), "Labour Day"),
+        PublicHoliday(so, date(year, 6, 26), "Independence Day"),
+        PublicHoliday(so, date(year, 7, 1), "Republic Day"),
+    ]
+    if year in _EID_AL_FITR:
+        h.append(PublicHoliday(so, _EID_AL_FITR[year], "Eid al-Fitr", is_variable=True))
+    if year in _EID_AL_ADHA:
+        h.append(PublicHoliday(so, _EID_AL_ADHA[year], "Eid al-Adha", is_variable=True))
+    if year in _MAULID:
+        h.append(PublicHoliday(so, _MAULID[year], "Prophet's Birthday (Mawlid)", is_variable=True))
+    return h
+
+
+def _south_sudan_holidays(year: int) -> list[PublicHoliday]:
+    """South Sudan (SS) — majority Christian, with national independence days.
+    Islamic dates are approximate."""
+    ss = "SS"
+    h = [
+        PublicHoliday(ss, date(year, 1, 1), "New Year's Day"),
+        PublicHoliday(ss, _good_friday(year), "Good Friday", is_variable=True),
+        PublicHoliday(ss, _easter_monday(year), "Easter Monday", is_variable=True),
+        PublicHoliday(ss, date(year, 5, 1), "Labour Day"),
+        PublicHoliday(ss, date(year, 5, 16), "SPLA Day"),
+        PublicHoliday(ss, date(year, 7, 9), "Independence Day"),
+        PublicHoliday(ss, date(year, 7, 30), "Martyrs' Day"),
+        PublicHoliday(ss, date(year, 12, 25), "Christmas Day"),
+    ]
+    if year in _EID_AL_FITR:
+        h.append(PublicHoliday(ss, _EID_AL_FITR[year], "Eid al-Fitr", is_variable=True))
+    if year in _EID_AL_ADHA:
+        h.append(PublicHoliday(ss, _EID_AL_ADHA[year], "Eid al-Adha", is_variable=True))
+    return h
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -208,6 +248,8 @@ _BUILDERS = {
     "UG": _uganda_holidays,
     "TZ": _tanzania_holidays,
     "ET": _ethiopia_holidays,
+    "SO": _somalia_holidays,
+    "SS": _south_sudan_holidays,
 }
 
 SUPPORTED_COUNTRIES = tuple(_BUILDERS.keys())
