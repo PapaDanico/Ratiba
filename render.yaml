@@ -64,6 +64,25 @@ services:
       - key: SECRET_KEY
         generateValue: true
 
+  # ── Recurrency digest (scheduled) ────────────────────────────────────────
+  # Emails crewing staff a daily summary of lapsing currencies/ratings/docs.
+  # Runs the digest in-process per operator (no HTTP/auth needed).
+  - type: cron
+    name: ratiba-digest
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    dockerCommand: ./digest-cron.sh
+    schedule: "0 5 * * *"  # 05:00 UTC ≈ 08:00 EAT, daily
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ratiba-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+
   # ── Redis ──────────────────────────────────────────────────────────────────
   - type: redis
     name: ratiba-redis
