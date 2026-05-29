@@ -50,3 +50,5 @@ class PostingOut(BaseModel):
     notes: str | None
     crew: list[PostingCrewOut]
     engineer_cover: bool  # at least one engineer on the team
+    days_to_end: int  # calendar days until end_date (negative once past)
+    rotation_due: bool  # ending within the rotation-alert window — plan relief

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -17,11 +18,15 @@ from app.services import postings as postings_service
 
 router = APIRouter()
 
+# A posting ending within this many days needs relief crew rotated in.
+ROTATION_DUE_WINDOW_DAYS = 7
+
 
 def _to_out(session: Session, posting: Posting) -> PostingOut:
     crew_ids = postings_service.crew_ids_for_posting(session, posting_id=posting.id)
     crew = session.scalars(select(Crew).where(Crew.id.in_(crew_ids))).all() if crew_ids else []
     crew_sorted = sorted(crew, key=lambda c: (c.crew_category.value, c.role.value, c.employee_no))
+    days_to_end = (posting.end_date - date.today()).days
     return PostingOut(
         id=posting.id,
         location_icao=posting.location_icao,
@@ -35,6 +40,8 @@ def _to_out(session: Session, posting: Posting) -> PostingOut:
         notes=posting.notes,
         crew=[PostingCrewOut.model_validate(c) for c in crew_sorted],
         engineer_cover=any(c.crew_category is CrewCategory.ENGINEERING for c in crew_sorted),
+        days_to_end=days_to_end,
+        rotation_due=0 <= days_to_end <= ROTATION_DUE_WINDOW_DAYS,
     )
 
 

@@ -28,6 +28,8 @@ type Posting = {
   notes: string | null;
   crew: PostingCrew[];
   engineer_cover: boolean;
+  days_to_end: number;
+  rotation_due: boolean;
 };
 
 type Crew = { id: string; employee_no: string; first_name: string; last_name: string };
@@ -286,6 +288,9 @@ export function PostingsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {p.rotation_due && (
+                      <Badge tone="red">Rotation due ({p.days_to_end}d)</Badge>
+                    )}
                     {p.crew.length > 0 && !p.engineer_cover && (
                       <Badge tone="amber">No engineer cover</Badge>
                     )}

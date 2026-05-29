@@ -134,3 +134,18 @@ def test_overlapping_postings_rejected(
     clash = client.post(f"/api/v1/postings/{p2}/assign", json={"crew_id": str(crew.id)})
     assert clash.status_code == 422
     assert "overlapping" in clash.json()["detail"]
+
+
+def test_rotation_due_flag(auth_client: tuple[TestClient, User]) -> None:
+    client, _ = auth_client
+    # Ending in 3 days → rotation due.
+    soon = client.post(
+        "/api/v1/postings", json=_posting_body("HKMO", "Kenya", "DETACHMENT", -5, 3)
+    ).json()
+    assert soon["rotation_due"] is True
+    assert soon["days_to_end"] == 3
+    # Ending in 20 days → not due yet.
+    later = client.post(
+        "/api/v1/postings", json=_posting_body("HKMO", "Kenya", "DETACHMENT", 0, 20)
+    ).json()
+    assert later["rotation_due"] is False
