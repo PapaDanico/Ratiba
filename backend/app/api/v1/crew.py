@@ -6,7 +6,7 @@ import uuid
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from jose import JWTError
 from pydantic import BaseModel
@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_writer
 from app.core.security import create_ical_token, decode_token
 from app.models import Crew, CrewCurrency, User
+from app.models.crew import CrewCategory
 from app.schemas.crew import (
     CrewIn,
     CrewOut,
@@ -80,12 +81,15 @@ def currency_dashboard(
 
 @router.get("", response_model=list[CrewOut])
 def list_crew(
+    category: CrewCategory | None = Query(default=None),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ) -> list[CrewOut]:
     rows = session.scalars(
         _scoped(select(Crew), user).order_by(Crew.last_name, Crew.first_name)
     ).all()
+    if category is not None:
+        rows = [r for r in rows if r.crew_category == category]
     return [CrewOut.model_validate(r) for r in rows]
 
 

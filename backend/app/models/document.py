@@ -26,6 +26,7 @@ class DocumentType(enum.StrEnum):
     LICENCE = "LICENCE"  # CPL / ATPL
     MEDICAL = "MEDICAL"  # Class 1 / 2
     TYPE_RATING_CERT = "TYPE_RATING_CERT"
+    MAINTENANCE_AUTH = "MAINTENANCE_AUTH"  # engineer type authorisation (e.g. Part-66)
     PASSPORT = "PASSPORT"
     VISA = "VISA"
     WORK_PERMIT = "WORK_PERMIT"

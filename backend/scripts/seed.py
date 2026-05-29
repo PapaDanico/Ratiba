@@ -572,8 +572,9 @@ def _seed_demo(session: Session) -> None:
 
         summary = seed_jetways(session)
         print(
-            f"  Seeded Jetways Airlines: {summary['crew']} pilots, "
-            f"{summary['aircraft']} aircraft, {summary['assignments']} assignments."
+            f"  Seeded Jetways Airlines: {summary['pilots']} pilots + "
+            f"{summary['cabin_eng']} cabin/eng, {summary['aircraft']} aircraft, "
+            f"{summary['assignments']} assignments."
         )
     except Exception as exc:  # never let Jetways break the core demo seed
         print(f"  Jetways seed skipped: {exc}")

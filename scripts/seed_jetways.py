@@ -520,6 +520,106 @@ def seed_jetways(session: Session) -> dict[str, int]:
             doc_type=DocumentType.LICENCE,
         )
 
+    # ── Cabin crew + accompanying engineers ──
+    # Tracked and qualified, but not auto-paired (full crew-complement
+    # rostering is a later phase). Cabin crew carry SEP / first-aid / CRM +
+    # medical; engineers carry a maintenance type-authorisation + DGR.
+    cabin_and_eng: tuple[tuple[str, CrewRole, str, int], ...] = (
+        ("CC-P01", CrewRole.PURSER, "Purser", 30),
+        ("CC-P02", CrewRole.PURSER, "Purser", 22),
+        ("CC-01", CrewRole.CABIN_CREW, "Cabin Crew", 11),
+        ("CC-02", CrewRole.CABIN_CREW, "Cabin Crew", 14),
+        ("CC-03", CrewRole.CABIN_CREW, "Cabin Crew", 7),
+        ("CC-04", CrewRole.CABIN_CREW, "Cabin Crew", 18),
+        ("CC-05", CrewRole.CABIN_CREW, "Cabin Crew", 25),
+        ("CC-06", CrewRole.CABIN_CREW, "Cabin Crew", 3),
+        ("ENG-01", CrewRole.ENGINEER, "Engineer", 0),
+        ("ENG-02", CrewRole.ENGINEER, "Engineer", 0),
+    )
+    for j, (emp, role, label, med_months) in enumerate(cabin_and_eng):
+        number = emp.split("-")[-1]
+        crew, created = _get_or_create(
+            session,
+            Crew,
+            defaults={
+                "first_name": label,
+                "last_name": number,
+                "role": role,
+                "date_of_hire": date(
+                    today.year - 3 - (j % 5), ((j * 3) % 12) + 1, ((j * 5) % 27) + 1
+                ),
+                "date_of_birth": date(1985 + (j % 12), ((j * 5) % 12) + 1, ((j * 7) % 27) + 1),
+                "base_station": "HKJK",
+                "contract_type": ContractType.FULL_TIME,
+                "active": True,
+                "languages": ["en", "sw"],
+                "faith_observance_flags": {},
+            },
+            operator_id=operator.id,
+            employee_no=emp,
+        )
+        if not created:
+            continue
+        if role is CrewRole.ENGINEER:
+            _get_or_create(
+                session,
+                CrewDocument,
+                defaults={
+                    "document_number": f"AML-{number}",
+                    "issuing_authority": "KCAA",
+                    "issue_date": today - timedelta(days=400),
+                    "expiry_date": today + timedelta(days=300 + j * 20),
+                    "notes": "Aircraft maintenance type authorisation (Fokker F50/F70/F100)",
+                },
+                operator_id=operator.id,
+                crew_id=crew.id,
+                doc_type=DocumentType.MAINTENANCE_AUTH,
+            )
+            _get_or_create(
+                session,
+                CrewCurrency,
+                defaults={
+                    "last_completed_date": today - timedelta(days=200),
+                    "expires_date": today + timedelta(days=160),
+                    "evidence_ref": "DGR CAT",
+                },
+                operator_id=operator.id,
+                crew_id=crew.id,
+                currency_type=CurrencyType.DG,
+            )
+        else:
+            _get_or_create(
+                session,
+                CrewDocument,
+                defaults={
+                    "document_number": f"MED-{emp}",
+                    "issuing_authority": "KCAA",
+                    "issue_date": today - timedelta(days=180),
+                    "expiry_date": today + timedelta(days=med_months * 30),
+                    "notes": "Class 2 medical certificate",
+                },
+                operator_id=operator.id,
+                crew_id=crew.id,
+                doc_type=DocumentType.MEDICAL,
+            )
+            for ct, days in (
+                (CurrencyType.EMERG_PROC, med_months * 30),
+                (CurrencyType.FIRST_AID, 60 + j * 20),
+                (CurrencyType.CRM, 200 + j * 15),
+            ):
+                _get_or_create(
+                    session,
+                    CrewCurrency,
+                    defaults={
+                        "last_completed_date": today - timedelta(days=300),
+                        "expires_date": today + timedelta(days=days),
+                        "evidence_ref": "DEMO",
+                    },
+                    operator_id=operator.id,
+                    crew_id=crew.id,
+                    currency_type=ct,
+                )
+
     # ── Operator FTL scheme (KCAR Part 8 hard limits over baseline) ──
     cset = session.scalar(select(ConstraintSet).where(ConstraintSet.operator_id == operator.id))
     if cset is None:
@@ -679,7 +779,8 @@ def seed_jetways(session: Session) -> dict[str, int]:
 
     session.commit()
     return {
-        "crew": len(ALL_PILOTS),
+        "pilots": len(ALL_PILOTS),
+        "cabin_eng": len(cabin_and_eng),
         "aircraft": len(FLEET),
         "assignments": assignments_created,
     }
@@ -817,8 +918,8 @@ def main() -> int:
     print(f"  Login    : {OFFICER_EMAIL} / {PASSWORD}  (Crewing Officer)")
     print(f"             {CHIEF_EMAIL} / {PASSWORD}  (Chief Pilot)")
     print(
-        f"  Seeded   : {summary['crew']} pilots, {summary['aircraft']} aircraft, "
-        f"{summary['assignments']} duty-day assignments"
+        f"  Seeded   : {summary['pilots']} pilots + {summary['cabin_eng']} cabin/eng, "
+        f"{summary['aircraft']} aircraft, {summary['assignments']} duty-day assignments"
     )
     return 0
 

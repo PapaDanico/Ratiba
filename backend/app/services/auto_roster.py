@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Crew, CrewCurrency, CrewTypeRating, Sector
+from app.models.crew import FLIGHT_DECK_ROLES
 from app.models.leave import LeaveRequest, LeaveStatus
 from app.schemas.roster import SectorInputIn
 from app.services import ftl_limits, optimiser
@@ -34,8 +35,14 @@ def _crew_profiles(
     horizon_from: date,
     horizon_to: date,
 ) -> list[optimiser.CrewProfile]:
+    # Only flight-deck crew enter the pilot-pairing optimiser. Cabin and
+    # engineering crew are tracked/qualified elsewhere; full crew-complement
+    # rostering is a later phase.
     crew = session.scalars(
-        select(Crew).where(Crew.operator_id == operator_id).where(Crew.active.is_(True))
+        select(Crew)
+        .where(Crew.operator_id == operator_id)
+        .where(Crew.active.is_(True))
+        .where(Crew.role.in_(FLIGHT_DECK_ROLES))
     ).all()
     crew_by_id = {c.id: c for c in crew}
 

@@ -7,7 +7,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.crew import ContractType, CrewRole
+from app.models.crew import ContractType, CrewCategory, CrewRole
 from app.models.training import CurrencyType
 
 
@@ -19,6 +19,7 @@ class CrewOut(BaseModel):
     first_name: str
     last_name: str
     role: CrewRole
+    crew_category: CrewCategory
     base_station: str
     contract_type: ContractType
     active: bool

@@ -9,12 +9,25 @@ type Crew = {
   employee_no: string;
   first_name: string;
   last_name: string;
-  role: "CAPT" | "FO" | "SO";
+  role: "CAPT" | "FO" | "SO" | "PURSER" | "CABIN_CREW" | "ENGINEER";
+  crew_category: "FLIGHT_DECK" | "CABIN" | "ENGINEERING";
   base_station: string;
   contract_type: string;
   active: boolean;
   email: string | null;
   phone_number: string | null;
+};
+
+const CATEGORY_LABEL: Record<Crew["crew_category"], string> = {
+  FLIGHT_DECK: "Flight deck",
+  CABIN: "Cabin",
+  ENGINEERING: "Engineering",
+};
+
+const CATEGORY_TONE: Record<Crew["crew_category"], "steel" | "gold" | "amber"> = {
+  FLIGHT_DECK: "steel",
+  CABIN: "gold",
+  ENGINEERING: "amber",
 };
 
 function todayYearMonth(): { year: number; month: number } {
@@ -258,6 +271,7 @@ export function CrewPage() {
                   <th className="py-2 pr-4 font-medium">Employee #</th>
                   <th className="py-2 pr-4 font-medium">Name</th>
                   <th className="py-2 pr-4 font-medium">Role</th>
+                  <th className="py-2 pr-4 font-medium">Category</th>
                   <th className="py-2 pr-4 font-medium">Base</th>
                   <th className="py-2 pr-4 font-medium">Email</th>
                   <th className="py-2 pr-4 font-medium">Phone</th>
@@ -276,6 +290,11 @@ export function CrewPage() {
                     </td>
                     <td data-label="Role" className="py-2 pr-4">
                       <Badge tone="steel">{c.role}</Badge>
+                    </td>
+                    <td data-label="Category" className="py-2 pr-4">
+                      <Badge tone={CATEGORY_TONE[c.crew_category]}>
+                        {CATEGORY_LABEL[c.crew_category]}
+                      </Badge>
                     </td>
                     <td data-label="Base" className="py-2 pr-4 font-mono">
                       {c.base_station}
