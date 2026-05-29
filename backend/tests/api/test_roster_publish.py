@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
-from app.models import FlightDutyPeriod, Sector, SectorAssignment
+from app.models import Crew, FlightDutyPeriod, Sector, SectorAssignment
 from app.models.user import User
 
 
@@ -168,3 +168,59 @@ def test_publish_rejects_unknown_crew(auth_client: tuple[TestClient, User]) -> N
     }
     resp = client.post("/api/v1/roster/publish", json=payload)
     assert resp.status_code == 422
+
+
+def test_published_roster_applies_rest_minimum_across_days(
+    auth_client: tuple[TestClient, User],
+    db_session,
+) -> None:
+    """Day 2's legality reflects the short rest after day 1 — proving prior-duty
+    history now feeds roster FDP legality (each day was judged in isolation
+    before, so the rest-minimum rule never fired)."""
+    client, _ = auth_client
+    cap_emp, fo_emp = _create_two_crew(client)
+    d1 = date(2026, 8, 1)
+    d2 = date(2026, 8, 2)
+
+    def sector(sid: str, d: date, sh: int, eh: int, block: str) -> dict:
+        return {
+            "sector_id": sid,
+            "date_local": d.isoformat(),
+            "std": datetime(d.year, d.month, d.day, sh, 0, tzinfo=UTC).isoformat(),
+            "sta": datetime(d.year, d.month, d.day, eh, 0, tzinfo=UTC).isoformat(),
+            "aircraft_reg": "5Y-RST",
+            "aircraft_type": "DH8D",
+            "block_hours": block,
+        }
+
+    def assignment(d: date, sids: list[str]) -> dict:
+        return {
+            "duty_day_key": f"5Y-RST|{d.isoformat()}",
+            "date_local": d.isoformat(),
+            "aircraft_reg": "5Y-RST",
+            "aircraft_type": "DH8D",
+            "sector_ids": sids,
+            "captain_id": cap_emp,
+            "fo_id": fo_emp,
+        }
+
+    # Day 1 off-duty 18:30; day 2 report 05:00 → 10.5 h rest (< 12 h home floor).
+    payload = {
+        "horizon_from": d1.isoformat(),
+        "horizon_to": d2.isoformat(),
+        "sectors": [sector("RST1", d1, 12, 18, "6.0"), sector("RST2", d2, 6, 9, "3.0")],
+        "assignments": [assignment(d1, ["RST1"]), assignment(d2, ["RST2"])],
+    }
+    resp = client.post("/api/v1/roster/publish", json=payload)
+    assert resp.status_code == 200, resp.text
+
+    cap = db_session.query(Crew).filter(Crew.employee_no == cap_emp).one()
+    fdps = {
+        f.date: f
+        for f in db_session.query(FlightDutyPeriod).filter(FlightDutyPeriod.crew_id == cap.id).all()
+    }
+    # Day 1 has no prior duty → rest rule not applicable → legal.
+    assert fdps[d1].legality_state.value == "LEGAL"
+    # Day 2 sees day 1 as prior → rest-minimum rule fires and the day isn't legal.
+    assert "KCAR-P8-REST-MIN" in fdps[d2].ftl_rules_applied
+    assert fdps[d2].legality_state.value != "LEGAL"
