@@ -80,6 +80,17 @@ def require_writer(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Authorise an operator-administration action (team / user management) —
+    403 unless the user is an ADMIN. Stricter than :func:`require_writer`."""
+    if user.role is not UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only an operator administrator can manage users",
+        )
+    return user
+
+
 def get_current_operator(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_db),

@@ -23,6 +23,7 @@ from app.api.v1 import (
     sectors,
     swap,
     training,
+    users,
 )
 from app.api.v1 import (
     settings as settings_routes,
@@ -52,5 +53,6 @@ api_router.include_router(aircraft.router, prefix="/fleet", tags=["fleet"])
 api_router.include_router(reference.router, prefix="/reference", tags=["reference"])
 api_router.include_router(constraints.router, prefix="/constraints", tags=["constraints"])
 api_router.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
 
 __all__ = ["api_router"]
