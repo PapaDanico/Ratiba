@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import smtplib
 import ssl
+import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -207,4 +208,60 @@ def push_notice(session: Session, notice: Notice) -> int:
     if phone_numbers and settings.at_api_key.strip():
         total += _push_sms(phone_numbers, text_sms)
 
+    return total
+
+
+def _send_email_text(addresses: list[str], subject: str, body: str, from_addr: str) -> int:
+    settings = get_settings()
+    host = settings.smtp_host.strip()
+    if not host or not from_addr:
+        return 0
+    sent = 0
+    try:
+        context = ssl.create_default_context()
+        if settings.smtp_use_tls:
+            server: smtplib.SMTP = smtplib.SMTP(host, settings.smtp_port, timeout=15)
+            server.ehlo()
+            server.starttls(context=context)
+        else:
+            server = smtplib.SMTP(host, settings.smtp_port, timeout=15)
+        if settings.smtp_user:
+            server.login(settings.smtp_user, settings.smtp_password)
+        for addr in addresses:
+            try:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = subject
+                msg["From"] = from_addr
+                msg["To"] = addr
+                msg.attach(MIMEText(body, "plain", "utf-8"))
+                server.sendmail(from_addr, addr, msg.as_string())
+                sent += 1
+            except Exception as exc:
+                log.warning("email send failed for %s: %r", addr, exc)
+        server.quit()
+    except Exception as exc:
+        log.warning("smtp connection failed: %r", exc)
+    return sent
+
+
+def notify_crew_member(session: Session, *, crew_id: uuid.UUID, subject: str, body: str) -> int:
+    """Best-effort direct message to one crew member across every configured
+    channel (email / SMS / Telegram). Returns successful deliveries; silently
+    no-ops when a channel's credentials aren't set, so call sites needn't guard.
+    """
+    settings = get_settings()
+    crew = session.get(Crew, crew_id)
+    if crew is None:
+        return 0
+    total = 0
+    if crew.telegram_chat_id is not None and settings.telegram_bot_token.strip():
+        total += _push_telegram(
+            [crew.telegram_chat_id], f"{subject}\n\n{body}", settings.telegram_bot_token.strip()
+        )
+    if crew.email and settings.smtp_host.strip():
+        total += _send_email_text(
+            [crew.email], f"[Ratiba] {subject}", body, settings.smtp_from.strip()
+        )
+    if crew.phone_number and settings.at_api_key.strip():
+        total += _push_sms([crew.phone_number], f"{subject}: {body}")
     return total

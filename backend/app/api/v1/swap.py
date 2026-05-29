@@ -13,7 +13,7 @@ from app.core.dependencies import get_current_user, require_writer
 from app.models import SwapRequest, User
 from app.models.swap import SwapStatus
 from app.schemas.leave_swap import SwapDecision, SwapRequestIn, SwapRequestOut
-from app.services import audit_log
+from app.services import audit_log, notify
 
 router = APIRouter()
 
@@ -97,4 +97,13 @@ def decide_swap(
     )
     session.commit()
     session.refresh(row)
+
+    decision = row.status.value.lower()
+    for crew_id in (row.crew_id_initiator, row.crew_id_counterparty):
+        notify.notify_crew_member(
+            session,
+            crew_id=crew_id,
+            subject=f"Duty swap {decision}",
+            body=f"Your duty-swap request was {decision} by {user.full_name}.",
+        )
     return SwapRequestOut.model_validate(row)
