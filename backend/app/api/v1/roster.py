@@ -157,11 +157,22 @@ def publish(
     payload: PublishRosterRequest,
     user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
+    queue: JobQueue = Depends(get_job_queue),
 ) -> PublishRosterResponse:
     try:
-        return roster_service.publish_roster(session, user=user, payload=payload)
+        result = roster_service.publish_roster(session, user=user, payload=payload)
     except roster_service.RosterPersistenceError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    # Notify assigned crew off the request path (Redis worker in prod).
+    queue.enqueue(
+        "app.tasks.notifications.notify_roster_published",
+        {
+            "operator_id": str(user.operator_id),
+            "horizon_from": payload.horizon_from.isoformat(),
+            "horizon_to": payload.horizon_to.isoformat(),
+        },
+    )
+    return result
 
 
 @router.post(

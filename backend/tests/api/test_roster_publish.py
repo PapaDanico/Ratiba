@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.models import Crew, FlightDutyPeriod, Sector, SectorAssignment
 from app.models.user import User
+from app.services import notify
 
 
 def _create_two_crew(client: TestClient) -> tuple[str, str]:
@@ -87,6 +89,55 @@ def test_publish_creates_sectors_assignments_and_fdps(
     assert db_session.query(Sector).count() == 1
     assert db_session.query(SectorAssignment).count() == 2
     assert db_session.query(FlightDutyPeriod).count() == 2
+
+
+def test_publish_notifies_assigned_crew(
+    auth_client: tuple[TestClient, User], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, _ = auth_client
+    cap_emp, fo_emp = _create_two_crew(client)
+
+    notified: list[str] = []
+
+    def _spy(session, *, crew_id, subject, body):  # type: ignore[no-untyped-def]
+        notified.append(str(crew_id))
+        return 0
+
+    monkeypatch.setattr(notify, "notify_crew_member", _spy)
+
+    day = date(2026, 7, 1)
+    std = datetime(2026, 7, 1, 6, 0, tzinfo=UTC)
+    payload = {
+        "horizon_from": day.isoformat(),
+        "horizon_to": day.isoformat(),
+        "sectors": [
+            {
+                "sector_id": "RB101",
+                "date_local": day.isoformat(),
+                "std": std.isoformat(),
+                "sta": (std + timedelta(hours=3)).isoformat(),
+                "aircraft_reg": "5Y-AAA",
+                "aircraft_type": "DH8D",
+                "block_hours": "3.0",
+            }
+        ],
+        "assignments": [
+            {
+                "duty_day_key": f"5Y-AAA|{day.isoformat()}",
+                "date_local": day.isoformat(),
+                "aircraft_reg": "5Y-AAA",
+                "aircraft_type": "DH8D",
+                "sector_ids": ["RB101"],
+                "captain_id": cap_emp,
+                "fo_id": fo_emp,
+            }
+        ],
+    }
+    resp = client.post("/api/v1/roster/publish", json=payload)
+    assert resp.status_code == 200, resp.text
+    # The publish enqueues a notify job; the in-process queue runs it inline and
+    # re-reads the two published FDPs (CAPT + FO).
+    assert len(notified) == 2
 
 
 def test_get_roster_lists_published_assignments(
