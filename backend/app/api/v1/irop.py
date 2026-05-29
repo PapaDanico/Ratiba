@@ -59,6 +59,7 @@ def assess(
             new_rest_h=a.cascade.new_rest_h,
             rest_floor_h=a.cascade.rest_floor_h,
             breached=a.cascade.breached,
+            extension_h=a.cascade.extension_h,
         ),
         duty_day_key=a.duty_day_key,
         aircraft_reg=a.aircraft_reg,

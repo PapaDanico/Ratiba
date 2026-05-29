@@ -20,6 +20,7 @@ type Cascade = {
   new_rest_h: number | null;
   rest_floor_h: number | null;
   breached: boolean;
+  extension_h: number;
 };
 
 type Assessment = {
@@ -321,6 +322,11 @@ export function IropPage() {
                     <span>
                       {result.cascade.new_rest_h}h rest vs {result.cascade.rest_floor_h}h floor
                     </span>
+                    {result.cascade.extension_h > 0 && (
+                      <span className="text-xs text-dn-muted">
+                        (incl. +{result.cascade.extension_h}h per OPS033 §4.6.7)
+                      </span>
+                    )}
                     <YesNo ok={!result.cascade.breached} yes="Rest OK" no="Rest breached" />
                   </div>
                 )}

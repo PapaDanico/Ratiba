@@ -40,6 +40,7 @@ class CascadeImpactOut(BaseModel):
     new_rest_h: float | None
     rest_floor_h: float | None
     breached: bool
+    extension_h: float = 0.0
 
 
 class IropAssessmentOut(BaseModel):
