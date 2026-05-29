@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError, tokenStore } from "@/lib/api";
@@ -74,83 +75,74 @@ function CrossOpFtlButton({ crew }: { crew: Crew }) {
         Cross-op FTL
       </button>
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-dn-dark/40 p-4"
-          role="dialog"
-          aria-modal="true"
+        <Modal
+          title={`Cross-operator FTL — ${crew.first_name} ${crew.last_name}`}
+          onClose={() => setOpen(false)}
+          maxWidth="max-w-lg"
         >
-          <Card className="w-full max-w-lg">
-            <CardHeader>
-              <CardTitle>
-                Cross-operator FTL — {crew.first_name} {crew.last_name}
-              </CardTitle>
-            </CardHeader>
-            <CardBody>
-              {busy ? (
-                <p className="text-sm text-dn-muted">Loading…</p>
-              ) : error ? (
-                <p className="text-sm text-dn-red">{error}</p>
-              ) : data ? (
-                <>
-                  <p className="text-sm text-dn-muted mb-3">
-                    {data.linked ? (
+          {busy ? (
+            <p className="text-sm text-dn-muted">Loading…</p>
+          ) : error ? (
+            <p className="text-sm text-dn-red">{error}</p>
+          ) : data ? (
+            <>
+              <p className="text-sm text-dn-muted mb-3">
+                {data.linked ? (
+                  <>
+                    Aggregated across <strong>{data.operator_count}</strong> operators sharing ref{" "}
+                    <span className="font-mono">{data.person_ref}</span>. Totals only — other
+                    operators&apos; duty detail is not shown.
+                  </>
+                ) : (
+                  <>
+                    Not linked to another operator
+                    {data.person_ref ? (
                       <>
-                        Aggregated across <strong>{data.operator_count}</strong> operators sharing
-                        ref <span className="font-mono">{data.person_ref}</span>. Totals only —
-                        other operators&apos; duty detail is not shown.
+                        {" "}
+                        (ref <span className="font-mono">{data.person_ref}</span>)
                       </>
-                    ) : (
-                      <>
-                        Not linked to another operator
-                        {data.person_ref ? (
-                          <>
-                            {" "}
-                            (ref <span className="font-mono">{data.person_ref}</span>)
-                          </>
-                        ) : null}{" "}
-                        — these are this operator&apos;s cumulative totals.
-                      </>
-                    )}
-                  </p>
-                  <table className="w-full text-sm responsive-table">
-                    <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
-                      <tr>
-                        <th className="py-2 pr-4 font-medium">Window</th>
-                        <th className="py-2 pr-4 font-medium">Total</th>
-                        <th className="py-2 pr-4 font-medium">Limit</th>
-                        <th className="py-2 pr-4 font-medium">State</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-dn-steel-lt">
-                      {data.windows.map((w) => (
-                        <tr key={w.label}>
-                          <td data-label="Window" className="py-2 pr-4 text-dn-dark">
-                            {w.label}
-                          </td>
-                          <td data-label="Total" className="py-2 pr-4 font-mono">
-                            {w.total_h}h
-                          </td>
-                          <td data-label="Limit" className="py-2 pr-4 font-mono text-dn-muted">
-                            {w.limit_h}h
-                          </td>
-                          <td data-label="State" className="py-2 pr-4">
-                            <Badge tone={XOP_TONE[w.state]}>{w.state}</Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p className="mt-3 text-xs text-dn-muted">As of {data.as_of}.</p>
-                </>
-              ) : null}
-              <div className="flex justify-end pt-3">
-                <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
+                    ) : null}{" "}
+                    — these are this operator&apos;s cumulative totals.
+                  </>
+                )}
+              </p>
+              <table className="w-full text-sm responsive-table">
+                <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                  <tr>
+                    <th className="py-2 pr-4 font-medium">Window</th>
+                    <th className="py-2 pr-4 font-medium">Total</th>
+                    <th className="py-2 pr-4 font-medium">Limit</th>
+                    <th className="py-2 pr-4 font-medium">State</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dn-steel-lt">
+                  {data.windows.map((w) => (
+                    <tr key={w.label}>
+                      <td data-label="Window" className="py-2 pr-4 text-dn-dark">
+                        {w.label}
+                      </td>
+                      <td data-label="Total" className="py-2 pr-4 font-mono">
+                        {w.total_h}h
+                      </td>
+                      <td data-label="Limit" className="py-2 pr-4 font-mono text-dn-muted">
+                        {w.limit_h}h
+                      </td>
+                      <td data-label="State" className="py-2 pr-4">
+                        <Badge tone={XOP_TONE[w.state]}>{w.state}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-3 text-xs text-dn-muted">As of {data.as_of}.</p>
+            </>
+          ) : null}
+          <div className="flex justify-end pt-3">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </Modal>
       )}
     </>
   );

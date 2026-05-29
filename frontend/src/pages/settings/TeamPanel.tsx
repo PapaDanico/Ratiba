@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { Modal } from "@/components/ui/Modal";
 import { api, ApiError } from "@/lib/api";
 
 type Member = {
@@ -30,6 +31,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
   const [members, setMembers] = useState<Member[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [confirmDeactivate, setConfirmDeactivate] = useState<Member | null>(null);
 
   // Invite form
   const [email, setEmail] = useState("");
@@ -163,7 +165,11 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => patch(m.id, { is_active: !m.is_active })}
+                              onClick={() =>
+                                m.is_active
+                                  ? setConfirmDeactivate(m)
+                                  : patch(m.id, { is_active: true })
+                              }
                               className="text-dn-steel underline text-xs hover:text-dn-dark"
                               data-testid={`toggle-${m.email}`}
                             >
@@ -247,6 +253,40 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
           </form>
         </CardBody>
       </Card>
+
+      {confirmDeactivate && (
+        <Modal
+          title="Deactivate member?"
+          onClose={() => setConfirmDeactivate(null)}
+          testId="confirm-deactivate"
+        >
+          <p className="text-sm text-dn-dark">
+            {confirmDeactivate.full_name} ({confirmDeactivate.email}) will no longer be able to sign
+            in. You can reactivate them later.
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmDeactivate(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              data-testid="confirm-deactivate-submit"
+              onClick={() => {
+                patch(confirmDeactivate.id, { is_active: false });
+                setConfirmDeactivate(null);
+              }}
+            >
+              Deactivate
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
