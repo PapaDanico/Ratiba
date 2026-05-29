@@ -38,18 +38,21 @@ from app.models import (
     LeaveRequest,
     Notice,
     Operator,
+    Posting,
     SwapRequest,
     User,
 )
-from app.models.crew import ContractType, CrewRole
+from app.models.crew import FLIGHT_DECK_ROLES, ContractType, CrewRole
 from app.models.leave import LeaveStatus, LeaveType
 from app.models.notice import NoticeCategory, NoticeSeverity
 from app.models.operator import OperatorTier
+from app.models.posting import PostingType
 from app.models.swap import SwapStatus
 from app.models.training import CurrencyType
 from app.models.user import UserRole
 from app.schemas.roster import AssignmentOut, PublishRosterRequest, SectorInputIn
 from app.services import audit_pack, roster_service
+from app.services import postings as postings_service
 
 DEFAULT_OPERATOR_AOC = "DEV-AOC-001"
 DEFAULT_USER_EMAIL = "officer@example.aero"
@@ -100,6 +103,10 @@ DEMO_OPERATORS: tuple[DemoOperator, ...] = (
             DemoCrew("AC-FO-03", "Sifa", "Maina", CrewRole.FO),
             DemoCrew("AC-FO-04", "Furaha", "Cheruiyot", CrewRole.FO),
             DemoCrew("AC-FO-05", "Neema", "Akinyi", CrewRole.FO),
+            DemoCrew("AC-PUR-01", "Lulu", "Wanjiru", CrewRole.PURSER),
+            DemoCrew("AC-CC-01", "Dalila", "Mutua", CrewRole.CABIN_CREW),
+            DemoCrew("AC-CC-02", "Subira", "Kones", CrewRole.CABIN_CREW),
+            DemoCrew("AC-ENG-01", "Otieno", "Omondi", CrewRole.ENGINEER),
         ),
     ),
     DemoOperator(
@@ -117,6 +124,8 @@ DEMO_OPERATORS: tuple[DemoOperator, ...] = (
             DemoCrew("MA-FO-01", "Mwajuma", "Hassan", CrewRole.FO),
             DemoCrew("MA-FO-02", "Juma", "Ndegwa", CrewRole.FO),
             DemoCrew("MA-FO-03", "Pendo", "Kibet", CrewRole.FO),
+            DemoCrew("MA-CC-01", "Amina", "Said", CrewRole.CABIN_CREW),
+            DemoCrew("MA-ENG-01", "Kamau", "Njuguna", CrewRole.ENGINEER),
         ),
     ),
 )
@@ -493,6 +502,79 @@ def _seed_default(session: Session) -> None:
     print(f"Default seed ready. Log in as {DEFAULT_USER_EMAIL} / {DEFAULT_USER_PASSWORD}")
 
 
+def _ensure_nonpilot_currency(
+    session: Session, *, operator: Operator, crew: Crew, role: CrewRole, today: date
+) -> None:
+    """One representative currency per non-pilot so they show on the dashboard:
+    cabin crew → SEP (EMERG_PROC), engineer → DGR."""
+    ctype = CurrencyType.DG if role is CrewRole.ENGINEER else CurrencyType.EMERG_PROC
+    existing = session.scalar(
+        select(CrewCurrency)
+        .where(CrewCurrency.crew_id == crew.id)
+        .where(CrewCurrency.currency_type == ctype)
+    )
+    if existing is not None:
+        return
+    session.add(
+        CrewCurrency(
+            operator_id=operator.id,
+            crew_id=crew.id,
+            currency_type=ctype,
+            last_completed_date=today - timedelta(days=120),
+            expires_date=today + timedelta(days=245),
+            evidence_ref="DEMO",
+        )
+    )
+    session.commit()
+
+
+def _ensure_demo_posting(
+    session: Session,
+    *,
+    operator: Operator,
+    user_id: uuid.UUID,
+    crew_by_emp: dict[str, Crew],
+    today: date,
+) -> None:
+    """A short domestic detachment so the demo shows an outstation posting.
+
+    Domestic (Kenya) so the international work-permit gate doesn't apply.
+    Deploys one of each available discipline (capt + fo + cabin + engineer).
+    """
+    if session.scalar(select(Posting).where(Posting.operator_id == operator.id)) is not None:
+        return
+    by_role: dict[CrewRole, list[Crew]] = {}
+    for c in crew_by_emp.values():
+        by_role.setdefault(c.role, []).append(c)
+    team = [
+        by_role[r][0]
+        for r in (CrewRole.CAPT, CrewRole.FO, CrewRole.CABIN_CREW, CrewRole.ENGINEER)
+        if by_role.get(r)
+    ]
+    if not team:
+        return
+    posting = postings_service.create_posting(
+        session,
+        operator_id=operator.id,
+        user_id=user_id,
+        location_icao="HKMO",
+        country="Kenya",
+        type=PostingType.DETACHMENT,
+        start_date=today + timedelta(days=10),
+        end_date=today + timedelta(days=24),
+        notes="Coastal (Mombasa) detachment — demo",
+    )
+    for c in team:
+        postings_service.assign_crew(
+            session,
+            operator_id=operator.id,
+            user_id=user_id,
+            posting_id=posting.id,
+            crew_id=c.id,
+        )
+    session.commit()
+
+
 def _seed_demo(session: Session) -> None:
     today = date.today()
     for demo in DEMO_OPERATORS:
@@ -527,14 +609,19 @@ def _seed_demo(session: Session) -> None:
                 spec=spec,
                 hire_date=today - timedelta(days=365 * (idx % 5 + 1)),
             )
-            _ensure_type_rating(
-                session,
-                operator=op_row,
-                crew=crew,
-                aircraft_type=demo.aircraft_type,
-                today=today,
-            )
-            _ensure_currencies(session, operator=op_row, crew=crew, today=today, profile=idx)
+            if spec.role in FLIGHT_DECK_ROLES:
+                _ensure_type_rating(
+                    session,
+                    operator=op_row,
+                    crew=crew,
+                    aircraft_type=demo.aircraft_type,
+                    today=today,
+                )
+                _ensure_currencies(session, operator=op_row, crew=crew, today=today, profile=idx)
+            else:
+                _ensure_nonpilot_currency(
+                    session, operator=op_row, crew=crew, role=spec.role, today=today
+                )
 
         crew_by_emp = {
             c.employee_no: c
@@ -543,6 +630,9 @@ def _seed_demo(session: Session) -> None:
         _ensure_leave_and_swap(session, operator_id=op_row.id, crew_by_emp=crew_by_emp, today=today)
         _ensure_fleet(session, operator_id=op_row.id, demo=demo, user_id=officer.id)
         _ensure_notices(session, operator_id=op_row.id, user_id=officer.id)
+        _ensure_demo_posting(
+            session, operator=op_row, user_id=officer.id, crew_by_emp=crew_by_emp, today=today
+        )
 
         # Roster publish is idempotent — but generating it twice creates two
         # GENERATE_AUDIT_PACK + PUBLISH_ROSTER audit events, which is the
