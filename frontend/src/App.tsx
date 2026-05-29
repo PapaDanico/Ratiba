@@ -16,6 +16,7 @@ import { AuditPage } from "@/pages/audit";
 import { CrewMePage } from "@/pages/me";
 import { SwapsPage } from "@/pages/swaps";
 import { NoticesPage } from "@/pages/notices";
+import { PostingsPage } from "@/pages/postings";
 import { FleetPage } from "@/pages/fleet";
 import { ConstraintsPage } from "@/pages/constraints";
 import { PrivacyPage } from "@/pages/legal/privacy";
@@ -42,6 +43,7 @@ export function App() {
             <Route path="routings" element={<RoutingsPage />} />
             <Route path="roster" element={<RosterPage />} />
             <Route path="crew" element={<CrewPage />} />
+            <Route path="postings" element={<PostingsPage />} />
             <Route path="import" element={<ImportPage />} />
             <Route path="training" element={<TrainingPage />} />
             <Route path="documents" element={<DocumentsPage />} />
