@@ -94,6 +94,12 @@ def test_diversion_pushes_fdp_illegal(
     assert body["disrupted_legality"] != "LEGAL"
     assert any("FDP-MAX" in r for r in body["rules_breached"])
     assert body["disrupted_flight_h"] == 13.0
+    # Amend context for one-click relief hand-off.
+    assert body["duty_day_key"] == f"5Y-IRP|{d.isoformat()}"
+    assert body["aircraft_reg"] == "5Y-IRP"
+    assert body["captain_employee_no"] == "IR-CAP"
+    assert body["fo_employee_no"] == "IR-FO"
+    assert body["crew_role_on_duty"] == "CAPT"
 
 
 def test_delay_cascades_into_next_rest(

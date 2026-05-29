@@ -25,6 +25,8 @@ from app.models import (
     FlightDutyPeriod,
     Posting,
     PostingAssignment,
+    Sector,
+    SectorAssignment,
 )
 from app.models.crew import CrewRole
 from app.models.ftl import FdpType, LegalityState
@@ -152,6 +154,47 @@ class IropAssessment:
     disrupted_legality: str
     rules_breached: list[str]
     cascade: CascadeImpact
+    # Amend context — populated when the duty has published sectors, so the UI
+    # can hand a chosen relief candidate straight to /roster/amend. None when the
+    # duty isn't a published flight-deck pairing (e.g. standby).
+    duty_day_key: str | None = None
+    aircraft_reg: str | None = None
+    captain_employee_no: str | None = None
+    fo_employee_no: str | None = None
+    crew_role_on_duty: str | None = None
+
+
+def _duty_amend_context(
+    session: Session, *, operator_id: uuid.UUID, crew_id: uuid.UUID, on_date: date
+) -> tuple[str | None, str | None, str | None, str | None, str | None]:
+    """For the crew's published duty on ``on_date``, return
+    (duty_day_key, aircraft_reg, captain_emp_no, fo_emp_no, this_crew_role) so
+    the IROP board can pre-fill an amendment. All-None when the crew has no
+    published sectors that day."""
+    sector = session.scalar(
+        select(Sector)
+        .join(SectorAssignment, SectorAssignment.sector_id == Sector.id)
+        .where(Sector.operator_id == operator_id)
+        .where(Sector.date == on_date)
+        .where(SectorAssignment.crew_id == crew_id)
+        .limit(1)
+    )
+    if sector is None:
+        return None, None, None, None, None
+
+    rows = session.execute(
+        select(SectorAssignment.crew_id, SectorAssignment.role_on_sector, Crew.employee_no)
+        .join(Sector, Sector.id == SectorAssignment.sector_id)
+        .join(Crew, Crew.id == SectorAssignment.crew_id)
+        .where(Sector.operator_id == operator_id)
+        .where(Sector.date == on_date)
+        .where(Sector.aircraft_reg == sector.aircraft_reg)
+    ).all()
+    captain = next((r.employee_no for r in rows if r.role_on_sector == "CAPT"), None)
+    fo = next((r.employee_no for r in rows if r.role_on_sector == "FO"), None)
+    this_role = next((r.role_on_sector for r in rows if r.crew_id == crew_id), None)
+    duty_day_key = f"{sector.aircraft_reg}|{on_date.isoformat()}"
+    return duty_day_key, sector.aircraft_reg, captain, fo, this_role
 
 
 def _history(
@@ -271,6 +314,10 @@ def assess_diversion(
             breached=new_rest < floor,
         )
 
+    duty_key, aircraft_reg, captain_emp, fo_emp, crew_role = _duty_amend_context(
+        session, operator_id=operator_id, crew_id=crew_id, on_date=on_date
+    )
+
     return IropAssessment(
         crew_employee_no=crew.employee_no,
         date=on_date,
@@ -283,4 +330,9 @@ def assess_diversion(
         disrupted_legality=disrupted.legality_state.value,
         rules_breached=breached,
         cascade=cascade,
+        duty_day_key=duty_key,
+        aircraft_reg=aircraft_reg,
+        captain_employee_no=captain_emp,
+        fo_employee_no=fo_emp,
+        crew_role_on_duty=crew_role,
     )

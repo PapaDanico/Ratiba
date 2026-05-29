@@ -54,3 +54,8 @@ class IropAssessmentOut(BaseModel):
     disrupted_legality: str
     rules_breached: list[str]
     cascade: CascadeImpactOut
+    duty_day_key: str | None = None
+    aircraft_reg: str | None = None
+    captain_employee_no: str | None = None
+    fo_employee_no: str | None = None
+    crew_role_on_duty: str | None = None
