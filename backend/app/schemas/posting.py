@@ -49,3 +49,4 @@ class PostingOut(BaseModel):
     duration_days: int
     notes: str | None
     crew: list[PostingCrewOut]
+    engineer_cover: bool  # at least one engineer on the team

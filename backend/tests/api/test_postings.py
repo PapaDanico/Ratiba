@@ -12,13 +12,13 @@ from app.models.crew import ContractType, CrewRole
 from app.models.document import CrewDocument, DocumentType
 
 
-def _mk_crew(db: Session, operator_id, employee_no: str) -> Crew:
+def _mk_crew(db: Session, operator_id, employee_no: str, role: CrewRole = CrewRole.CAPT) -> Crew:
     c = Crew(
         operator_id=operator_id,
         employee_no=employee_no,
         first_name="Test",
         last_name=employee_no,
-        role=CrewRole.CAPT,
+        role=role,
         date_of_hire=date(2020, 1, 1),
         date_of_birth=date(1990, 1, 1),
         base_station="HKJK",
@@ -71,6 +71,21 @@ def test_assign_domestic_crew(auth_client: tuple[TestClient, User], db_session: 
     resp = client.post(f"/api/v1/postings/{pid}/assign", json={"crew_id": str(crew.id)})
     assert resp.status_code == 200, resp.text
     assert {m["employee_no"] for m in resp.json()["crew"]} == {"CAP-1"}
+
+
+def test_engineer_cover_flag(auth_client: tuple[TestClient, User], db_session: Session) -> None:
+    client, user = auth_client
+    pilot = _mk_crew(db_session, user.operator_id, "CAP-9", CrewRole.CAPT)
+    eng = _mk_crew(db_session, user.operator_id, "ENG-9", CrewRole.ENGINEER)
+    pid = client.post(
+        "/api/v1/postings", json=_posting_body("HKMO", "Kenya", "DETACHMENT", 0, 10)
+    ).json()["id"]
+
+    after_pilot = client.post(f"/api/v1/postings/{pid}/assign", json={"crew_id": str(pilot.id)})
+    assert after_pilot.json()["engineer_cover"] is False
+
+    after_eng = client.post(f"/api/v1/postings/{pid}/assign", json={"crew_id": str(eng.id)})
+    assert after_eng.json()["engineer_cover"] is True
 
 
 def test_international_posting_requires_permit(

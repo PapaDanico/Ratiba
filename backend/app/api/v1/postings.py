@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_writer
 from app.models import Crew, Posting, User
+from app.models.crew import CrewCategory
 from app.schemas.posting import PostingAssignIn, PostingCrewOut, PostingIn, PostingOut
 from app.services import postings as postings_service
 
@@ -33,6 +34,7 @@ def _to_out(session: Session, posting: Posting) -> PostingOut:
         duration_days=(posting.end_date - posting.start_date).days + 1,
         notes=posting.notes,
         crew=[PostingCrewOut.model_validate(c) for c in crew_sorted],
+        engineer_cover=any(c.crew_category is CrewCategory.ENGINEERING for c in crew_sorted),
     )
 
 

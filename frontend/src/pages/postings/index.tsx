@@ -27,6 +27,7 @@ type Posting = {
   duration_days: number;
   notes: string | null;
   crew: PostingCrew[];
+  engineer_cover: boolean;
 };
 
 type Crew = { id: string; employee_no: string; first_name: string; last_name: string };
@@ -284,7 +285,12 @@ export function PostingsPage() {
                       <span className="text-dn-muted"> · {p.lessee_name}</span>
                     )}
                   </div>
-                  <Badge tone="steel">{p.duration_days} days</Badge>
+                  <div className="flex items-center gap-2">
+                    {p.crew.length > 0 && !p.engineer_cover && (
+                      <Badge tone="amber">No engineer cover</Badge>
+                    )}
+                    <Badge tone="steel">{p.duration_days} days</Badge>
+                  </div>
                 </div>
                 <p className="mt-1 text-xs text-dn-muted">
                   {p.start_date} → {p.end_date}
