@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 
 type Account = {
   id: string;
@@ -20,6 +21,7 @@ const ROLE_LABEL: Record<Account["role"], string> = {
 };
 
 export function AccountPanel() {
+  const toast = useToast();
   const [account, setAccount] = useState<Account | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
@@ -67,8 +69,11 @@ export function AccountPanel() {
       });
       setAccount(updated);
       setNameOk(true);
+      toast.show("Profile saved", "success");
     } catch (err) {
-      setNameErr(err instanceof ApiError ? err.message : "Save failed");
+      const msg = err instanceof ApiError ? err.message : "Save failed";
+      setNameErr(msg);
+      toast.show(msg, "error");
     } finally {
       setSavingName(false);
     }
@@ -80,6 +85,7 @@ export function AccountPanel() {
     setPwOk(false);
     if (next !== confirm) {
       setPwErr("New password and confirmation do not match.");
+      toast.show("New password and confirmation do not match.", "error");
       return;
     }
     setSavingPw(true);
@@ -92,8 +98,11 @@ export function AccountPanel() {
       setCurrent("");
       setNext("");
       setConfirm("");
+      toast.show("Password changed", "success");
     } catch (err) {
-      setPwErr(err instanceof ApiError ? err.message : "Could not change password");
+      const msg = err instanceof ApiError ? err.message : "Could not change password";
+      setPwErr(msg);
+      toast.show(msg, "error");
     } finally {
       setSavingPw(false);
     }
