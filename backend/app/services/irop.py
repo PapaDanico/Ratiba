@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -92,12 +92,18 @@ def suggest_alternatives(
             .where(Posting.end_date >= on_date)
         ).all()
     )
+    # A crew member may hold several LANDINGS_90D rows (renewals); the latest
+    # expiry is the one that governs currency, so take the max per crew.
     landings: dict[uuid.UUID, date] = {
-        row.crew_id: row.expires_date
+        row.crew_id: row.max_expires
         for row in session.execute(
-            select(CrewCurrency.crew_id, CrewCurrency.expires_date)
+            select(
+                CrewCurrency.crew_id,
+                func.max(CrewCurrency.expires_date).label("max_expires"),
+            )
             .where(CrewCurrency.operator_id == operator_id)
             .where(CrewCurrency.currency_type == CurrencyType.LANDINGS_90D)
+            .group_by(CrewCurrency.crew_id)
         ).all()
     }
 

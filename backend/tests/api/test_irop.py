@@ -180,6 +180,17 @@ def test_alternatives_ranks_available_crew_first(
             expires_date=date(2026, 11, 1),
         )
     )
+    # A stale, already-expired currency row (a prior cycle). The latest expiry
+    # governs — this must not flip ALT-READY to not-current.
+    db_session.add(
+        CrewCurrency(
+            operator_id=user.operator_id,
+            crew_id=ready.id,
+            currency_type=CurrencyType.LANDINGS_90D,
+            last_completed_date=date(2025, 1, 1),
+            expires_date=date(2025, 4, 1),
+        )
+    )
     mk("ALT-UNRATED")  # no type rating, no currency → not available
     db_session.commit()
 
