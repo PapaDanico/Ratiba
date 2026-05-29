@@ -18,14 +18,111 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Crew, FlightDutyPeriod
+from app.models import (
+    Crew,
+    CrewCurrency,
+    CrewTypeRating,
+    FlightDutyPeriod,
+    Posting,
+    PostingAssignment,
+)
+from app.models.crew import CrewRole
 from app.models.ftl import FdpType, LegalityState
+from app.models.training import CurrencyType
 from app.services import ftl_engine, ftl_limits
 from app.services import postings as postings_service
 
 
 class IropError(Exception):
     """Raised for IROP assessment failures (mapped to HTTP 404/422)."""
+
+
+@dataclass(frozen=True)
+class AltCrew:
+    crew_id: uuid.UUID
+    employee_no: str
+    name: str
+    role: str
+    type_rated: bool
+    landings_current: bool
+    free: bool  # not already on a duty / posting that day
+    available: bool  # type_rated and current and free
+
+
+def suggest_alternatives(
+    session: Session,
+    *,
+    operator_id: uuid.UUID,
+    on_date: date,
+    role: CrewRole,
+    aircraft_type: str,
+    exclude_crew_id: uuid.UUID | None = None,
+) -> list[AltCrew]:
+    """Relief crew for a duty on ``on_date``: same role, type-rated for the
+    aircraft, 90-day landing-current, and free (not already on a duty or
+    posting that day). Available candidates are returned first."""
+    crew = session.scalars(
+        select(Crew)
+        .where(Crew.operator_id == operator_id)
+        .where(Crew.active.is_(True))
+        .where(Crew.role == role)
+    ).all()
+    rated_ids = set(
+        session.scalars(
+            select(CrewTypeRating.crew_id)
+            .where(CrewTypeRating.operator_id == operator_id)
+            .where(CrewTypeRating.aircraft_type == aircraft_type)
+            .where(CrewTypeRating.valid_from <= on_date)
+            .where(CrewTypeRating.valid_until >= on_date)
+        ).all()
+    )
+    busy_ids = set(
+        session.scalars(
+            select(FlightDutyPeriod.crew_id)
+            .where(FlightDutyPeriod.operator_id == operator_id)
+            .where(FlightDutyPeriod.date == on_date)
+        ).all()
+    )
+    posting_ids = set(
+        session.scalars(
+            select(PostingAssignment.crew_id)
+            .join(Posting, Posting.id == PostingAssignment.posting_id)
+            .where(Posting.operator_id == operator_id)
+            .where(Posting.start_date <= on_date)
+            .where(Posting.end_date >= on_date)
+        ).all()
+    )
+    landings: dict[uuid.UUID, date] = {
+        row.crew_id: row.expires_date
+        for row in session.execute(
+            select(CrewCurrency.crew_id, CrewCurrency.expires_date)
+            .where(CrewCurrency.operator_id == operator_id)
+            .where(CrewCurrency.currency_type == CurrencyType.LANDINGS_90D)
+        ).all()
+    }
+
+    out: list[AltCrew] = []
+    for c in crew:
+        if exclude_crew_id is not None and c.id == exclude_crew_id:
+            continue
+        type_rated = c.id in rated_ids
+        free = c.id not in busy_ids and c.id not in posting_ids
+        exp = landings.get(c.id)
+        current = exp is not None and exp >= on_date
+        out.append(
+            AltCrew(
+                crew_id=c.id,
+                employee_no=c.employee_no,
+                name=f"{c.first_name} {c.last_name}",
+                role=c.role.value,
+                type_rated=type_rated,
+                landings_current=current,
+                free=free,
+                available=type_rated and current and free,
+            )
+        )
+    out.sort(key=lambda a: (not a.available, a.employee_no))
+    return out
 
 
 @dataclass(frozen=True)

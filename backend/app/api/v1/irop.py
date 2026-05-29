@@ -8,7 +8,14 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models import User
-from app.schemas.irop import CascadeImpactOut, IropAssessIn, IropAssessmentOut
+from app.models.crew import CrewRole
+from app.schemas.irop import (
+    AltCrewOut,
+    CascadeImpactOut,
+    IropAlternativesIn,
+    IropAssessIn,
+    IropAssessmentOut,
+)
 from app.services import irop as irop_service
 
 router = APIRouter()
@@ -54,3 +61,28 @@ def assess(
             breached=a.cascade.breached,
         ),
     )
+
+
+@router.post(
+    "/alternatives",
+    response_model=list[AltCrewOut],
+    summary="Relief crew who could legally take a duty (available first)",
+)
+def alternatives(
+    payload: IropAlternativesIn,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> list[AltCrewOut]:
+    try:
+        role = CrewRole(payload.role.strip().upper())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"unknown role {payload.role!r}") from exc
+    rows = irop_service.suggest_alternatives(
+        session,
+        operator_id=user.operator_id,
+        on_date=payload.date,
+        role=role,
+        aircraft_type=payload.aircraft_type.strip().upper(),
+        exclude_crew_id=payload.exclude_crew_id,
+    )
+    return [AltCrewOut(**vars(r)) for r in rows]

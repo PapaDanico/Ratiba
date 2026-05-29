@@ -17,6 +17,24 @@ class IropAssessIn(BaseModel):
     discretion_h: Decimal = Field(default=Decimal("0"), ge=0, le=4)
 
 
+class IropAlternativesIn(BaseModel):
+    date: date
+    role: str  # CAPT | FO | ...
+    aircraft_type: str
+    exclude_crew_id: uuid.UUID | None = None
+
+
+class AltCrewOut(BaseModel):
+    crew_id: uuid.UUID
+    employee_no: str
+    name: str
+    role: str
+    type_rated: bool
+    landings_current: bool
+    free: bool
+    available: bool
+
+
 class CascadeImpactOut(BaseModel):
     next_date: date | None
     new_rest_h: float | None

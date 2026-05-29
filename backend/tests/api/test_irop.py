@@ -82,7 +82,11 @@ def test_diversion_pushes_fdp_illegal(
 
     resp = client.post(
         "/api/v1/irop/assess",
-        json={"crew_id": str(_crew_id(db_session, cap)), "date": d.isoformat(), "extra_flight_h": 10},
+        json={
+            "crew_id": str(_crew_id(db_session, cap)),
+            "date": d.isoformat(),
+            "extra_flight_h": 10,
+        },
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -104,7 +108,11 @@ def test_delay_cascades_into_next_rest(
     # 12h ground delay on day 1 → off-duty 21:30; day 2 reports 05:00 → 7.5h rest.
     resp = client.post(
         "/api/v1/irop/assess",
-        json={"crew_id": str(_crew_id(db_session, cap)), "date": d1.isoformat(), "extra_ground_h": 12},
+        json={
+            "crew_id": str(_crew_id(db_session, cap)),
+            "date": d1.isoformat(),
+            "extra_ground_h": 12,
+        },
     )
     assert resp.status_code == 200, resp.text
     cascade = resp.json()["cascade"]
@@ -113,9 +121,7 @@ def test_delay_cascades_into_next_rest(
     assert cascade["new_rest_h"] < cascade["rest_floor_h"]
 
 
-def test_assess_unknown_duty_404(
-    auth_client: tuple[TestClient, User], db_session: Session
-) -> None:
+def test_assess_unknown_duty_404(auth_client: tuple[TestClient, User], db_session: Session) -> None:
     client, _ = auth_client
     cap, _fo = _two_crew(client)
     resp = client.post(
@@ -123,3 +129,68 @@ def test_assess_unknown_duty_404(
         json={"crew_id": str(_crew_id(db_session, cap)), "date": "2026-01-01", "extra_flight_h": 2},
     )
     assert resp.status_code == 404
+
+
+def test_alternatives_ranks_available_crew_first(
+    auth_client: tuple[TestClient, User], db_session: Session
+) -> None:
+    from app.models import CrewCurrency, CrewTypeRating
+    from app.models.crew import ContractType, CrewRole
+    from app.models.training import CurrencyType
+
+    client, user = auth_client
+    on_date = date(2026, 9, 20)
+
+    def mk(emp: str) -> Crew:
+        c = Crew(
+            operator_id=user.operator_id,
+            employee_no=emp,
+            first_name="Alt",
+            last_name=emp,
+            role=CrewRole.CAPT,
+            date_of_hire=date(2019, 1, 1),
+            date_of_birth=date(1985, 1, 1),
+            base_station="HKJK",
+            contract_type=ContractType.FULL_TIME,
+            active=True,
+            languages=[],
+            faith_observance_flags={},
+        )
+        db_session.add(c)
+        db_session.commit()
+        db_session.refresh(c)
+        return c
+
+    ready = mk("ALT-READY")
+    db_session.add(
+        CrewTypeRating(
+            operator_id=user.operator_id,
+            crew_id=ready.id,
+            aircraft_type="DH8D",
+            valid_from=date(2024, 1, 1),
+            valid_until=date(2027, 1, 1),
+        )
+    )
+    db_session.add(
+        CrewCurrency(
+            operator_id=user.operator_id,
+            crew_id=ready.id,
+            currency_type=CurrencyType.LANDINGS_90D,
+            last_completed_date=date(2026, 8, 1),
+            expires_date=date(2026, 11, 1),
+        )
+    )
+    mk("ALT-UNRATED")  # no type rating, no currency → not available
+    db_session.commit()
+
+    resp = client.post(
+        "/api/v1/irop/alternatives",
+        json={"date": on_date.isoformat(), "role": "CAPT", "aircraft_type": "DH8D"},
+    )
+    assert resp.status_code == 200, resp.text
+    rows = resp.json()
+    by_emp = {r["employee_no"]: r for r in rows}
+    assert by_emp["ALT-READY"]["available"] is True
+    assert by_emp["ALT-UNRATED"]["available"] is False
+    # available crew sorted first
+    assert rows[0]["available"] is True
