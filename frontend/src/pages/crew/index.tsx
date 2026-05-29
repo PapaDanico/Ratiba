@@ -18,6 +18,144 @@ type Crew = {
   phone_number: string | null;
 };
 
+type CrossOpWindow = {
+  label: string;
+  metric: string;
+  days: number;
+  total_h: number;
+  limit_h: number;
+  state: "LEGAL" | "AT_LIMIT" | "OVER";
+};
+
+type CrossOpFtl = {
+  crew_employee_no: string;
+  person_ref: string | null;
+  linked: boolean;
+  operator_count: number;
+  as_of: string;
+  windows: CrossOpWindow[];
+};
+
+const XOP_TONE: Record<CrossOpWindow["state"], "green" | "amber" | "red"> = {
+  LEGAL: "green",
+  AT_LIMIT: "amber",
+  OVER: "red",
+};
+
+function CrossOpFtlButton({ crew }: { crew: Crew }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<CrossOpFtl | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setOpen(true);
+    setBusy(true);
+    setError(null);
+    setData(null);
+    try {
+      const body = await api<CrossOpFtl>(`/api/v1/crew/${crew.id}/cross-operator-ftl`);
+      setData(body);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to load");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={load}
+        className="text-dn-steel underline text-xs hover:text-dn-dark"
+        data-testid={`xop-ftl-${crew.employee_no}`}
+      >
+        Cross-op FTL
+      </button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-dn-dark/40 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle>
+                Cross-operator FTL — {crew.first_name} {crew.last_name}
+              </CardTitle>
+            </CardHeader>
+            <CardBody>
+              {busy ? (
+                <p className="text-sm text-dn-muted">Loading…</p>
+              ) : error ? (
+                <p className="text-sm text-dn-red">{error}</p>
+              ) : data ? (
+                <>
+                  <p className="text-sm text-dn-muted mb-3">
+                    {data.linked ? (
+                      <>
+                        Aggregated across <strong>{data.operator_count}</strong> operators sharing
+                        ref <span className="font-mono">{data.person_ref}</span>. Totals only —
+                        other operators&apos; duty detail is not shown.
+                      </>
+                    ) : (
+                      <>
+                        Not linked to another operator
+                        {data.person_ref ? (
+                          <>
+                            {" "}
+                            (ref <span className="font-mono">{data.person_ref}</span>)
+                          </>
+                        ) : null}{" "}
+                        — these are this operator&apos;s cumulative totals.
+                      </>
+                    )}
+                  </p>
+                  <table className="w-full text-sm responsive-table">
+                    <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                      <tr>
+                        <th className="py-2 pr-4 font-medium">Window</th>
+                        <th className="py-2 pr-4 font-medium">Total</th>
+                        <th className="py-2 pr-4 font-medium">Limit</th>
+                        <th className="py-2 pr-4 font-medium">State</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dn-steel-lt">
+                      {data.windows.map((w) => (
+                        <tr key={w.label}>
+                          <td data-label="Window" className="py-2 pr-4 text-dn-dark">
+                            {w.label}
+                          </td>
+                          <td data-label="Total" className="py-2 pr-4 font-mono">
+                            {w.total_h}h
+                          </td>
+                          <td data-label="Limit" className="py-2 pr-4 font-mono text-dn-muted">
+                            {w.limit_h}h
+                          </td>
+                          <td data-label="State" className="py-2 pr-4">
+                            <Badge tone={XOP_TONE[w.state]}>{w.state}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-3 text-xs text-dn-muted">As of {data.as_of}.</p>
+                </>
+              ) : null}
+              <div className="flex justify-end pt-3">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      )}
+    </>
+  );
+}
+
 const CATEGORY_LABEL: Record<Crew["crew_category"], string> = {
   FLIGHT_DECK: "Flight deck",
   CABIN: "Cabin",
@@ -316,6 +454,7 @@ export function CrewPage() {
                       <div className="flex gap-2">
                         <RosterPdfButton crew={c} />
                         <CalendarFeedButton crew={c} />
+                        <CrossOpFtlButton crew={c} />
                       </div>
                     </td>
                   </tr>

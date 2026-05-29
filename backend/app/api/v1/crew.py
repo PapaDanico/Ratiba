@@ -22,12 +22,14 @@ from app.schemas.crew import (
     CrewIn,
     CrewOut,
     CrewPatch,
+    CrossOperatorFtlOut,
+    CrossOperatorWindowOut,
     CurrencyIn,
     CurrencyOut,
     CurrencyStatus,
 )
 from app.schemas.pilot import IssuePairingResponse
-from app.services import audit_log, ical_feed
+from app.services import audit_log, cross_operator, ical_feed
 from app.services import pairing as pairing_service
 
 router = APIRouter()
@@ -286,4 +288,34 @@ def crew_roster_ics(
         content=body,
         media_type="text/calendar; charset=utf-8",
         headers={"Content-Disposition": f'inline; filename="ratiba-{crew_id}.ics"'},
+    )
+
+
+@router.get(
+    "/{crew_id}/cross-operator-ftl",
+    response_model=CrossOperatorFtlOut,
+    summary="Cumulative FTL totals across every operator this person flies for",
+)
+def cross_operator_ftl(
+    crew_id: uuid.UUID,
+    as_of: date = Query(default_factory=date.today),
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> CrossOperatorFtlOut:
+    """Privacy-preserving aggregate: when the crew member shares a person_ref
+    with crew in other operators, their duty/block totals over the rolling FTL
+    windows reflect all of it — without exposing other operators' duty detail."""
+    try:
+        summary = cross_operator.cross_operator_ftl_summary(
+            session, operator_id=user.operator_id, crew_id=crew_id, as_of=as_of
+        )
+    except cross_operator.CrossOperatorError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return CrossOperatorFtlOut(
+        crew_employee_no=summary.crew_employee_no,
+        person_ref=summary.person_ref,
+        linked=summary.linked,
+        operator_count=summary.operator_count,
+        as_of=summary.as_of,
+        windows=[CrossOperatorWindowOut(**vars(w)) for w in summary.windows],
     )

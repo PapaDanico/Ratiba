@@ -11,6 +11,24 @@ from app.models.crew import ContractType, CrewCategory, CrewRole
 from app.models.training import CurrencyType
 
 
+class CrossOperatorWindowOut(BaseModel):
+    label: str
+    metric: str
+    days: int
+    total_h: float
+    limit_h: float
+    state: str
+
+
+class CrossOperatorFtlOut(BaseModel):
+    crew_employee_no: str
+    person_ref: str | None
+    linked: bool
+    operator_count: int
+    as_of: date
+    windows: list[CrossOperatorWindowOut]
+
+
 class CrewOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
