@@ -591,8 +591,9 @@ def _seed_demo(session: Session) -> None:
     print()
     print(
         "Each operator has crew with mixed currency states, a 28-day "
-        "published roster, pending + approved leave, a pending swap, and a "
-        "90-day audit pack ready to download."
+        "published roster, and pending + approved leave + a pending swap. "
+        "Audit packs are generated on demand from the Audit packs page "
+        "(Jetways ships with one pre-generated)."
     )
 
 
