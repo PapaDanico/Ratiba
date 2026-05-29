@@ -52,7 +52,15 @@ const CAT_TONE: Record<PostingCrew["crew_category"], "steel" | "gold" | "amber">
   ENGINEERING: "amber",
 };
 
-function AssignControl({ postingId, crew, onDone }: { postingId: string; crew: Crew[]; onDone: () => void }) {
+function AssignControl({
+  postingId,
+  crew,
+  onDone,
+}: {
+  postingId: string;
+  crew: Crew[];
+  onDone: () => void;
+}) {
   const [crewId, setCrewId] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -188,9 +196,9 @@ export function PostingsPage() {
       </CardHeader>
       <CardBody>
         <p className="text-sm text-dn-muted mb-4">
-          Deploy a crew team (flight deck + cabin + engineer) away from base for a bounded
-          rotation. Rotations are capped at 28 days; international postings require each crew
-          member to hold a valid work permit or visa.
+          Deploy a crew team (flight deck + cabin + engineer) away from base for a bounded rotation.
+          Rotations are capped at 28 days; international postings require each crew member to hold a
+          valid work permit or visa.
         </p>
 
         <form onSubmit={create} className="mb-6 space-y-3" data-testid="create-posting-form">
@@ -283,14 +291,10 @@ export function PostingsPage() {
                       {TYPE_LABEL[p.type]} · {p.location_icao}
                     </span>
                     <span className="text-dn-muted"> · {p.country}</span>
-                    {p.lessee_name && (
-                      <span className="text-dn-muted"> · {p.lessee_name}</span>
-                    )}
+                    {p.lessee_name && <span className="text-dn-muted"> · {p.lessee_name}</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    {p.rotation_due && (
-                      <Badge tone="red">Rotation due ({p.days_to_end}d)</Badge>
-                    )}
+                    {p.rotation_due && <Badge tone="red">Rotation due ({p.days_to_end}d)</Badge>}
                     {p.crew.length > 0 && !p.engineer_cover && (
                       <Badge tone="amber">No engineer cover</Badge>
                     )}

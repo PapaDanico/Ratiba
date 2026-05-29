@@ -351,49 +351,50 @@ export function IropPage() {
 
           {reliefErr && <p className="text-sm text-dn-red">{reliefErr}</p>}
 
-          {alts && (alts.length === 0 ? (
-            <p className="text-sm text-dn-muted">No crew of that role found.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm responsive-table">
-                <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
-                  <tr>
-                    <th className="py-2 pr-4 font-medium">Crew</th>
-                    <th className="py-2 pr-4 font-medium">Role</th>
-                    <th className="py-2 pr-4 font-medium">Type-rated</th>
-                    <th className="py-2 pr-4 font-medium">Landing-current</th>
-                    <th className="py-2 pr-4 font-medium">Free</th>
-                    <th className="py-2 pr-4 font-medium">Available</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dn-steel-lt">
-                  {alts.map((a) => (
-                    <tr key={a.crew_id} className="hover:bg-dn-fog">
-                      <td data-label="Crew" className="py-2 pr-4 text-dn-dark">
-                        {a.name}{" "}
-                        <span className="text-dn-muted font-mono text-xs">({a.employee_no})</span>
-                      </td>
-                      <td data-label="Role" className="py-2 pr-4">
-                        {a.role}
-                      </td>
-                      <td data-label="Type-rated" className="py-2 pr-4">
-                        <YesNo ok={a.type_rated} yes="Yes" no="No" />
-                      </td>
-                      <td data-label="Landing-current" className="py-2 pr-4">
-                        <YesNo ok={a.landings_current} yes="Yes" no="No" />
-                      </td>
-                      <td data-label="Free" className="py-2 pr-4">
-                        <YesNo ok={a.free} yes="Yes" no="No" />
-                      </td>
-                      <td data-label="Available" className="py-2 pr-4">
-                        <YesNo ok={a.available} yes="Available" no="—" />
-                      </td>
+          {alts &&
+            (alts.length === 0 ? (
+              <p className="text-sm text-dn-muted">No crew of that role found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm responsive-table">
+                  <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                    <tr>
+                      <th className="py-2 pr-4 font-medium">Crew</th>
+                      <th className="py-2 pr-4 font-medium">Role</th>
+                      <th className="py-2 pr-4 font-medium">Type-rated</th>
+                      <th className="py-2 pr-4 font-medium">Landing-current</th>
+                      <th className="py-2 pr-4 font-medium">Free</th>
+                      <th className="py-2 pr-4 font-medium">Available</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+                  </thead>
+                  <tbody className="divide-y divide-dn-steel-lt">
+                    {alts.map((a) => (
+                      <tr key={a.crew_id} className="hover:bg-dn-fog">
+                        <td data-label="Crew" className="py-2 pr-4 text-dn-dark">
+                          {a.name}{" "}
+                          <span className="text-dn-muted font-mono text-xs">({a.employee_no})</span>
+                        </td>
+                        <td data-label="Role" className="py-2 pr-4">
+                          {a.role}
+                        </td>
+                        <td data-label="Type-rated" className="py-2 pr-4">
+                          <YesNo ok={a.type_rated} yes="Yes" no="No" />
+                        </td>
+                        <td data-label="Landing-current" className="py-2 pr-4">
+                          <YesNo ok={a.landings_current} yes="Yes" no="No" />
+                        </td>
+                        <td data-label="Free" className="py-2 pr-4">
+                          <YesNo ok={a.free} yes="Yes" no="No" />
+                        </td>
+                        <td data-label="Available" className="py-2 pr-4">
+                          <YesNo ok={a.available} yes="Available" no="—" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
         </CardBody>
       </Card>
     </div>

@@ -112,10 +112,15 @@ export function FatiguePage() {
                 {rows.map((r) => (
                   <tr key={r.employee_no} className="hover:bg-dn-fog">
                     <td data-label="Crew" className="py-2 pr-4 text-dn-dark">
-                      {r.name} <span className="text-dn-muted font-mono text-xs">({r.employee_no})</span>
+                      {r.name}{" "}
+                      <span className="text-dn-muted font-mono text-xs">({r.employee_no})</span>
                     </td>
-                    <td data-label="Role" className="py-2 pr-4">{r.role}</td>
-                    <td data-label="FDPs" className="py-2 pr-4">{r.fdp_count}</td>
+                    <td data-label="Role" className="py-2 pr-4">
+                      {r.role}
+                    </td>
+                    <td data-label="FDPs" className="py-2 pr-4">
+                      {r.fdp_count}
+                    </td>
                     <td data-label="Night %" className="py-2 pr-4">
                       {r.night_pct > 25 ? (
                         <Badge tone="amber">{r.night_pct}%</Badge>
