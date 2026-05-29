@@ -39,6 +39,7 @@ from app.schemas.roster import (
     SectorInputIn,
 )
 from app.services import audit_log, ftl_engine, ftl_limits
+from app.services import postings as postings_service
 
 
 class RosterPersistenceError(Exception):
@@ -108,7 +109,7 @@ def _fdp_to_history(fdp: FlightDutyPeriod) -> ftl_engine.FdpHistoryEntry:
 
 def _compute_fdp_legality(
     sectors: list[SectorInputIn],
-    _crew_id: uuid.UUID,
+    crew_id: uuid.UUID,
     date_local: date,
     *,
     session: Session,
@@ -124,7 +125,10 @@ def _compute_fdp_legality(
 
     ``history`` carries the crew member's prior FDPs (earlier roster days plus
     persisted/imported duties) so the cumulative-hours and rest-minimum rules
-    fire — without it each duty day is judged in isolation.
+    fire — without it each duty day is judged in isolation. If the crew member
+    is on a posting covering ``date_local`` the duty is away-from-base, so the
+    away rest floor (not the home floor) applies and the posting timezone drives
+    band-based rules.
     """
     day_sectors = sorted(
         [s for s in sectors if s.date_local == date_local],
@@ -143,6 +147,11 @@ def _compute_fdp_legality(
     earlier = [h for h in history if h.report_time < report]
     prior_fdp = max(earlier, key=lambda h: h.report_time) if earlier else None
 
+    # On a posting → away from base: away rest floor + posting timezone.
+    posting = postings_service.active_posting_for(
+        session, operator_id=operator_id, crew_id=crew_id, on_date=date_local
+    )
+
     fdp_in = ftl_engine.FdpInput(
         report_time=report,
         off_duty_time=off,
@@ -151,6 +160,8 @@ def _compute_fdp_legality(
         duty_hours=duty_h,
         prior_fdp=prior_fdp,
         history=history,
+        at_home_base=posting is None,
+        base_tz=posting.base_tz if posting is not None else "Africa/Nairobi",
     )
     verdicts = ftl_limits.check_fdp_for_operator(fdp_in, operator_id, session)
     aggregated = ftl_engine.aggregate_verdicts(verdicts)

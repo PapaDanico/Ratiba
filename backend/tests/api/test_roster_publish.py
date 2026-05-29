@@ -224,3 +224,73 @@ def test_published_roster_applies_rest_minimum_across_days(
     # Day 2 sees day 1 as prior → rest-minimum rule fires and the day isn't legal.
     assert "KCAR-P8-REST-MIN" in fdps[d2].ftl_rules_applied
     assert fdps[d2].legality_state.value != "LEGAL"
+
+
+def test_posting_applies_away_base_rest_floor(
+    auth_client: tuple[TestClient, User],
+    db_session,
+) -> None:
+    """Identical short-rest roster to the home-base case, but the crew is on a
+    posting → away rest floor (10h) applies, so day 2's 10.5h rest is legal."""
+    client, _ = auth_client
+    cap_emp, fo_emp = _create_two_crew(client)
+    d1 = date(2026, 9, 1)
+    d2 = date(2026, 9, 2)
+
+    # Domestic detachment covering both days; assign both crew.
+    pid = client.post(
+        "/api/v1/postings",
+        json={
+            "location_icao": "HKMO",
+            "country": "Kenya",
+            "type": "DETACHMENT",
+            "start_date": d1.isoformat(),
+            "end_date": (d1 + timedelta(days=10)).isoformat(),
+        },
+    ).json()["id"]
+    crew_ids = {c["employee_no"]: c["id"] for c in client.get("/api/v1/crew").json()}
+    for emp in (cap_emp, fo_emp):
+        r = client.post(f"/api/v1/postings/{pid}/assign", json={"crew_id": crew_ids[emp]})
+        assert r.status_code == 200, r.text
+
+    def sector(sid: str, d: date, sh: int, eh: int, block: str) -> dict:
+        return {
+            "sector_id": sid,
+            "date_local": d.isoformat(),
+            "std": datetime(d.year, d.month, d.day, sh, 0, tzinfo=UTC).isoformat(),
+            "sta": datetime(d.year, d.month, d.day, eh, 0, tzinfo=UTC).isoformat(),
+            "aircraft_reg": "5Y-AWY",
+            "aircraft_type": "DH8D",
+            "block_hours": block,
+        }
+
+    def assignment(d: date, sids: list[str]) -> dict:
+        return {
+            "duty_day_key": f"5Y-AWY|{d.isoformat()}",
+            "date_local": d.isoformat(),
+            "aircraft_reg": "5Y-AWY",
+            "aircraft_type": "DH8D",
+            "sector_ids": sids,
+            "captain_id": cap_emp,
+            "fo_id": fo_emp,
+        }
+
+    payload = {
+        "horizon_from": d1.isoformat(),
+        "horizon_to": d2.isoformat(),
+        # Day 1 off 18:30; day 2 report 06:00 → 11.5h rest: clears the 10h away
+        # floor but would breach the 12h home floor.
+        "sectors": [sector("AWY1", d1, 12, 18, "6.0"), sector("AWY2", d2, 7, 10, "3.0")],
+        "assignments": [assignment(d1, ["AWY1"]), assignment(d2, ["AWY2"])],
+    }
+    resp = client.post("/api/v1/roster/publish", json=payload)
+    assert resp.status_code == 200, resp.text
+
+    cap = db_session.query(Crew).filter(Crew.employee_no == cap_emp).one()
+    fdps = {
+        f.date: f
+        for f in db_session.query(FlightDutyPeriod).filter(FlightDutyPeriod.crew_id == cap.id).all()
+    }
+    # Rest rule still runs, but 11.5h clears the 10h away floor → legal.
+    assert "KCAR-P8-REST-MIN" in fdps[d2].ftl_rules_applied
+    assert fdps[d2].legality_state.value == "LEGAL"

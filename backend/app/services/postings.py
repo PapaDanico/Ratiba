@@ -158,6 +158,22 @@ def list_postings(session: Session, *, operator_id: uuid.UUID) -> list[Posting]:
     )
 
 
+def active_posting_for(
+    session: Session, *, operator_id: uuid.UUID, crew_id: uuid.UUID, on_date: date
+) -> Posting | None:
+    """The posting (if any) this crew member is deployed on for ``on_date`` —
+    used to flag duties as away-from-base for FTL rest rules."""
+    return session.scalar(
+        select(Posting)
+        .join(PostingAssignment, PostingAssignment.posting_id == Posting.id)
+        .where(Posting.operator_id == operator_id)
+        .where(PostingAssignment.crew_id == crew_id)
+        .where(Posting.start_date <= on_date)
+        .where(Posting.end_date >= on_date)
+        .limit(1)
+    )
+
+
 def crew_ids_for_posting(session: Session, *, posting_id: uuid.UUID) -> list[uuid.UUID]:
     return list(
         session.scalars(
