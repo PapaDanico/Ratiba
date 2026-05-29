@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { TeamPanel } from "./TeamPanel";
 
 type Operator = {
   id: string;
@@ -48,7 +50,12 @@ const WEIGHT_FIELDS: { key: string; label: string; help: string }[] = [
   },
 ];
 
+type Tab = "operator" | "team";
+
 export function SettingsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const [tab, setTab] = useState<Tab>("operator");
   const [op, setOp] = useState<Operator | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -102,22 +109,64 @@ export function SettingsPage() {
     setOp({ ...op, default_soft_weights: { ...op.default_soft_weights, [key]: num } });
   }
 
+  const tabBar = isAdmin ? (
+    <div className="flex gap-1 border-b border-dn-steel-lt" data-testid="settings-tabs">
+      <button
+        type="button"
+        onClick={() => setTab("operator")}
+        className={
+          tab === "operator"
+            ? "px-4 py-2 text-sm border-b-2 border-dn-steel text-dn-dark"
+            : "px-4 py-2 text-sm text-dn-muted hover:text-dn-dark"
+        }
+        data-testid="tab-operator"
+      >
+        Operator
+      </button>
+      <button
+        type="button"
+        onClick={() => setTab("team")}
+        className={
+          tab === "team"
+            ? "px-4 py-2 text-sm border-b-2 border-dn-steel text-dn-dark"
+            : "px-4 py-2 text-sm text-dn-muted hover:text-dn-dark"
+        }
+        data-testid="tab-team"
+      >
+        Team
+      </button>
+    </div>
+  ) : null;
+
+  if (tab === "team" && isAdmin && user) {
+    return (
+      <div className="space-y-6">
+        {tabBar}
+        <TeamPanel currentUserId={user.id} />
+      </div>
+    );
+  }
+
   if (!op) {
     return (
-      <Card>
-        <CardBody>
-          {error ? (
-            <p className="text-sm text-dn-red">{error}</p>
-          ) : (
-            <p className="text-sm text-dn-muted">Loading…</p>
-          )}
-        </CardBody>
-      </Card>
+      <div className="space-y-6">
+        {tabBar}
+        <Card>
+          <CardBody>
+            {error ? (
+              <p className="text-sm text-dn-red">{error}</p>
+            ) : (
+              <p className="text-sm text-dn-muted">Loading…</p>
+            )}
+          </CardBody>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {tabBar}
       <Card>
         <CardHeader>
           <CardTitle>Operator settings</CardTitle>
