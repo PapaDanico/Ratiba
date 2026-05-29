@@ -26,8 +26,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models import Crew
+from app.models import Crew, User
 from app.models.notice import Notice
+from app.models.user import UserRole
 
 log = logging.getLogger("ratiba.notify")
 
@@ -265,3 +266,20 @@ def notify_crew_member(session: Session, *, crew_id: uuid.UUID, subject: str, bo
     if crew.phone_number and settings.at_api_key.strip():
         total += _push_sms([crew.phone_number], f"{subject}: {body}")
     return total
+
+
+def notify_staff(session: Session, *, operator_id: uuid.UUID, subject: str, body: str) -> int:
+    """Email every active staff member of an operator (dashboard logins, not
+    pilots). Best-effort; no-ops when SMTP isn't configured."""
+    settings = get_settings()
+    addresses = list(
+        session.scalars(
+            select(User.email)
+            .where(User.operator_id == operator_id)
+            .where(User.is_active.is_(True))
+            .where(User.role != UserRole.PILOT)
+        ).all()
+    )
+    if not addresses or not settings.smtp_host.strip():
+        return 0
+    return _send_email_text(addresses, f"[Ratiba] {subject}", body, settings.smtp_from.strip())
