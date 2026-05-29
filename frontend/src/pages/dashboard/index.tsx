@@ -117,6 +117,22 @@ type LeaveRequest = {
   status: string;
 };
 
+type SwapRequest = {
+  id: string;
+  status: string;
+};
+
+type FatigueRow = {
+  employee_no: string;
+  peak_band: "LOW" | "ELEVATED" | "HIGH";
+};
+
+function isoDaysAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
 type RecurrencyItem = {
   crew_id: string;
   employee_no: string;
@@ -137,6 +153,8 @@ function attentionTone(state: RecurrencyItem["state"]): "amber" | "red" | "neutr
 export function DashboardPage() {
   const { user } = useAuth();
   const [pendingLeave, setPendingLeave] = useState<number>(0);
+  const [pendingSwaps, setPendingSwaps] = useState<number>(0);
+  const [fatigueHigh, setFatigueHigh] = useState<number | null>(null);
   const [currencyCounts, setCurrencyCounts] = useState({
     green: 0,
     amber: 0,
@@ -150,15 +168,22 @@ export function DashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [pending, currencies, recurrency, limits] = await Promise.all([
+        const [pending, swaps, currencies, recurrency, fatigue, limits] = await Promise.all([
           api<LeaveRequest[]>("/api/v1/leave?status=PENDING"),
+          api<SwapRequest[]>("/api/v1/swap?status=PENDING"),
           api<CurrencyStatus[]>("/api/v1/crew/currency/dashboard"),
           api<RecurrencyItem[]>("/api/v1/training/recurrency?within_days=30"),
+          // Fatigue screen over the trailing 28 days — advisory; never block load.
+          api<FatigueRow[]>(
+            `/api/v1/reports/fatigue?date_from=${isoDaysAgo(28)}&date_to=${isoDaysAgo(0)}`,
+          ).catch(() => null),
           // Cosmetic only — never let it fail the dashboard load.
           api<{ source: "operator" | "baseline" }>("/api/v1/ftl/limits").catch(() => null),
         ]);
         if (cancelled) return;
         setPendingLeave(pending.length);
+        setPendingSwaps(swaps.length);
+        if (fatigue) setFatigueHigh(fatigue.filter((r) => r.peak_band === "HIGH").length);
         if (limits) setSchemeSource(limits.source);
         const counts = { green: 0, amber: 0, red: 0 };
         for (const c of currencies) {
@@ -195,51 +220,69 @@ export function DashboardPage() {
         </Card>
       )}
       <DemoGuide />
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending leave</CardTitle>
-          </CardHeader>
-          <CardBody>
-            <div className="font-display text-5xl text-dn-dark" data-testid="pending-leave-count">
-              {pendingLeave}
-            </div>
-            <p className="mt-2 text-sm text-dn-muted">Requests awaiting your decision.</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Currency status</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Badge tone="green">Current</Badge>
-              <span className="font-mono text-dn-dark">{currencyCounts.green}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <Badge tone="amber">Expiring ≤ 30 d</Badge>
-              <span className="font-mono text-dn-dark">{currencyCounts.amber}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <Badge tone="red">Expired</Badge>
-              <span className="font-mono text-dn-dark">{currencyCounts.red}</span>
-            </div>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>This week</CardTitle>
-          </CardHeader>
-          <CardBody>
-            <p className="text-sm text-dn-muted">
-              Roster calendar lives under{" "}
-              <Link to="/roster" className="text-dn-steel underline">
-                Roster
-              </Link>
-              . FTL violations show inline before publication.
-            </p>
-          </CardBody>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Link to="/leave" className="block transition hover:opacity-90">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending leave</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <div className="font-display text-5xl text-dn-dark" data-testid="pending-leave-count">
+                {pendingLeave}
+              </div>
+              <p className="mt-2 text-sm text-dn-muted">Requests awaiting your decision.</p>
+            </CardBody>
+          </Card>
+        </Link>
+        <Link to="/swaps" className="block transition hover:opacity-90">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending swaps</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <div className="font-display text-5xl text-dn-dark" data-testid="pending-swaps-count">
+                {pendingSwaps}
+              </div>
+              <p className="mt-2 text-sm text-dn-muted">Duty-swap requests to review.</p>
+            </CardBody>
+          </Card>
+        </Link>
+        <Link to="/currency" className="block transition hover:opacity-90">
+          <Card>
+            <CardHeader>
+              <CardTitle>Currency status</CardTitle>
+            </CardHeader>
+            <CardBody className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge tone="green">Current</Badge>
+                <span className="font-mono text-dn-dark">{currencyCounts.green}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <Badge tone="amber">Expiring ≤ 30 d</Badge>
+                <span className="font-mono text-dn-dark">{currencyCounts.amber}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <Badge tone="red">Expired</Badge>
+                <span className="font-mono text-dn-dark">{currencyCounts.red}</span>
+              </div>
+            </CardBody>
+          </Card>
+        </Link>
+        <Link to="/fatigue" className="block transition hover:opacity-90">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fatigue watch</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <div className="font-display text-5xl text-dn-dark" data-testid="fatigue-high-count">
+                {fatigueHigh ?? "—"}
+              </div>
+              <p className="mt-2 text-sm text-dn-muted">
+                Crew at a HIGH fatigue band over the last 28 days.
+              </p>
+            </CardBody>
+          </Card>
+        </Link>
       </div>
 
       <Card>
