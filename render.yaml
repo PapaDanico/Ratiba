@@ -19,9 +19,10 @@ services:
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
-      # Set this to the frontend URL after the first deploy:
+      # CORS allow-origin. Set to the frontend URL after the first deploy:
       #   https://ratiba-app.onrender.com  (or your custom domain)
-      - key: ALLOWED_ORIGINS
+      # (The app reads FRONTEND_URL; nginx also proxies /api server-side.)
+      - key: FRONTEND_URL
         sync: false
 
   # ── Frontend (nginx + Vite SPA) ────────────────────────────────────────────
