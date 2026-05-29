@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/lib/auth";
+import { ToastProvider } from "@/lib/toast";
 import { LoginPage } from "@/pages/login";
 import { DashboardPage } from "@/pages/dashboard";
 import { CrewPage } from "@/pages/crew";
@@ -28,41 +29,43 @@ import { ImportPage } from "@/pages/import";
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/crew/me" element={<CrewMePage />} />
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppShell />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="routings" element={<RoutingsPage />} />
-            <Route path="roster" element={<RosterPage />} />
-            <Route path="crew" element={<CrewPage />} />
-            <Route path="postings" element={<PostingsPage />} />
-            <Route path="import" element={<ImportPage />} />
-            <Route path="training" element={<TrainingPage />} />
-            <Route path="documents" element={<DocumentsPage />} />
-            <Route path="currency" element={<CurrencyPage />} />
-            <Route path="leave" element={<LeavePage />} />
-            <Route path="swaps" element={<SwapsPage />} />
-            <Route path="notices" element={<NoticesPage />} />
-            <Route path="fleet" element={<FleetPage />} />
-            <Route path="constraints" element={<ConstraintsPage />} />
-            <Route path="fatigue" element={<FatiguePage />} />
-            <Route path="irop" element={<IropPage />} />
-            <Route path="audit" element={<AuditPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/crew/me" element={<CrewMePage />} />
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<DashboardPage />} />
+              <Route path="routings" element={<RoutingsPage />} />
+              <Route path="roster" element={<RosterPage />} />
+              <Route path="crew" element={<CrewPage />} />
+              <Route path="postings" element={<PostingsPage />} />
+              <Route path="import" element={<ImportPage />} />
+              <Route path="training" element={<TrainingPage />} />
+              <Route path="documents" element={<DocumentsPage />} />
+              <Route path="currency" element={<CurrencyPage />} />
+              <Route path="leave" element={<LeavePage />} />
+              <Route path="swaps" element={<SwapsPage />} />
+              <Route path="notices" element={<NoticesPage />} />
+              <Route path="fleet" element={<FleetPage />} />
+              <Route path="constraints" element={<ConstraintsPage />} />
+              <Route path="fatigue" element={<FatiguePage />} />
+              <Route path="irop" element={<IropPage />} />
+              <Route path="audit" element={<AuditPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }
