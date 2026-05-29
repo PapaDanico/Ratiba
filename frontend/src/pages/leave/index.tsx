@@ -3,6 +3,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 
 type LeaveRequest = {
   id: string;
@@ -15,6 +16,7 @@ type LeaveRequest = {
 };
 
 export function LeavePage() {
+  const toast = useToast();
   const [rows, setRows] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,8 +47,11 @@ export function LeavePage() {
         body: JSON.stringify({ status }),
       });
       await reload();
+      toast.show(`Leave ${status.toLowerCase()}`, "success");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Decision failed");
+      const msg = err instanceof ApiError ? err.message : "Decision failed";
+      setError(msg);
+      toast.show(msg, "error");
     } finally {
       setBusy(null);
     }
