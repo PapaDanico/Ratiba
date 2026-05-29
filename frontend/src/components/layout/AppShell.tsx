@@ -47,6 +47,12 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-dn-gold focus:px-3 focus:py-2 focus:text-sm focus:text-dn-lava"
+      >
+        Skip to content
+      </a>
       {/* ── Top bar: dark volcanic header ── */}
       <header className="bg-dn-lava tribal-texture sticky top-0 z-30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -168,7 +174,11 @@ export function AppShell() {
       </header>
 
       {/* ── Main content ── */}
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 sm:py-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 sm:py-8"
+      >
         <Outlet />
       </main>
 
