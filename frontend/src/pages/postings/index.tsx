@@ -50,9 +50,15 @@ const CAT_TONE: Record<PostingCrew["crew_category"], "steel" | "gold" | "amber">
 };
 
 function AssignControl({ postingId, crew, onDone }: { postingId: string; crew: Crew[]; onDone: () => void }) {
-  const [crewId, setCrewId] = useState(crew[0]?.id ?? "");
+  const [crewId, setCrewId] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // crew loads async in the parent; default the selection once it arrives.
+  useEffect(() => {
+    const first = crew[0];
+    if (!crewId && first) setCrewId(first.id);
+  }, [crew, crewId]);
 
   async function assign() {
     if (!crewId) return;
