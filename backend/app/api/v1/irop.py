@@ -1,0 +1,56 @@
+"""Irregular-operations (IROP) endpoints."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models import User
+from app.schemas.irop import CascadeImpactOut, IropAssessIn, IropAssessmentOut
+from app.services import irop as irop_service
+
+router = APIRouter()
+
+
+@router.post(
+    "/assess",
+    response_model=IropAssessmentOut,
+    summary="Recompute a disrupted duty's FTL legality + cascade (read-only)",
+)
+def assess(
+    payload: IropAssessIn,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> IropAssessmentOut:
+    try:
+        a = irop_service.assess_diversion(
+            session,
+            operator_id=user.operator_id,
+            crew_id=payload.crew_id,
+            on_date=payload.date,
+            extra_flight_h=payload.extra_flight_h,
+            extra_ground_h=payload.extra_ground_h,
+            discretion_h=payload.discretion_h,
+        )
+    except irop_service.IropError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return IropAssessmentOut(
+        crew_employee_no=a.crew_employee_no,
+        date=a.date,
+        away_from_base=a.away_from_base,
+        original_flight_h=a.original_flight_h,
+        original_duty_h=a.original_duty_h,
+        original_legality=a.original_legality,
+        disrupted_flight_h=a.disrupted_flight_h,
+        disrupted_duty_h=a.disrupted_duty_h,
+        disrupted_legality=a.disrupted_legality,
+        rules_breached=a.rules_breached,
+        cascade=CascadeImpactOut(
+            next_date=a.cascade.next_date,
+            new_rest_h=a.cascade.new_rest_h,
+            rest_floor_h=a.cascade.rest_floor_h,
+            breached=a.cascade.breached,
+        ),
+    )

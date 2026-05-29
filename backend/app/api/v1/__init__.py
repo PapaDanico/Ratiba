@@ -11,6 +11,7 @@ from app.api.v1 import (
     documents,
     duties,
     ftl,
+    irop,
     leave,
     me,
     notices,
@@ -46,6 +47,7 @@ api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(notices.router, prefix="/notices", tags=["notices"])
 api_router.include_router(postings.router, prefix="/postings", tags=["postings"])
+api_router.include_router(irop.router, prefix="/irop", tags=["irop"])
 api_router.include_router(aircraft.router, prefix="/fleet", tags=["fleet"])
 api_router.include_router(reference.router, prefix="/reference", tags=["reference"])
 api_router.include_router(constraints.router, prefix="/constraints", tags=["constraints"])
