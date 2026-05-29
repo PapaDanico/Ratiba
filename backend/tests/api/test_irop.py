@@ -125,6 +125,10 @@ def test_delay_cascades_into_next_rest(
     assert cascade["next_date"] == d2.isoformat()
     assert cascade["breached"] is True
     assert cascade["new_rest_h"] < cascade["rest_floor_h"]
+    # CAA-AC-OPS033 4.6.7: the next rest floor grows by the 12h FDP extension
+    # (12h home base floor + 12h extension = 24h required).
+    assert cascade["extension_h"] == 12.0
+    assert cascade["rest_floor_h"] == 24.0
 
 
 def test_assess_unknown_duty_404(auth_client: tuple[TestClient, User], db_session: Session) -> None:

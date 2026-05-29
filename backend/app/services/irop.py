@@ -139,6 +139,10 @@ class CascadeImpact:
     new_rest_h: float | None
     rest_floor_h: float | None
     breached: bool
+    # CAA-AC-OPS033 4.6.7: when an FDP is extended (discretion/disruption), the
+    # following off-duty must be increased by the amount of the extension. This
+    # is that add-on (hours), already included in rest_floor_h.
+    extension_h: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -305,13 +309,17 @@ def assess_diversion(
             session, operator_id=operator_id, crew_id=crew_id, on_date=nxt.date
         )
         floor_key = "rest_away_floor_h" if next_posting is not None else "rest_home_floor_h"
-        floor = float(limits[floor_key])
+        base_floor = float(limits[floor_key])
+        # CAA-AC-OPS033 4.6.7: the next off-duty must grow by the FDP extension.
+        extension_h = round(added_h, 1)
+        required_floor = round(base_floor + extension_h, 1)
         new_rest = (nxt.report_time - new_off).total_seconds() / 3600.0
         cascade = CascadeImpact(
             next_date=nxt.date,
             new_rest_h=round(new_rest, 1),
-            rest_floor_h=floor,
-            breached=new_rest < floor,
+            rest_floor_h=required_floor,
+            extension_h=extension_h,
+            breached=new_rest < required_floor,
         )
 
     duty_key, aircraft_reg, captain_emp, fo_emp, crew_role = _duty_amend_context(
