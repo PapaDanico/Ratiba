@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -84,8 +84,13 @@ def create_app() -> FastAPI:
         return VersionResponse(name="ratiba", version=__version__, phase="6")
 
     @app.get("/readyz", response_model=ReadyResponse, tags=["meta"])
-    async def readyz() -> ReadyResponse:
-        """Orchestrator readiness probe — verifies DB + Redis are reachable."""
+    async def readyz(response: Response) -> ReadyResponse:
+        """Orchestrator readiness probe — verifies DB + Redis are reachable.
+
+        Returns 503 when the database is unreachable (``not_ready``) so a
+        platform health check won't route to an instance that can't serve.
+        Redis-only failure is ``degraded`` but still 200 — Redis is optional
+        (the job queue falls back to in-process)."""
         checks: dict[str, str] = {}
         db_ok = True
         try:
@@ -114,6 +119,8 @@ def create_app() -> FastAPI:
             status_str = "degraded"
         else:
             status_str = "ready"
+        if status_str == "not_ready":
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return ReadyResponse(status=status_str, checks=checks)
 
     app.include_router(api_router)

@@ -6,7 +6,9 @@ services:
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
     plan: free
-    healthCheckPath: /healthz
+    # Readiness (DB-backed): returns 503 until Postgres is reachable, so Render
+    # won't route to an instance that can't serve login. /healthz is liveness.
+    healthCheckPath: /readyz
     envVars:
       - key: DATABASE_URL
         fromDatabase:
