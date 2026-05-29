@@ -127,6 +127,13 @@ type FatigueRow = {
   peak_band: "LOW" | "ELEVATED" | "HIGH";
 };
 
+type NoticeStat = {
+  id: string;
+  requires_ack: boolean;
+  ack_count: number;
+  crew_total: number;
+};
+
 function isoDaysAgo(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
@@ -155,6 +162,7 @@ export function DashboardPage() {
   const [pendingLeave, setPendingLeave] = useState<number>(0);
   const [pendingSwaps, setPendingSwaps] = useState<number>(0);
   const [fatigueHigh, setFatigueHigh] = useState<number | null>(null);
+  const [noticesPendingAck, setNoticesPendingAck] = useState<number>(0);
   const [currencyCounts, setCurrencyCounts] = useState({
     green: 0,
     amber: 0,
@@ -168,21 +176,27 @@ export function DashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [pending, swaps, currencies, recurrency, fatigue, limits] = await Promise.all([
-          api<LeaveRequest[]>("/api/v1/leave?status=PENDING"),
-          api<SwapRequest[]>("/api/v1/swap?status=PENDING"),
-          api<CurrencyStatus[]>("/api/v1/crew/currency/dashboard"),
-          api<RecurrencyItem[]>("/api/v1/training/recurrency?within_days=30"),
-          // Fatigue screen over the trailing 28 days — advisory; never block load.
-          api<FatigueRow[]>(
-            `/api/v1/reports/fatigue?date_from=${isoDaysAgo(28)}&date_to=${isoDaysAgo(0)}`,
-          ).catch(() => null),
-          // Cosmetic only — never let it fail the dashboard load.
-          api<{ source: "operator" | "baseline" }>("/api/v1/ftl/limits").catch(() => null),
-        ]);
+        const [pending, swaps, currencies, recurrency, notices, fatigue, limits] =
+          await Promise.all([
+            api<LeaveRequest[]>("/api/v1/leave?status=PENDING"),
+            api<SwapRequest[]>("/api/v1/swap?status=PENDING"),
+            api<CurrencyStatus[]>("/api/v1/crew/currency/dashboard"),
+            api<RecurrencyItem[]>("/api/v1/training/recurrency?within_days=30"),
+            api<NoticeStat[]>("/api/v1/notices").catch(() => null),
+            // Fatigue screen over the trailing 28 days — advisory; never block load.
+            api<FatigueRow[]>(
+              `/api/v1/reports/fatigue?date_from=${isoDaysAgo(28)}&date_to=${isoDaysAgo(0)}`,
+            ).catch(() => null),
+            // Cosmetic only — never let it fail the dashboard load.
+            api<{ source: "operator" | "baseline" }>("/api/v1/ftl/limits").catch(() => null),
+          ]);
         if (cancelled) return;
         setPendingLeave(pending.length);
         setPendingSwaps(swaps.length);
+        if (notices)
+          setNoticesPendingAck(
+            notices.filter((n) => n.requires_ack && n.ack_count < n.crew_total).length,
+          );
         if (fatigue) setFatigueHigh(fatigue.filter((r) => r.peak_band === "HIGH").length);
         if (limits) setSchemeSource(limits.source);
         const counts = { green: 0, amber: 0, red: 0 };
@@ -220,7 +234,7 @@ export function DashboardPage() {
         </Card>
       )}
       <DemoGuide />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Link to="/leave" className="block transition hover:opacity-90">
           <Card>
             <CardHeader>
@@ -279,6 +293,21 @@ export function DashboardPage() {
               </div>
               <p className="mt-2 text-sm text-dn-muted">
                 Crew at a HIGH fatigue band over the last 28 days.
+              </p>
+            </CardBody>
+          </Card>
+        </Link>
+        <Link to="/notices" className="block transition hover:opacity-90">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notices</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <div className="font-display text-5xl text-dn-dark" data-testid="notices-pending-ack">
+                {noticesPendingAck}
+              </div>
+              <p className="mt-2 text-sm text-dn-muted">
+                Notices still awaiting crew acknowledgement.
               </p>
             </CardBody>
           </Card>

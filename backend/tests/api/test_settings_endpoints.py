@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.models.user import User
 
@@ -32,6 +33,29 @@ def test_patch_operator_timezone(auth_client: tuple[TestClient, User]) -> None:
 
     bad = client.patch("/api/v1/settings/operator", json={"timezone": "Mars/Olympus_Mons"})
     assert bad.status_code == 422
+
+
+def test_operator_data_export_requires_admin(
+    auth_client: tuple[TestClient, User], db_session: Session
+) -> None:
+    client, user = auth_client
+    # Default seeded_user is a CREWING_OFFICER — not an admin.
+    assert client.get("/api/v1/settings/operator/export").status_code == 403
+
+    from app.models.user import UserRole
+
+    user.role = UserRole.ADMIN
+    db_session.commit()
+
+    resp = client.get("/api/v1/settings/operator/export")
+    assert resp.status_code == 200, resp.text
+    assert resp.headers["content-type"].startswith("application/json")
+    assert "attachment" in resp.headers.get("content-disposition", "")
+    body = resp.json()
+    assert {"exported_at", "operator", "users", "crew"} <= set(body)
+    assert body["operator"]["id"] == str(user.operator_id)
+    # Credentials never leak.
+    assert all("hashed_password" not in u and "password" not in u for u in body["users"])
 
 
 def test_account_get_and_rename(auth_client: tuple[TestClient, User]) -> None:
