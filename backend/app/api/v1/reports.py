@@ -12,7 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_writer
+from app.core.job_queue import JobQueue, get_job_queue
 from app.models import Crew, FlightDutyPeriod, Operator, Posting, PostingAssignment, User
 from app.models.ftl import FdpType
 from app.services import fatigue, payroll
@@ -156,3 +157,30 @@ def fatigue_report(
         )
     rows.sort(key=lambda r: r.peak_score, reverse=True)
     return rows
+
+
+class DigestEnqueuedOut(BaseModel):
+    job_id: str
+    status: str
+
+
+@router.post(
+    "/expiry-digest",
+    response_model=DigestEnqueuedOut,
+    summary="Email crewing staff a recurrency digest (enqueued; cron-triggerable)",
+    dependencies=[Depends(require_writer)],
+)
+def expiry_digest(
+    within_days: int = Query(default=30, ge=1, le=365),
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+    queue: JobQueue = Depends(get_job_queue),
+) -> DigestEnqueuedOut:
+    """Enqueue a recurrency digest email for this operator's crewing staff.
+    Intended to be hit by a scheduled job (e.g. a daily Render Cron) as well as
+    on demand. Off the request path via the job queue."""
+    job = queue.enqueue(
+        "app.tasks.notifications.notify_expiry_digest",
+        {"operator_id": str(user.operator_id), "within_days": within_days},
+    )
+    return DigestEnqueuedOut(job_id=job.id, status=job.status)

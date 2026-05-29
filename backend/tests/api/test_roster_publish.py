@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.models import Crew, FlightDutyPeriod, Sector, SectorAssignment
 from app.models.user import User
+from app.services import notify
 
 
 def _create_two_crew(client: TestClient) -> tuple[str, str]:
@@ -87,6 +89,64 @@ def test_publish_creates_sectors_assignments_and_fdps(
     assert db_session.query(Sector).count() == 1
     assert db_session.query(SectorAssignment).count() == 2
     assert db_session.query(FlightDutyPeriod).count() == 2
+
+
+def test_roster_published_task_notifies_assigned_crew(
+    auth_client: tuple[TestClient, User], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The enqueued notify task re-reads the published FDPs and messages each
+    assigned crew member. Invoked directly so the assertion is independent of
+    the queue backend (inline in-process locally vs. deferred rq in CI)."""
+    from app.tasks.notifications import notify_roster_published
+
+    client, user = auth_client
+    cap_emp, fo_emp = _create_two_crew(client)
+
+    day = date(2026, 7, 1)
+    std = datetime(2026, 7, 1, 6, 0, tzinfo=UTC)
+    payload = {
+        "horizon_from": day.isoformat(),
+        "horizon_to": day.isoformat(),
+        "sectors": [
+            {
+                "sector_id": "RB101",
+                "date_local": day.isoformat(),
+                "std": std.isoformat(),
+                "sta": (std + timedelta(hours=3)).isoformat(),
+                "aircraft_reg": "5Y-AAA",
+                "aircraft_type": "DH8D",
+                "block_hours": "3.0",
+            }
+        ],
+        "assignments": [
+            {
+                "duty_day_key": f"5Y-AAA|{day.isoformat()}",
+                "date_local": day.isoformat(),
+                "aircraft_reg": "5Y-AAA",
+                "aircraft_type": "DH8D",
+                "sector_ids": ["RB101"],
+                "captain_id": cap_emp,
+                "fo_id": fo_emp,
+            }
+        ],
+    }
+    assert client.post("/api/v1/roster/publish", json=payload).status_code == 200
+
+    notified: list[str] = []
+    monkeypatch.setattr(
+        notify,
+        "notify_crew_member",
+        lambda session, *, crew_id, subject, body: notified.append(str(crew_id)) or 0,
+    )
+    result = notify_roster_published(
+        {
+            "operator_id": str(user.operator_id),
+            "horizon_from": day.isoformat(),
+            "horizon_to": day.isoformat(),
+        }
+    )
+    assert result["crew_notified"] == 2
+    assert len(notified) == 2
 
 
 def test_get_roster_lists_published_assignments(
