@@ -372,13 +372,12 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
   const shareMessage = link
     ? `Pair your Ratiba crew app — open this link on your phone: ${link}`
     : "";
-  const phoneDigits = (crew.phone_number ?? "").replace(/\D/g, "");
+  const phoneDigits = (crew.phone_number ?? "").replace(/\D/g, ""); // wa.me wants digits only
+  const smsPhone = (crew.phone_number ?? "").replace(/\s/g, ""); // keep a leading +, drop spaces
   const whatsappHref = link
     ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(shareMessage)}`
     : "#";
-  const smsHref = link
-    ? `sms:${crew.phone_number ?? ""}?&body=${encodeURIComponent(shareMessage)}`
-    : "#";
+  const smsHref = link ? `sms:${smsPhone}?&body=${encodeURIComponent(shareMessage)}` : "#";
   const emailHref = link
     ? `mailto:${crew.email ?? ""}?subject=${encodeURIComponent(
         "Ratiba crew app pairing",
