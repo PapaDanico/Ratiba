@@ -1,22 +1,37 @@
 """Async HTTP client the bot uses to talk to the Ratiba backend.
 
-One client instance per bot process. Per-chat pilot JWTs are tracked in
-``PilotSessionStore`` (in-process for Phase 4 MVP — Redis-backed in Phase 6
-if/when we run multiple bot replicas).
+One client instance per bot process. Per-chat pilot JWTs are tracked in a
+:class:`SessionStore`: in-process by default, or Redis-backed (shared across
+bot replicas) when ``REDIS_URL`` points at a reachable Redis.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, Protocol, cast
 
 import httpx
+
+logger = logging.getLogger(__name__)
+
+# Pilot tokens are issued for 30 days; expire cached sessions on the same clock
+# so a Redis-backed store doesn't accumulate dead entries.
+_PILOT_SESSION_TTL_SECONDS = 30 * 86_400
+
+
+class SessionStore(Protocol):
+    """chat_id → pilot JWT. Implemented in-process and over Redis."""
+
+    def get(self, chat_id: int) -> str | None: ...
+    def set(self, chat_id: int, token: str) -> None: ...
+    def clear(self, chat_id: int) -> None: ...
 
 
 @dataclass
 class PilotSessionStore:
-    """chat_id → pilot JWT, in-process."""
+    """chat_id → pilot JWT, in-process. Fine for a single bot replica."""
 
     sessions: dict[int, str] = field(default_factory=dict)
 
@@ -30,6 +45,70 @@ class PilotSessionStore:
         self.sessions.pop(chat_id, None)
 
 
+class RedisPilotSessionStore:
+    """chat_id → pilot JWT, in Redis — survives a bot restart and is shared
+    across replicas. Resilient: a Redis blip degrades to "not paired" (the
+    pilot re-pairs) rather than crashing a handler."""
+
+    def __init__(
+        self,
+        client: Any,
+        *,
+        ttl_seconds: int = _PILOT_SESSION_TTL_SECONDS,
+        prefix: str = "ratiba:bot:session:",
+    ) -> None:
+        self._redis = client
+        self._ttl = ttl_seconds
+        self._prefix = prefix
+
+    def _key(self, chat_id: int) -> str:
+        return f"{self._prefix}{chat_id}"
+
+    def get(self, chat_id: int) -> str | None:
+        try:
+            raw = self._redis.get(self._key(chat_id))
+        except Exception as exc:  # pragma: no cover - transient redis failure
+            logger.warning("bot session read failed (%r) — treating as unpaired", exc)
+            return None
+        if raw is None:
+            return None
+        return raw.decode() if isinstance(raw, bytes) else str(raw)
+
+    def set(self, chat_id: int, token: str) -> None:
+        try:
+            self._redis.setex(self._key(chat_id), self._ttl, token)
+        except Exception as exc:  # pragma: no cover - transient redis failure
+            logger.warning("bot session write failed (%r)", exc)
+
+    def clear(self, chat_id: int) -> None:
+        try:
+            self._redis.delete(self._key(chat_id))
+        except Exception as exc:  # pragma: no cover - transient redis failure
+            logger.warning("bot session clear failed (%r)", exc)
+
+
+def build_session_store(
+    redis_url: str | None = None,
+    *,
+    ttl_seconds: int = _PILOT_SESSION_TTL_SECONDS,
+) -> SessionStore:
+    """Return a Redis-backed store when ``REDIS_URL`` is set and reachable,
+    otherwise the in-process one. Mirrors the backend's queue selection: the
+    choice is made once, at startup, with a graceful fallback."""
+    url = redis_url if redis_url is not None else os.environ.get("REDIS_URL", "").strip()
+    if url:
+        try:
+            import redis
+
+            client = redis.from_url(url, socket_connect_timeout=1, socket_timeout=1)
+            client.ping()
+            logger.info("bot session store: Redis-backed")
+            return RedisPilotSessionStore(client, ttl_seconds=ttl_seconds)
+        except Exception as exc:
+            logger.warning("Redis unavailable (%r) — bot sessions are in-process only", exc)
+    return PilotSessionStore()
+
+
 class BackendError(RuntimeError):
     def __init__(self, status_code: int, body: Any) -> None:
         detail = body.get("detail") if isinstance(body, dict) else str(body)
@@ -39,11 +118,11 @@ class BackendError(RuntimeError):
 
 
 class RatibaApi:
-    def __init__(self, base_url: str | None = None, store: PilotSessionStore | None = None) -> None:
+    def __init__(self, base_url: str | None = None, store: SessionStore | None = None) -> None:
         self.base_url = (base_url or os.environ.get("BACKEND_URL") or "http://backend:8000").rstrip(
             "/"
         )
-        self.store = store or PilotSessionStore()
+        self.store = store if store is not None else build_session_store()
         self._client = httpx.AsyncClient(base_url=self.base_url, timeout=15.0)
 
     async def aclose(self) -> None:
