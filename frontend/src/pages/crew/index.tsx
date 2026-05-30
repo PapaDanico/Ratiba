@@ -4,8 +4,11 @@ import { Modal } from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ShareButtons } from "@/components/ui/ShareButtons";
 import { api, ApiError, authFetch } from "@/lib/api";
+import { SortableTh } from "@/components/ui/SortableTh";
+import { useSort } from "@/lib/useSort";
 
 type Crew = {
   id: string;
@@ -465,10 +468,19 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
   );
 }
 
+type CrewSortKey = "employee_no" | "name" | "role" | "base";
+
 export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { sort, toggle, sorted } = useSort<CrewSortKey>(null);
+  const visibleRows = sorted(rows, {
+    employee_no: (c) => c.employee_no,
+    name: (c) => `${c.first_name} ${c.last_name}`.toLowerCase(),
+    role: (c) => c.role,
+    base: (c) => c.base_station,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -498,60 +510,73 @@ export function CrewPage() {
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-dn-muted">
-            No crew yet. Create one via the API or wait for the import flow in Phase 6.
-          </p>
+          <EmptyState
+            icon="👥"
+            title="No crew yet"
+            hint="Import your roster via the Import page, or add crew through the API."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="crew-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
-                  <th className="py-2 pr-4 font-medium">Employee #</th>
-                  <th className="py-2 pr-4 font-medium">Name</th>
-                  <th className="py-2 pr-4 font-medium">Role</th>
-                  <th className="py-2 pr-4 font-medium">Category</th>
-                  <th className="py-2 pr-4 font-medium">Base</th>
-                  <th className="py-2 pr-4 font-medium">Email</th>
-                  <th className="py-2 pr-4 font-medium">Phone</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-4 font-medium">Actions</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Employee #" col="employee_no" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Name" col="name" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Role" col="role" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">Category</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Base" col="base" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">Email</th>
+                  <th className="py-3 pr-4 font-medium">Phone</th>
+                  <th className="py-3 pr-4 font-medium">Status</th>
+                  <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
-                {rows.map((c) => (
-                  <tr key={c.id} className="hover:bg-dn-fog">
-                    <td data-label="Employee #" className="py-2 pr-4 font-mono text-dn-steel">
+                {visibleRows.map((c) => (
+                  <tr key={c.id} className="group transition-colors hover:bg-dn-fog">
+                    <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel">
                       {c.employee_no}
                     </td>
-                    <td data-label="Name" className="py-2 pr-4 text-dn-dark">
+                    <td data-label="Name" className="py-3 pr-4 text-dn-dark">
                       {c.first_name} {c.last_name}
                     </td>
-                    <td data-label="Role" className="py-2 pr-4">
+                    <td data-label="Role" className="py-3 pr-4">
                       <Badge tone="steel">{c.role}</Badge>
                     </td>
-                    <td data-label="Category" className="py-2 pr-4">
+                    <td data-label="Category" className="py-3 pr-4">
                       <Badge tone={CATEGORY_TONE[c.crew_category]}>
                         {CATEGORY_LABEL[c.crew_category]}
                       </Badge>
                     </td>
-                    <td data-label="Base" className="py-2 pr-4 font-mono">
+                    <td data-label="Base" className="py-3 pr-4 font-mono">
                       {c.base_station}
                     </td>
-                    <td data-label="Email" className="py-2 pr-4 text-xs text-dn-muted">
+                    <td data-label="Email" className="py-3 pr-4 text-xs text-dn-muted">
                       {c.email ?? "—"}
                     </td>
-                    <td data-label="Phone" className="py-2 pr-4 font-mono text-xs">
+                    <td data-label="Phone" className="py-3 pr-4 font-mono text-xs">
                       {c.phone_number ?? "—"}
                     </td>
-                    <td data-label="Status" className="py-2 pr-4">
+                    <td data-label="Status" className="py-3 pr-4">
                       {c.active ? (
                         <Badge tone="green">Active</Badge>
                       ) : (
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td data-label="" className="py-2 pr-4">
-                      <div className="flex gap-2">
+                    {/* Actions recede until the row is hovered/focused — calmer grid,
+                        but kept full-opacity on touch (no hover) and on focus-within
+                        for keyboard users. */}
+                    <td data-label="" className="py-3 pr-4">
+                      <div className="row-actions flex flex-wrap justify-end gap-2">
                         <RosterPdfButton crew={c} />
                         <CalendarFeedButton crew={c} />
                         <PairDeviceButton crew={c} />

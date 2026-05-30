@@ -291,46 +291,48 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
             <table className="rtable min-w-full text-sm" data-testid="duties-table">
               <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
-                  <th className="py-2 pr-4 font-medium">Crew</th>
-                  <th className="py-2 pr-4 font-medium">Date</th>
-                  <th className="py-2 pr-4 font-medium">Type</th>
-                  <th className="py-2 pr-4 font-medium">Window (UTC)</th>
-                  <th className="py-2 pr-4 font-medium">State</th>
-                  <th className="py-2 pr-4 font-medium" />
+                  <th className="py-3 pr-4 font-medium">Crew</th>
+                  <th className="py-3 pr-4 font-medium">Date</th>
+                  <th className="py-3 pr-4 font-medium">Type</th>
+                  <th className="py-3 pr-4 font-medium">Window (UTC)</th>
+                  <th className="py-3 pr-4 font-medium">State</th>
+                  <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
                 {duties.map((d) => (
-                  <tr key={d.id} className="hover:bg-dn-fog">
-                    <td data-label="Crew" className="py-2 pr-4">
+                  <tr key={d.id}>
+                    <td data-label="Crew" className="py-3 pr-4">
                       <span className="text-dn-dark">{d.crew_name}</span>{" "}
                       <span className="font-mono text-xs text-dn-muted">({d.employee_no})</span>
                     </td>
-                    <td data-label="Date" className="py-2 pr-4 font-mono">
+                    <td data-label="Date" className="py-3 pr-4 font-mono">
                       {d.date}
                     </td>
-                    <td data-label="Type" className="py-2 pr-4">
+                    <td data-label="Type" className="py-3 pr-4">
                       <Badge tone={d.type === "STANDBY" ? "amber" : "neutral"}>{d.type}</Badge>
                     </td>
-                    <td data-label="Window (UTC)" className="py-2 pr-4 font-mono text-xs">
+                    <td data-label="Window (UTC)" className="py-3 pr-4 font-mono text-xs">
                       {d.type === "OFF" ? "—" : `${d.duration_h.toFixed(1)}h`}
                     </td>
-                    <td data-label="State" className="py-2 pr-4">
+                    <td data-label="State" className="py-3 pr-4">
                       {d.legality_state ? (
                         <Badge tone={legalityTone(d.legality_state)}>{d.legality_state}</Badge>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td data-label="" className="py-2 pr-4">
-                      <button
-                        type="button"
-                        onClick={() => remove(d.id)}
-                        className="text-dn-red underline text-xs"
-                        data-testid={`delete-duty-${d.id}`}
-                      >
-                        remove
-                      </button>
+                    <td data-label="" className="py-3 pr-4">
+                      <div className="row-actions flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => remove(d.id)}
+                          className="text-dn-red underline text-xs"
+                          data-testid={`delete-duty-${d.id}`}
+                        >
+                          remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -346,6 +348,16 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
 export function RosterPage() {
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(addDays(todayIso(), 27));
+  const [density, setDensity] = useState<"comfortable" | "compact">(
+    () =>
+      (localStorage.getItem("ratiba.roster.density") as "comfortable" | "compact") ?? "comfortable",
+  );
+  const compact = density === "compact";
+  function toggleDensity() {
+    const next = compact ? "comfortable" : "compact";
+    setDensity(next);
+    localStorage.setItem("ratiba.roster.density", next);
+  }
   const [rows, setRows] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -585,6 +597,15 @@ export function RosterPage() {
               </div>
               <Button
                 size="sm"
+                variant="secondary"
+                onClick={toggleDensity}
+                data-testid="density-toggle"
+                title="Toggle calendar density"
+              >
+                {compact ? "Comfortable" : "Compact"}
+              </Button>
+              <Button
+                size="sm"
                 onClick={autoGenerate}
                 disabled={generating}
                 data-testid="auto-generate-btn"
@@ -682,7 +703,8 @@ export function RosterPage() {
                     <div
                       key={d}
                       className={[
-                        "rounded-md border p-2 min-h-[100px]",
+                        "rounded-md border",
+                        compact ? "p-1 min-h-[64px]" : "p-2 min-h-[100px]",
                         holidayName
                           ? "bg-amber-50 border-amber-200"
                           : "bg-dn-fog border-dn-steel-lt",
@@ -704,7 +726,10 @@ export function RosterPage() {
                           {dayAssignments.map((a) => (
                             <li
                               key={a.duty_day_key}
-                              className="bg-white rounded border border-dn-steel-lt px-2 py-1 text-xs"
+                              className={[
+                                "bg-white rounded border border-dn-steel-lt text-xs",
+                                compact ? "px-1 py-0.5" : "px-2 py-1",
+                              ].join(" ")}
                             >
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-mono">{a.aircraft_reg}</span>

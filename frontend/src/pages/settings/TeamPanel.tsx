@@ -129,26 +129,26 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
               <table className="w-full text-sm responsive-table">
                 <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                   <tr>
-                    <th className="py-2 pr-4 font-medium">Name</th>
-                    <th className="py-2 pr-4 font-medium">Email</th>
-                    <th className="py-2 pr-4 font-medium">Role</th>
-                    <th className="py-2 pr-4 font-medium">Status</th>
-                    <th className="py-2 pr-4 font-medium">Actions</th>
+                    <th className="py-3 pr-4 font-medium">Name</th>
+                    <th className="py-3 pr-4 font-medium">Email</th>
+                    <th className="py-3 pr-4 font-medium">Role</th>
+                    <th className="py-3 pr-4 font-medium">Status</th>
+                    <th className="py-3 pr-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dn-steel-lt">
                   {members.map((m) => {
                     const isSelf = m.id === currentUserId;
                     return (
-                      <tr key={m.id} className="hover:bg-dn-fog">
-                        <td data-label="Name" className="py-2 pr-4 text-dn-dark">
+                      <tr key={m.id}>
+                        <td data-label="Name" className="py-3 pr-4 text-dn-dark">
                           {m.full_name}
                           {isSelf && <span className="text-dn-muted text-xs"> (you)</span>}
                         </td>
-                        <td data-label="Email" className="py-2 pr-4 font-mono text-xs">
+                        <td data-label="Email" className="py-3 pr-4 font-mono text-xs">
                           {m.email}
                         </td>
-                        <td data-label="Role" className="py-2 pr-4">
+                        <td data-label="Role" className="py-3 pr-4">
                           {isSelf ? (
                             <Badge tone="steel">{ROLE_LABEL[m.role]}</Badge>
                           ) : (
@@ -168,27 +168,29 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                             </select>
                           )}
                         </td>
-                        <td data-label="Status" className="py-2 pr-4">
+                        <td data-label="Status" className="py-3 pr-4">
                           <Badge tone={m.is_active ? "green" : "red"}>
                             {m.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </td>
-                        <td data-label="Actions" className="py-2 pr-4">
+                        <td data-label="Actions" className="py-3 pr-4">
                           {isSelf ? (
                             <span className="text-dn-muted text-xs">—</span>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                m.is_active
-                                  ? setConfirmDeactivate(m)
-                                  : patch(m.id, { is_active: true })
-                              }
-                              className="text-dn-steel underline text-xs hover:text-dn-dark"
-                              data-testid={`toggle-${m.email}`}
-                            >
-                              {m.is_active ? "Deactivate" : "Reactivate"}
-                            </button>
+                            <div className="row-actions flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  m.is_active
+                                    ? setConfirmDeactivate(m)
+                                    : patch(m.id, { is_active: true })
+                                }
+                                className="text-dn-steel underline text-xs hover:text-dn-dark"
+                                data-testid={`toggle-${m.email}`}
+                              >
+                                {m.is_active ? "Deactivate" : "Reactivate"}
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>

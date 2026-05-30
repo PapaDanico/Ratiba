@@ -55,12 +55,10 @@ Per ADR 0006:
 2. **ODPC (KDPA 2019) registration** — required for a paid pilot;
    not required for an evaluation against operator-supplied data on
    their own infrastructure.
-3. **httpOnly cookies + CSRF migration** for JWTs — the LocalStorage
-   token model is industry-standard for evaluations; we'll close this
-   when we're moving toward the first paid pilot.
-4. **Drag-and-drop calendar editing**, **magic-link pairing**,
-   **multi-replica bot** with Redis-backed session store — all UX
-   niceties that don't block evaluation.
+
+> **Addendum (post-audit, this cycle):** items 3 and 4 below were listed
+> here as *deferred* but have since been **delivered** — see the dated
+> addendum at the foot of this document.
 
 ## Recommendation
 
@@ -76,3 +74,31 @@ evaluation experience is:
 
 The product surface won't change between this audit and the start of
 those conversations.
+
+---
+
+## Addendum — capabilities delivered after the audit
+
+This pass shipped several items the audit above had marked deferred or
+roadmap, all verified (backend suite + live browser checks) and CI-green:
+
+- **Security hardening:** JWTs moved off `localStorage` to **httpOnly
+  cookies with CSRF** (double-submit) for both officer and pilot web
+  surfaces; refresh-token logout-revocation fix; **Redis-backed bot
+  session store** for multi-replica.
+- **FTL engine:** the two roadmap rules — **reserve sleep-opportunity**
+  (CAA-AC-OPS033 §4.6.8) and **weekly recovery rest** (§4.6.2) — plus a
+  weekly-rest constraint in the optimiser and a cascading FTL recompute
+  on amendments.
+- **Roster UX:** **drag-and-drop** crew reassignment with live FTL
+  re-check + role guard, and a comfortable/compact density toggle.
+- **Crew comms:** **one-tap magic-link pairing** and **WhatsApp / SMS /
+  email** sharing of duties, rosters and the pairing link; an Africa's
+  Talking **WhatsApp** notify channel (credential-gated).
+- **UI polish:** calm-grid tables (rhythm, hover-reveal actions, mobile
+  card-collapse fix), `EmptyState` component, sticky headers, loading
+  skeletons, a dashboard "one thing that needs you" attention hero, and
+  column sort.
+
+Net effect on the recommendation: unchanged — **still ready to share with
+1–2 prospective users**, now with a more complete and polished surface.

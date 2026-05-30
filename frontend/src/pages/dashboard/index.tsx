@@ -157,6 +157,103 @@ function attentionTone(state: RecurrencyItem["state"]): "amber" | "red" | "neutr
   return "neutral";
 }
 
+type HeroTone = "red" | "amber" | "steel" | "green";
+
+const HERO_STYLE: Record<HeroTone, string> = {
+  red: "border-dn-red/40 bg-dn-red/5",
+  amber: "border-dn-amber/40 bg-dn-amber/5",
+  steel: "border-dn-steel/30 bg-dn-steel/5",
+  green: "border-dn-green/30 bg-dn-green/5",
+};
+
+/**
+ * "One thing that needs you" — surfaces the single most-urgent item above the
+ * tiles, by descending severity. Reuses counts already loaded for the tiles
+ * (no extra requests); links straight to the screen that resolves it.
+ */
+function AttentionHero({
+  expiredCurrency,
+  expiringCurrency,
+  fatigueHigh,
+  pendingApprovals,
+  noticesPendingAck,
+}: {
+  expiredCurrency: number;
+  expiringCurrency: number;
+  fatigueHigh: number;
+  pendingApprovals: number;
+  noticesPendingAck: number;
+}) {
+  let hero: { tone: HeroTone; icon: string; title: string; detail: string; to: string };
+  if (expiredCurrency > 0) {
+    hero = {
+      tone: "red",
+      icon: "⛔",
+      title: `${expiredCurrency} crew with an expired currency`,
+      detail: "These crew can't be legally rostered until renewed. Review the currency dashboard.",
+      to: "/currency",
+    };
+  } else if (fatigueHigh > 0) {
+    hero = {
+      tone: "red",
+      icon: "🌙",
+      title: `${fatigueHigh} crew at a HIGH fatigue band`,
+      detail: "Advisory fatigue screen flagged elevated risk over the last 28 days.",
+      to: "/fatigue",
+    };
+  } else if (expiringCurrency > 0) {
+    hero = {
+      tone: "amber",
+      icon: "⏳",
+      title: `${expiringCurrency} currency item${expiringCurrency > 1 ? "s" : ""} expiring within 30 days`,
+      detail: "Schedule renewals before they lapse to keep crew available.",
+      to: "/currency",
+    };
+  } else if (pendingApprovals > 0) {
+    hero = {
+      tone: "steel",
+      icon: "📝",
+      title: `${pendingApprovals} request${pendingApprovals > 1 ? "s" : ""} awaiting your decision`,
+      detail: "Leave and swap requests are pending approval.",
+      to: "/leave",
+    };
+  } else if (noticesPendingAck > 0) {
+    hero = {
+      tone: "steel",
+      icon: "📣",
+      title: `${noticesPendingAck} notice${noticesPendingAck > 1 ? "s" : ""} awaiting crew acknowledgement`,
+      detail: "Some crew haven't yet acknowledged a required notice.",
+      to: "/notices",
+    };
+  } else {
+    hero = {
+      tone: "green",
+      icon: "✅",
+      title: "All clear — nothing needs your attention",
+      detail: "No expired currencies, fatigue flags, or pending approvals right now.",
+      to: "/roster",
+    };
+  }
+
+  return (
+    <Link to={hero.to} className="block" data-testid="attention-hero">
+      <div
+        className={`flex items-center gap-4 rounded-lg border p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md ${HERO_STYLE[hero.tone]}`}
+      >
+        <span aria-hidden className="text-3xl">
+          {hero.icon}
+        </span>
+        <div>
+          <p className="font-display text-xl text-dn-dark" data-testid="attention-hero-title">
+            {hero.title}
+          </p>
+          <p className="text-sm text-dn-muted">{hero.detail}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export function DashboardPage() {
   const { user } = useAuth();
   const [pendingLeave, setPendingLeave] = useState<number>(0);
@@ -233,10 +330,17 @@ export function DashboardPage() {
           <CardBody className="text-sm text-dn-red">{error}</CardBody>
         </Card>
       )}
+      <AttentionHero
+        expiredCurrency={currencyCounts.red}
+        expiringCurrency={currencyCounts.amber}
+        fatigueHigh={fatigueHigh ?? 0}
+        pendingApprovals={pendingLeave + pendingSwaps}
+        noticesPendingAck={noticesPendingAck}
+      />
       <DemoGuide />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Link to="/leave" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/leave" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Pending leave</CardTitle>
             </CardHeader>
@@ -248,8 +352,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/swaps" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/swaps" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Pending swaps</CardTitle>
             </CardHeader>
@@ -261,8 +365,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/currency" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/currency" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Currency status</CardTitle>
             </CardHeader>
@@ -282,8 +386,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/fatigue" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/fatigue" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Fatigue watch</CardTitle>
             </CardHeader>
@@ -297,8 +401,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/notices" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/notices" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Notices</CardTitle>
             </CardHeader>
