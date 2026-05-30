@@ -55,6 +55,9 @@ class FdpInputIn(BaseModel):
     discretion_uses_last_90d: int = Field(default=0, ge=0)
     standby_hours_before_call: Decimal = Field(default=Decimal("0"), ge=0, le=24)
     standby_type: Literal["NONE", "SHORT_CALL", "LONG_CALL"] = "NONE"
+    # Protected sleep opportunity (h) in the 24 h before a reserve call-out
+    # (CAA-AC-OPS033 §4.6.8). Defaults to a clearly-compliant value.
+    reserve_sleep_opportunity_h: Decimal = Field(default=Decimal("10"), ge=0, le=24)
 
 
 class FtlVerdictOut(BaseModel):

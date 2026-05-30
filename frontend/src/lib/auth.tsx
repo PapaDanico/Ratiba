@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { api, login as apiLogin, logout as apiLogout, tokenStore } from "./api";
+import { api, login as apiLogin, logout as apiLogout, session } from "./api";
 
 export type CurrentUser = {
   id: string;
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthContextValue["status"]>("unknown");
 
   const refreshMe = useCallback(async () => {
-    if (!tokenStore.getAccess()) {
+    if (!session.isAuthed()) {
       setStatus("anonymous");
       setUser(null);
       return;
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(me);
       setStatus("authenticated");
     } catch {
-      tokenStore.clear();
+      session.clear();
       setUser(null);
       setStatus("anonymous");
     }

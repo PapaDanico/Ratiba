@@ -1,8 +1,11 @@
-/** Pilot session — separate from the crewing-officer session in lib/auth.tsx. */
+/** Pilot session — separate from the crewing-officer session in lib/auth.tsx.
+ *
+ * The pilot JWT lives in an httpOnly `rt_pilot` cookie (XSS-safe), set by
+ * `/auth/pilot-pair`. Only the non-sensitive display profile is kept in
+ * localStorage, as the "this device is paired" marker. */
 
-import { api } from "./api";
+import { authFetch, api } from "./api";
 
-const PILOT_TOKEN_KEY = "ratiba.pilot_token";
 const PILOT_PROFILE_KEY = "ratiba.pilot_profile";
 
 export type PilotProfile = {
@@ -13,7 +16,6 @@ export type PilotProfile = {
 };
 
 export const pilotStore = {
-  getToken: (): string | null => localStorage.getItem(PILOT_TOKEN_KEY),
   getProfile: (): PilotProfile | null => {
     const raw = localStorage.getItem(PILOT_PROFILE_KEY);
     if (!raw) return null;
@@ -23,13 +25,14 @@ export const pilotStore = {
       return null;
     }
   },
-  set: (token: string, profile: PilotProfile) => {
-    localStorage.setItem(PILOT_TOKEN_KEY, token);
+  set: (profile: PilotProfile) => {
     localStorage.setItem(PILOT_PROFILE_KEY, JSON.stringify(profile));
   },
   clear: () => {
-    localStorage.removeItem(PILOT_TOKEN_KEY);
     localStorage.removeItem(PILOT_PROFILE_KEY);
+    // Best-effort clear of the readable CSRF marker; the server expires the
+    // httpOnly pilot cookie on its own schedule / on a 401.
+    document.cookie = "rt_csrf=; Max-Age=0; path=/";
   },
 };
 
@@ -42,6 +45,8 @@ type PairResponse = {
 };
 
 export async function pilotPair(code: string): Promise<PilotProfile> {
+  // The pairing response also sets the httpOnly pilot cookie; we only keep the
+  // display profile (pilot_token in the body is ignored by the browser).
   const body = await api<PairResponse>("/api/v1/auth/pilot-pair", {
     method: "POST",
     body: JSON.stringify({ code }),
@@ -53,19 +58,17 @@ export async function pilotPair(code: string): Promise<PilotProfile> {
     role: body.role,
     operator_id: body.operator_id,
   };
-  pilotStore.set(body.pilot_token, profile);
+  pilotStore.set(profile);
   return profile;
 }
 
-/** Call a pilot-scoped endpoint with the stored pilot token. */
+/** Call a pilot-scoped endpoint — auth rides on the httpOnly cookie + CSRF. */
 export async function pilotApi<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = pilotStore.getToken();
   const headers = new Headers(init.headers ?? {});
-  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const resp = await fetch(path, { ...init, headers });
+  const resp = await authFetch(path, { ...init, headers });
   if (resp.status === 401) {
     pilotStore.clear();
     throw new Error("Pilot session expired — please re-pair.");

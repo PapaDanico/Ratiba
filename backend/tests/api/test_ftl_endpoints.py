@@ -44,6 +44,18 @@ def test_validate_fdp_flags_illegal_duty(client: TestClient) -> None:
     assert response.json()["aggregated"]["legality_state"] == "ILLEGAL"
 
 
+def test_validate_fdp_reserve_sleep_opportunity(client: TestClient) -> None:
+    # A reserve (standby) duty with too little protected sleep opportunity is
+    # flagged by KCAR-P8-RESERVE-SLEEP via the public API.
+    body = _base_fdp()
+    body["standby_type"] = "SHORT_CALL"
+    body["reserve_sleep_opportunity_h"] = "5.0"
+    response = client.post("/api/v1/ftl/validate-fdp", json=body)
+    assert response.status_code == 200, response.text
+    trace = {v["rule_id"]: v["legality_state"] for v in response.json()["rule_trace"]}
+    assert trace["KCAR-P8-RESERVE-SLEEP"] == "ILLEGAL"
+
+
 def test_validate_fdp_rejects_invalid_payload(client: TestClient) -> None:
     body = _base_fdp()
     body["duty_hours"] = "-5"

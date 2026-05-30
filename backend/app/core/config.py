@@ -50,6 +50,19 @@ class Settings(BaseSettings):
         default=60, alias="JWT_ACCESS_TOKEN_EXPIRE_MINUTES"
     )
     jwt_refresh_token_expire_days: int = Field(default=30, alias="JWT_REFRESH_TOKEN_EXPIRE_DAYS")
+    # Browser sessions carry their JWTs in httpOnly cookies (defence against XSS
+    # token theft). Set COOKIE_SECURE=true wherever the dashboard is served over
+    # HTTPS so the cookies are only ever sent on secure connections. Local dev /
+    # tests run over plain HTTP, so the default is False.
+    cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
+    # SameSite policy for the session cookies. "lax" is correct for the default
+    # same-site deployment (SPA + API behind one origin/proxy). If the dashboard
+    # and API are served from *different* registrable domains, set "none" so the
+    # cookies survive cross-site requests — browsers then also require Secure, so
+    # COOKIE_SECURE is forced on in that mode.
+    cookie_samesite: Literal["lax", "strict", "none"] = Field(
+        default="lax", alias="COOKIE_SAMESITE"
+    )
 
     # Compliance
     kdpa_data_region: str = Field(default="ke-1", alias="KDPA_DATA_REGION")

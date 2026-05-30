@@ -70,6 +70,8 @@ SECRET_KEY=<openssl rand -hex 32 output>
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 JWT_REFRESH_TOKEN_EXPIRE_DAYS=30
+COOKIE_SECURE=true               # HTTPS in prod → mark session cookies Secure
+COOKIE_SAMESITE=lax              # see "Cookie auth & origins" below
 
 KDPA_DATA_REGION=<region tag>
 KDPA_REGISTRATION_REF=<ODPC reference if registered>
@@ -84,6 +86,26 @@ BACKEND_URL=https://api.<host>
 SENTRY_DSN=<…>
 LOG_LEVEL=INFO
 ```
+
+## Cookie auth & origins
+
+Browser sessions authenticate with **httpOnly cookies** (officer dashboard +
+`/crew/me`), so the deployment's origin shape matters:
+
+- **Default (recommended): same site.** Serve the SPA and proxy `/api` to the
+  backend under **one registrable domain** (the shipped nginx does this). Then
+  `COOKIE_SAMESITE=lax` is correct and the cookies "just work". The dashboard
+  and API can be different *hosts/ports* (e.g. `app.host` ↔ `api.host` is still
+  same-site under `host`) as long as they share the registrable domain; set
+  `FRONTEND_URL` to the exact dashboard origin for CORS.
+- **Cross-domain** (SPA and API on genuinely different domains): set
+  `COOKIE_SAMESITE=none` (which forces Secure on), and `FRONTEND_URL` to the
+  dashboard origin so CORS returns it with `Allow-Credentials`. Without this the
+  browser drops the session cookies on cross-site XHR and login appears to
+  "succeed" but every subsequent request is 401.
+
+The Telegram bot and any API client use `Authorization: Bearer` and are
+unaffected by either setting.
 
 ## First deploy
 

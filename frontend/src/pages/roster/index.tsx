@@ -5,7 +5,25 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 import { AmendModal } from "@/components/roster/AmendModal";
+
+type AmendResponse = {
+  duty_day_key: string;
+  captain_id: string;
+  fo_id: string;
+  legality_state: Assignment["legality_state"];
+};
+
+type CrewFull = {
+  id: string;
+  employee_no: string;
+  first_name: string;
+  last_name: string;
+  role: "CAPT" | "FO" | "SO" | "PURSER" | "CABIN_CREW" | "ENGINEER";
+  crew_category: "FLIGHT_DECK" | "CABIN" | "ENGINEERING";
+  active: boolean;
+};
 
 type Assignment = {
   duty_day_key: string;
@@ -339,6 +357,95 @@ export function RosterPage() {
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [draftMsg, setDraftMsg] = useState<string | null>(null);
+  const [crew, setCrew] = useState<CrewFull[]>([]);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [dragOverZone, setDragOverZone] = useState<string | null>(null);
+  const [draggingRole, setDraggingRole] = useState<"CAPT" | "FO" | null>(null);
+  const toast = useToast();
+
+  // A captain may operate either seat; an FO may only fill the FO seat.
+  function roleFits(crewRole: string | undefined, slot: "CAPT" | "FO"): boolean {
+    if (crewRole === "CAPT") return true;
+    return slot === "FO" && crewRole === "FO";
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api<CrewFull[]>("/api/v1/crew");
+        if (!cancelled) setCrew(list);
+      } catch {
+        if (!cancelled) setCrew([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  // NOTE: the roster list contract puts crew *employee numbers* in
+  // `captain_id`/`fo_id` (not UUIDs), so keys here are employee numbers.
+  const crewByEmpNo = new Map(crew.map((c) => [c.employee_no, c]));
+
+  function crewLabel(empNo: string): string {
+    const c = crewByEmpNo.get(empNo);
+    return c ? `${empNo} · ${c.first_name} ${c.last_name}` : empNo;
+  }
+
+  /** Reassign a duty's CAPT/FO via drag-and-drop: optimistic swap, then
+   * /roster/amend recomputes FTL legality (reconciled or rolled back). */
+  async function reassign(a: Assignment, role: "CAPT" | "FO", newEmpNo: string) {
+    const currentEmp = role === "CAPT" ? a.captain_id : a.fo_id;
+    if (newEmpNo === currentEmp) return; // dropped onto the same crew
+    const newRole = crewByEmpNo.get(newEmpNo)?.role;
+    if (!roleFits(newRole, role)) {
+      // Don't burn a request the backend will reject — explain instead.
+      toast.show(`${newEmpNo} (${newRole ?? "?"}) isn't rated for the ${role} seat`, "error");
+      return;
+    }
+    const newCaptainEmp = role === "CAPT" ? newEmpNo : a.captain_id;
+    const newFoEmp = role === "FO" ? newEmpNo : a.fo_id;
+
+    const prevRows = rows;
+    setSavingKey(a.duty_day_key);
+    setRows((rs) =>
+      rs.map((r) =>
+        r.duty_day_key === a.duty_day_key
+          ? { ...r, captain_id: newCaptainEmp, fo_id: newFoEmp, legality_state: null }
+          : r,
+      ),
+    );
+    try {
+      const res = await api<AmendResponse>("/api/v1/roster/amend", {
+        method: "POST",
+        body: JSON.stringify({
+          duty_day_key: a.duty_day_key,
+          new_captain_employee_no: newCaptainEmp,
+          new_fo_employee_no: newFoEmp,
+          reason: "Drag-and-drop crew reassignment",
+        }),
+      });
+      // Keep the employee-number display we set optimistically; only the
+      // recomputed legality needs reconciling from the response.
+      setRows((rs) =>
+        rs.map((r) =>
+          r.duty_day_key === a.duty_day_key ? { ...r, legality_state: res.legality_state } : r,
+        ),
+      );
+      const bad =
+        res.legality_state === "ILLEGAL" || res.legality_state === "REQUIRES_FRMS_DEROGATION";
+      toast.show(
+        `${role} on ${a.aircraft_reg} → ${newEmpNo} · FTL ${res.legality_state ?? "unknown"}`,
+        bad ? "error" : "success",
+      );
+    } catch (err) {
+      setRows(prevRows); // roll back the optimistic move
+      toast.show(err instanceof ApiError ? err.message : "Reassignment failed", "error");
+    } finally {
+      setSavingKey(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -536,68 +643,158 @@ export function RosterPage() {
           ) : error ? (
             <p className="text-sm text-dn-red">{error}</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-2" data-testid="roster-calendar">
-              {days.map((d) => {
-                const dayAssignments = byDate.get(d) ?? [];
-                const holidayName = holidayByDate.get(d);
-                return (
-                  <div
-                    key={d}
-                    className={[
-                      "rounded-md border p-2 min-h-[100px]",
-                      holidayName ? "bg-amber-50 border-amber-200" : "bg-dn-fog border-dn-steel-lt",
-                    ].join(" ")}
-                  >
-                    <div className="font-mono text-xs text-dn-steel mb-1">{d}</div>
-                    {holidayName && (
-                      <div
-                        className="text-xs font-medium text-amber-700 mb-1 truncate"
-                        title={holidayName}
-                      >
-                        🏛 {holidayName}
-                      </div>
-                    )}
-                    {dayAssignments.length === 0 ? (
-                      <div className="text-xs text-dn-muted">—</div>
-                    ) : (
-                      <ul className="space-y-1">
-                        {dayAssignments.map((a) => (
-                          <li
-                            key={a.duty_day_key}
-                            className="bg-white rounded border border-dn-steel-lt px-2 py-1 text-xs"
-                          >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="font-mono">{a.aircraft_reg}</span>
-                              <Badge tone="steel">{a.aircraft_type}</Badge>
-                            </div>
-                            <div className="text-dn-muted truncate">
-                              CAPT {a.captain_id} · FO {a.fo_id}
-                            </div>
-                            <div className="flex items-center justify-between mt-1">
-                              {a.legality_state ? (
-                                <Badge tone={legalityTone(a.legality_state)}>
-                                  {a.legality_state}
-                                </Badge>
-                              ) : (
-                                <span />
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => setEditing(a)}
-                                className="text-dn-steel underline text-xs"
-                                data-testid={`amend-btn-${a.duty_day_key}`}
-                              >
-                                amend
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+            <>
+              {rows.length > 0 && crew.length > 0 && (
+                <div className="mb-3" data-testid="crew-palette">
+                  <p className="text-xs text-dn-muted mb-1">
+                    Drag a crew member onto a duty&rsquo;s CAPT/FO slot to reassign — the FTL check
+                    runs live and the move rolls back if the backend rejects it.
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {crew
+                      .filter((c) => c.crew_category === "FLIGHT_DECK" && c.active)
+                      .map((c) => (
+                        <span
+                          key={c.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", c.employee_no);
+                            setDraggingRole(c.role === "CAPT" ? "CAPT" : "FO");
+                          }}
+                          onDragEnd={() => setDraggingRole(null)}
+                          className="cursor-grab rounded-full border border-dn-steel-lt bg-white px-2 py-0.5 text-xs hover:border-dn-gold"
+                          data-testid={`crew-chip-${c.employee_no}`}
+                          title={`${c.first_name} ${c.last_name} · ${c.role}`}
+                        >
+                          <span className="font-mono text-dn-steel">{c.employee_no}</span>{" "}
+                          {c.first_name} {c.last_name}
+                          <span className="ml-1 text-[10px] text-dn-muted">{c.role}</span>
+                        </span>
+                      ))}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-2" data-testid="roster-calendar">
+                {days.map((d) => {
+                  const dayAssignments = byDate.get(d) ?? [];
+                  const holidayName = holidayByDate.get(d);
+                  return (
+                    <div
+                      key={d}
+                      className={[
+                        "rounded-md border p-2 min-h-[100px]",
+                        holidayName
+                          ? "bg-amber-50 border-amber-200"
+                          : "bg-dn-fog border-dn-steel-lt",
+                      ].join(" ")}
+                    >
+                      <div className="font-mono text-xs text-dn-steel mb-1">{d}</div>
+                      {holidayName && (
+                        <div
+                          className="text-xs font-medium text-amber-700 mb-1 truncate"
+                          title={holidayName}
+                        >
+                          🏛 {holidayName}
+                        </div>
+                      )}
+                      {dayAssignments.length === 0 ? (
+                        <div className="text-xs text-dn-muted">—</div>
+                      ) : (
+                        <ul className="space-y-1">
+                          {dayAssignments.map((a) => (
+                            <li
+                              key={a.duty_day_key}
+                              className="bg-white rounded border border-dn-steel-lt px-2 py-1 text-xs"
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-mono">{a.aircraft_reg}</span>
+                                <Badge tone="steel">{a.aircraft_type}</Badge>
+                              </div>
+                              <div className="mt-0.5 space-y-0.5">
+                                {(["CAPT", "FO"] as const).map((role) => {
+                                  const id = role === "CAPT" ? a.captain_id : a.fo_id;
+                                  const zoneKey = `${a.duty_day_key}:${role}`;
+                                  const isOver = dragOverZone === zoneKey;
+                                  const valid =
+                                    draggingRole === null || roleFits(draggingRole, role);
+                                  const cls =
+                                    isOver && valid
+                                      ? "bg-dn-gold/30 ring-1 ring-dn-gold"
+                                      : draggingRole !== null && valid
+                                        ? "ring-1 ring-dn-gold/40"
+                                        : draggingRole !== null && !valid
+                                          ? "opacity-40"
+                                          : "";
+                                  return (
+                                    <div
+                                      key={role}
+                                      onDragOver={(e) => {
+                                        e.preventDefault();
+                                        if (valid) setDragOverZone(zoneKey);
+                                      }}
+                                      onDragLeave={() =>
+                                        setDragOverZone((z) => (z === zoneKey ? null : z))
+                                      }
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        setDragOverZone(null);
+                                        const emp = e.dataTransfer.getData("text/plain");
+                                        if (emp) void reassign(a, role, emp);
+                                      }}
+                                      className={[
+                                        "flex items-center gap-1 rounded px-1 transition-colors",
+                                        cls,
+                                      ].join(" ")}
+                                      data-testid={`slot-${role}-${a.duty_day_key}`}
+                                    >
+                                      <span className="text-[10px] font-semibold text-dn-steel">
+                                        {role}
+                                      </span>
+                                      <span
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.setData("text/plain", id);
+                                          const r = crewByEmpNo.get(id)?.role;
+                                          setDraggingRole(r === "CAPT" ? "CAPT" : "FO");
+                                        }}
+                                        onDragEnd={() => setDraggingRole(null)}
+                                        className="cursor-grab truncate text-dn-muted"
+                                        title="Drag onto another duty to move this crew"
+                                      >
+                                        {crewLabel(id)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                {savingKey === a.duty_day_key ? (
+                                  <span className="text-[10px] text-dn-muted">checking FTL…</span>
+                                ) : a.legality_state ? (
+                                  <Badge tone={legalityTone(a.legality_state)}>
+                                    {a.legality_state}
+                                  </Badge>
+                                ) : (
+                                  <span />
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setEditing(a)}
+                                  className="text-dn-steel underline text-xs"
+                                  data-testid={`amend-btn-${a.duty_day_key}`}
+                                >
+                                  amend
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
           {rows.length === 0 && !loading && !error && (
             <p className="mt-4 text-sm text-dn-muted" data-testid="roster-empty-hint">

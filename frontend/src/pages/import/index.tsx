@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { tokenStore } from "@/lib/api";
+import { authFetch } from "@/lib/api";
 
 type ImportKind = {
   key: string;
@@ -110,10 +110,8 @@ export function ImportPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const token = tokenStore.getAccess();
-      const res = await fetch(`${kind.path}?commit=${commit}`, {
+      const res = await authFetch(`${kind.path}?commit=${commit}`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: fd,
       });
       const body = (await res.json()) as ImportResult;

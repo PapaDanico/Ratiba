@@ -3,7 +3,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { api, ApiError, tokenStore } from "@/lib/api";
+import { api, ApiError, authFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { TeamPanel } from "./TeamPanel";
@@ -127,9 +127,7 @@ export function SettingsPage() {
     setExporting(true);
     setExportErr(null);
     try {
-      const resp = await fetch("/api/v1/settings/operator/export", {
-        headers: { Authorization: `Bearer ${tokenStore.getAccess() ?? ""}` },
-      });
+      const resp = await authFetch("/api/v1/settings/operator/export");
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
       const disposition = resp.headers.get("content-disposition") ?? "";

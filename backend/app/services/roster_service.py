@@ -457,6 +457,139 @@ def _worst_state(states: list[LegalityState]) -> LegalityState | None:
 # -----------------------------------------------------------------------------
 
 
+def _sector_to_input(s: Sector) -> SectorInputIn:
+    return SectorInputIn(
+        sector_id=s.flight_no,
+        date_local=s.date,
+        std=s.std,
+        sta=s.sta,
+        aircraft_reg=s.aircraft_reg,
+        aircraft_type=s.aircraft_type,
+        block_hours=Decimal(str((s.sta - s.std).total_seconds() / 3600.0)),
+    )
+
+
+def _recompute_crew_legality(
+    session: Session,
+    *,
+    user: User,
+    crew_ids: set[uuid.UUID],
+    from_date: date,
+) -> LegalityState:
+    """Recompute + persist FTL legality for each crew's published duty days on or
+    after ``from_date``, upserting their ``FlightDutyPeriod`` rows.
+
+    The cumulative-hours, rest-minimum and weekly-rest rules are backward-looking,
+    so changing one day's crew affects that day **and every later day** within the
+    window. We therefore replay each affected crew forward from ``from_date``,
+    seeding history from their FDPs in the prior 365 days and accumulating each
+    recomputed day. Returns the worst legality on ``from_date`` (the amended day).
+    """
+    # Reconstruct each affected crew's duty days from the (current) published
+    # sector assignments — the caller has already applied the swap.
+    sa_rows = session.scalars(
+        select(SectorAssignment).where(SectorAssignment.crew_id.in_(crew_ids))
+    ).all()
+    sector_ids = {sa.sector_id for sa in sa_rows}
+    sectors = (
+        session.scalars(
+            select(Sector)
+            .where(Sector.id.in_(sector_ids))
+            .where(Sector.operator_id == user.operator_id)
+            .where(Sector.status == SectorStatus.PUBLISHED)
+            .where(Sector.date >= from_date)
+        ).all()
+        if sector_ids
+        else []
+    )
+    sector_by_id = {s.id: s for s in sectors}
+    crew_day_sectors: dict[tuple[uuid.UUID, date], list[SectorInputIn]] = defaultdict(list)
+    for sa in sa_rows:
+        sector = sector_by_id.get(sa.sector_id)
+        if sector is not None:
+            crew_day_sectors[(sa.crew_id, sector.date)].append(_sector_to_input(sector))
+
+    # Seed history from each crew's persisted FDPs in the year before from_date.
+    window_start = from_date - timedelta(days=365)
+    history_by_crew: dict[uuid.UUID, list[ftl_engine.FdpHistoryEntry]] = defaultdict(list)
+    prior_fdps = session.scalars(
+        select(FlightDutyPeriod)
+        .where(FlightDutyPeriod.crew_id.in_(crew_ids))
+        .where(FlightDutyPeriod.date >= window_start)
+        .where(FlightDutyPeriod.date < from_date)
+    ).all()
+    for f in prior_fdps:
+        history_by_crew[f.crew_id].append(_fdp_to_history(f))
+
+    days_by_crew: dict[uuid.UUID, list[date]] = defaultdict(list)
+    for crew_id, day in crew_day_sectors:
+        days_by_crew[crew_id].append(day)
+
+    worst_on_from_date: LegalityState = LegalityState.LEGAL
+    for crew_id, days in days_by_crew.items():
+        accumulated = history_by_crew[crew_id]
+        for day in sorted(days):
+            inputs = crew_day_sectors[(crew_id, day)]
+            (report, off, sectors_count, flight_h, duty_h, legality, rules_applied) = (
+                _compute_fdp_legality(
+                    inputs,
+                    crew_id,
+                    day,
+                    session=session,
+                    operator_id=user.operator_id,
+                    history=tuple(accumulated),
+                )
+            )
+            existing = session.scalar(
+                select(FlightDutyPeriod)
+                .where(FlightDutyPeriod.crew_id == crew_id)
+                .where(FlightDutyPeriod.date == day)
+            )
+            if existing is not None:
+                existing.report_time = report
+                existing.off_duty_time = off
+                existing.sectors_count = sectors_count
+                existing.flight_hours = float(flight_h)
+                existing.duty_hours = float(duty_h)
+                existing.legality_state = legality
+                existing.ftl_rules_applied = rules_applied
+            else:
+                session.add(
+                    FlightDutyPeriod(
+                        operator_id=user.operator_id,
+                        created_by_user_id=user.id,
+                        crew_id=crew_id,
+                        date=day,
+                        report_time=report,
+                        off_duty_time=off,
+                        sectors_count=sectors_count,
+                        flight_hours=flight_h,
+                        duty_hours=duty_h,
+                        type=FdpType.FDP,
+                        legality_state=legality,
+                        ftl_rules_applied=rules_applied,
+                    )
+                )
+            accumulated.append(
+                ftl_engine.FdpHistoryEntry(
+                    date_local=day.isoformat(),
+                    report_time=report,
+                    off_duty_time=off,
+                    duty_hours=duty_h,
+                    flight_hours=flight_h,
+                    sectors_count=sectors_count,
+                    fdp_type=FdpType.FDP,
+                    at_home_base=True,
+                )
+            )
+            if day == from_date and _STATE_PRECEDENCE.index(legality) > _STATE_PRECEDENCE.index(
+                worst_on_from_date
+            ):
+                worst_on_from_date = legality
+    session.flush()
+    return worst_on_from_date
+
+
 def amend_roster(
     session: Session,
     *,
@@ -526,7 +659,10 @@ def amend_roster(
                 )
             )
 
-    # Replace the FDP rows for any crew whose involvement changed (old + new).
+    # Delete the amended day's FDP rows for every crew whose involvement changed
+    # (old + new); the cascade helper recreates them and recomputes legality for
+    # this day *and every later day* of those crew (cumulative/rest/weekly rules
+    # are backward-looking, so the change ripples forward).
     affected_crew = old_crew_ids | {new_captain.id, new_fo.id}
     old_fdps = session.scalars(
         select(FlightDutyPeriod)
@@ -537,51 +673,7 @@ def amend_roster(
         session.delete(fdp)
     session.flush()
 
-    # Build a fresh SectorInputIn list for the FDP computation.
-    day_sector_inputs = [
-        SectorInputIn(
-            sector_id=s.flight_no,
-            date_local=s.date,
-            std=s.std,
-            sta=s.sta,
-            aircraft_reg=s.aircraft_reg,
-            aircraft_type=s.aircraft_type,
-            block_hours=Decimal(str((s.sta - s.std).total_seconds() / 3600.0)),
-        )
-        for s in sectors
-    ]
-    aggregated: LegalityState = LegalityState.LEGAL
-    for crew in (new_captain, new_fo):
-        (
-            report,
-            off,
-            sectors_count,
-            flight_h,
-            duty_h,
-            legality,
-            rules_applied,
-        ) = _compute_fdp_legality(
-            day_sector_inputs, crew.id, day, session=session, operator_id=user.operator_id
-        )
-        session.add(
-            FlightDutyPeriod(
-                operator_id=user.operator_id,
-                created_by_user_id=user.id,
-                crew_id=crew.id,
-                date=day,
-                report_time=report,
-                off_duty_time=off,
-                sectors_count=sectors_count,
-                flight_hours=flight_h,
-                duty_hours=duty_h,
-                type=FdpType.FDP,
-                legality_state=legality,
-                ftl_rules_applied=rules_applied,
-            )
-        )
-        if _STATE_PRECEDENCE.index(legality) > _STATE_PRECEDENCE.index(aggregated):
-            aggregated = legality
-    session.flush()
+    aggregated = _recompute_crew_legality(session, user=user, crew_ids=affected_crew, from_date=day)
 
     audit_log.record(
         session,
