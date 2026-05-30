@@ -23,8 +23,10 @@ product:
 2. **Does the KCAA audit pack look like something you'd present to FOI?**
    What's missing? What's there but you wouldn't include? Where's the
    wording off?
-3. **Would your pilots use the Telegram bot?** Or would they ignore it
-   and stay with WhatsApp groups + screenshots?
+3. **How would your pilots want to receive their roster?** Ratiba now offers
+   three reach options — a Telegram bot, a phone web view, and one-tap
+   **WhatsApp / SMS / email** sharing of the roster/duty and the pairing link.
+   Which fits how your crew actually communicate today?
 4. **What's the one thing that has to be true for you to roll this out
    to your full crew complement?** (Be brutal — we'd rather hear "no"
    now than discover it after a contract.)
@@ -36,9 +38,14 @@ the operator who showed you Ratiba.
 
 ### 1. Overview tile (30 s)
 
-The landing page after login shows three numbers: pending leave
-requests, a currency traffic-light tile, and a pointer to the roster.
-**Does the "at a glance" balance feel right for your morning standup?**
+The landing page leads with an **attention banner** — "one thing that needs
+you" — that surfaces the single most-urgent item by severity (an expired
+currency, a HIGH fatigue flag, expiring currencies, pending approvals, or
+unacknowledged notices) and links straight to the screen that resolves it.
+Below it are the at-a-glance tiles: pending leave + swaps, a currency
+traffic-light, fatigue watch, and notices.
+**Does the "one thing that needs you" banner pick what *you'd* triage first on
+your morning standup?**
 
 ### 2. Roster calendar (3 min) — `/roster`
 
@@ -49,18 +56,22 @@ date). Coloured pills surface FTL legality at a glance — green
 
 Try this:
 
-- **Amend a duty day.** Click "amend" on any cell, swap one of the
-  pilots, supply a reason ("Captain unavailable — flu"), submit. The
-  audit trail records this with before/after states; the next
-  generated audit pack will show it.
-- **Notice the legality pill recompute** when you amend. Each FDP runs
-  through `app.services.ftl_engine` on save.
-- **Pick a different date window** to confirm the calendar handles
-  multi-month views cleanly.
+- **Drag-and-drop reassign.** Drag a crew member from the palette (or an
+  already-assigned name) onto a duty's CAPT or FO slot. The FTL check runs
+  live and the legality pill reconciles; an invalid drop (e.g. an FO onto a
+  Captain seat) is refused with a reason, and a backend rejection rolls the
+  move back. Every drop is a reason-stamped amendment in the audit trail.
+- **Amend a duty day** via the "amend" link for the same effect with a custom
+  reason. The audit trail records before/after; the next audit pack shows it.
+- **Notice the legality pill recompute** on every change — each FDP runs
+  through `app.services.ftl_engine`, and the change cascades to that crew's
+  later days too (cumulative / rest / weekly-rest windows are backward-looking).
+- **Toggle Comfortable / Compact** (top-right) to fit more of the 28-day grid
+  on screen; the choice is remembered.
 
-Question for feedback: **does the calendar grid match the mental model
-you have when you look at your current Excel roster?** If not, what
-shape would?
+Question for feedback: **does the calendar grid — and dragging crew between
+duties — match the mental model you have when you look at your current Excel
+roster?** If not, what shape would?
 
 ### 3. Crew + currency dashboard (1 min) — `/crew` and `/currency`
 
@@ -114,15 +125,18 @@ phone-sized web view. Same data, same surface.
 
 To try the web view:
 
-1. On `/crew`, find a pilot row and click "Issue pairing code"
-   (or run `curl` against `POST /api/v1/crew/{id}/pairing-token`).
-2. Open `http://localhost:3000/crew/me` in a mobile-sized browser
-   window.
-3. Paste the code. You're paired.
+1. On `/crew`, find a pilot row and click **"Pair device"**. This issues a
+   single-use code and shows a one-tap pairing **link** — plus **WhatsApp /
+   SMS / Email** buttons that open your own messaging app with the link
+   pre-filled to send to the pilot.
+2. Open that link (`/crew/me?pair=…`) in a mobile-sized browser window — it
+   **auto-pairs** on arrival, no code typing. (You can still paste the raw
+   code manually if you prefer.)
 
-Now click through the three tabs — Today, Roster, Currency. **Does
-this give your pilots enough? What's the one extra thing they'd ask
-for?**
+Now click through the tabs — Today, Roster, Currency, Notices. Each of Today
+and Roster has its own **Share** row (WhatsApp / SMS / Email) so a pilot can
+forward their duty or roster the way they actually communicate. **Does this
+give your pilots enough? What's the one extra thing they'd ask for?**
 
 (If `TELEGRAM_BOT_TOKEN` is set in `.env`, the same surface is
 available through your bot's chat — Phase 4 wired all seven commands.)
