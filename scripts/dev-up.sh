@@ -71,11 +71,22 @@ if [ "$(psql_q ratiba 'SELECT count(*) FROM users' || echo 0)" = "0" ]; then
 fi
 
 # 6) App servers -----------------------------------------------------------
+# Cookie policy. The Claude Code web preview serves the app over HTTPS inside a
+# cross-site iframe (under claude.ai), where browsers drop SameSite=Lax cookies
+# as third-party — which would silently break login (cookies set, never sent
+# back). There we need SameSite=None + Secure. Local-machine dev serves over
+# plain HTTP, where Secure cookies can't travel, so it stays Lax/insecure.
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+  COOKIE_SAMESITE="none"; COOKIE_SECURE="true"
+else
+  COOKIE_SAMESITE="lax"; COOKIE_SECURE="false"
+fi
 if ! curl -s -o /dev/null http://127.0.0.1:8000/healthz 2>/dev/null; then
-  log "starting backend (:8000)"
+  log "starting backend (:8000)  [cookies: samesite=$COOKIE_SAMESITE secure=$COOKIE_SECURE]"
   (cd "$REPO/backend" && DATABASE_URL="$DBURL" \
     SECRET_KEY="change_me_dev_only_change_me_dev_only_change_me_dev_only_12345" \
     FRONTEND_URL="http://localhost:3000" ENVIRONMENT="development" \
+    COOKIE_SAMESITE="$COOKIE_SAMESITE" COOKIE_SECURE="$COOKIE_SECURE" \
     nohup "$VENV/bin/uvicorn" app.main:app --host 127.0.0.1 --port 8000 \
     >/tmp/ratiba-backend.log 2>&1 &)
 fi

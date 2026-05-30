@@ -12,6 +12,9 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    // The Claude Code web preview reaches the dev server through an arbitrary
+    // proxy host; without this, Vite rejects the unknown Host header.
+    allowedHosts: true,
     proxy: {
       "/api": {
         target: process.env.VITE_BACKEND_URL ?? "http://localhost:8000",
