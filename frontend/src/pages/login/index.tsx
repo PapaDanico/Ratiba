@@ -17,13 +17,15 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [waking, setWaking] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setWaking(false);
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email, password, () => setWaking(true));
       navigate("/", { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -33,6 +35,7 @@ export function LoginPage() {
       }
     } finally {
       setSubmitting(false);
+      setWaking(false);
     }
   }
 
@@ -186,6 +189,11 @@ export function LoginPage() {
                       {error}
                     </p>
                   )}
+                  {waking && !error && (
+                    <p className="text-sm text-dn-muted" role="status" data-testid="login-waking">
+                      Waking the server — this can take up to a minute on first use. Hang tight…
+                    </p>
+                  )}
                   <Button
                     type="submit"
                     className="w-full mt-2"
@@ -193,7 +201,7 @@ export function LoginPage() {
                     disabled={submitting}
                     data-testid="login-submit"
                   >
-                    {submitting ? "Signing in…" : "Sign in"}
+                    {waking ? "Waking the server…" : submitting ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>
               ) : (

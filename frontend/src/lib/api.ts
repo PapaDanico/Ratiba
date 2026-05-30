@@ -169,17 +169,48 @@ export async function api<T = unknown>(
   return (await resp.json()) as T;
 }
 
-export async function login(email: string, password: string): Promise<void> {
-  // The backend sets httpOnly session cookies AND returns the token pair in the
-  // body. We capture the pair in memory so the session also works where cookies
-  // can't round-trip (cross-site preview iframe / blocked third-party cookies).
-  const resp = await fetch("/api/v1/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-    credentials: "include",
-  });
-  if (!resp.ok) {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Log in, transparently riding out a server cold-start. On a free-tier host the
+ * API can be asleep on the first request and the proxy returns 502/503/504 (or
+ * the fetch network-errors) for ~30-60s while it wakes — which otherwise shows
+ * the user a scary "something went wrong". We retry those *transient* failures
+ * with backoff, calling `onWaking` so the form can show a "waking the server…"
+ * hint. A 401 (bad credentials) is NOT transient and rejects immediately.
+ */
+export async function login(email: string, password: string, onWaking?: () => void): Promise<void> {
+  // Total budget ~45s: covers a typical free-tier cold start.
+  const delays = [0, 1500, 3000, 5000, 8000, 8000, 8000, 8000];
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < delays.length; attempt++) {
+    if (attempt > 0) {
+      onWaking?.();
+      await sleep(delays[attempt] ?? 8000);
+    }
+    let resp: Response;
+    try {
+      resp = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
+    } catch (netErr) {
+      // Network error (server not reachable yet) — transient, keep retrying.
+      lastErr = netErr;
+      continue;
+    }
+    if (resp.ok) {
+      await captureTokens(resp);
+      return;
+    }
+    // 5xx / 502 / 503 / 504 → cold-start; retry. Anything else (401, 400, 429)
+    // is a real answer — surface it immediately.
+    if (resp.status >= 500) {
+      lastErr = new ApiError(resp.status, await resp.text().catch(() => null));
+      continue;
+    }
     let body: unknown = null;
     try {
       body = await resp.json();
@@ -188,7 +219,8 @@ export async function login(email: string, password: string): Promise<void> {
     }
     throw new ApiError(resp.status, body);
   }
-  await captureTokens(resp);
+  // Exhausted retries — the server never woke.
+  throw lastErr instanceof ApiError ? lastErr : new ApiError(503, "server unavailable");
 }
 
 export function logout(): void {
