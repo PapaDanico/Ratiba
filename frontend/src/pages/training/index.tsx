@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
 
 type Crew = {
@@ -101,7 +102,7 @@ function RecurrencySection() {
       </CardHeader>
       <CardBody>
         {loading ? (
-          <p className="text-sm text-dn-muted">Loading…</p>
+          <TableSkeleton rows={6} cols={6} />
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : items.length === 0 ? (
@@ -311,7 +312,7 @@ function TypeRatingsSection() {
         </form>
 
         {loading ? (
-          <p className="text-sm text-dn-muted">Loading…</p>
+          <TableSkeleton rows={6} cols={6} />
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : ratings.length === 0 ? (

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
 
 type AircraftType = {
@@ -151,7 +152,7 @@ export function FleetPage() {
         </CardHeader>
         <CardBody>
           {loading ? (
-            <p className="text-sm text-dn-muted">Loading…</p>
+            <TableSkeleton rows={5} cols={3} />
           ) : fleet.length === 0 ? (
             <p className="text-sm text-dn-muted" data-testid="no-fleet">
               No aircraft registered yet.

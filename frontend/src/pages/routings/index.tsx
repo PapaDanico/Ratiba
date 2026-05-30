@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
 
 type Sector = {
@@ -563,7 +564,7 @@ export function RoutingsPage() {
         </CardHeader>
         <CardBody>
           {loading ? (
-            <p className="text-sm text-dn-muted">Loading…</p>
+            <TableSkeleton rows={6} cols={9} />
           ) : error ? (
             <p className="text-sm text-dn-red">{error}</p>
           ) : rows.length === 0 ? (

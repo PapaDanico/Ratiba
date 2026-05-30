@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -234,7 +235,7 @@ export function DocumentsPage() {
         </form>
 
         {loading ? (
-          <p className="text-sm text-dn-muted">Loading…</p>
+          <TableSkeleton rows={6} cols={8} />
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : docs.length === 0 ? (
