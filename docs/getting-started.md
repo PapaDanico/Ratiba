@@ -2,7 +2,8 @@
 
 This guide takes you from a fresh `git clone` to a populated dashboard
 with two operators, mixed currency states, a 14-day published roster,
-pending leave + swap requests, and a downloadable KCAA audit pack.
+pending leave + swap requests, and a one-click KCAA audit pack you can
+generate and download from the Audit packs page.
 
 ## Prerequisites
 
@@ -32,8 +33,12 @@ docker compose up --build
 docker compose exec backend alembic upgrade head
 
 # 5. Populate two demo operators with crew, currencies, a roster, and
-#    a generated audit pack.
+#    pending leave + swap requests.
 docker compose exec backend python scripts/seed.py --demo
+
+#    Audit-pack PDFs are generated on demand (the Audit packs page) to keep the
+#    seed light on small instances. To pre-generate one per operator, set:
+#    docker compose exec -e RATIBA_SEED_AUDIT_PACKS=1 backend python scripts/seed.py --demo
 ```
 
 ## What you have now
