@@ -554,7 +554,7 @@ export function CrewPage() {
                         but kept full-opacity on touch (no hover) and on focus-within
                         for keyboard users. */}
                     <td data-label="" className="py-3 pr-4">
-                      <div className="flex flex-wrap justify-end gap-2 opacity-70 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 md:opacity-60">
+                      <div className="row-actions flex flex-wrap justify-end gap-2">
                         <RosterPdfButton crew={c} />
                         <CalendarFeedButton crew={c} />
                         <PairDeviceButton crew={c} />
