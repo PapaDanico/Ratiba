@@ -60,10 +60,12 @@ through the dashboard for a 10-minute evaluation.
 The Telegram bot stays idle unless you set `TELEGRAM_BOT_TOKEN` — fine
 for the evaluation. To try the `/crew/me` mobile-first web view:
 
-1. Click into a crew member from the dashboard's Crew page.
-2. Issue a pairing code (button on the crew row).
-3. Open http://localhost:3000/crew/me in a phone-sized browser window.
-4. Enter the code.
+1. On the dashboard's Crew page, click **"Pair device"** on a crew row.
+2. Copy the one-tap pairing **link** it shows (or share it via the
+   WhatsApp / SMS / Email buttons).
+3. Open that link in a phone-sized browser window — it **auto-pairs** on
+   arrival. (You can also open `http://localhost:3000/crew/me` and paste the
+   raw code manually.)
 
 You're now seeing the same surface a pilot would see in Telegram.
 
