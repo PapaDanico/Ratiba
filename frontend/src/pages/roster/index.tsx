@@ -417,9 +417,7 @@ export function RosterPage() {
       // recomputed legality needs reconciling from the response.
       setRows((rs) =>
         rs.map((r) =>
-          r.duty_day_key === a.duty_day_key
-            ? { ...r, legality_state: res.legality_state }
-            : r,
+          r.duty_day_key === a.duty_day_key ? { ...r, legality_state: res.legality_state } : r,
         ),
       );
       const bad =
@@ -660,107 +658,111 @@ export function RosterPage() {
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-7 gap-2" data-testid="roster-calendar">
-              {days.map((d) => {
-                const dayAssignments = byDate.get(d) ?? [];
-                const holidayName = holidayByDate.get(d);
-                return (
-                  <div
-                    key={d}
-                    className={[
-                      "rounded-md border p-2 min-h-[100px]",
-                      holidayName ? "bg-amber-50 border-amber-200" : "bg-dn-fog border-dn-steel-lt",
-                    ].join(" ")}
-                  >
-                    <div className="font-mono text-xs text-dn-steel mb-1">{d}</div>
-                    {holidayName && (
-                      <div
-                        className="text-xs font-medium text-amber-700 mb-1 truncate"
-                        title={holidayName}
-                      >
-                        🏛 {holidayName}
-                      </div>
-                    )}
-                    {dayAssignments.length === 0 ? (
-                      <div className="text-xs text-dn-muted">—</div>
-                    ) : (
-                      <ul className="space-y-1">
-                        {dayAssignments.map((a) => (
-                          <li
-                            key={a.duty_day_key}
-                            className="bg-white rounded border border-dn-steel-lt px-2 py-1 text-xs"
-                          >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="font-mono">{a.aircraft_reg}</span>
-                              <Badge tone="steel">{a.aircraft_type}</Badge>
-                            </div>
-                            <div className="mt-0.5 space-y-0.5">
-                              {(["CAPT", "FO"] as const).map((role) => {
-                                const id = role === "CAPT" ? a.captain_id : a.fo_id;
-                                const zoneKey = `${a.duty_day_key}:${role}`;
-                                const isOver = dragOverZone === zoneKey;
-                                return (
-                                  <div
-                                    key={role}
-                                    onDragOver={(e) => {
-                                      e.preventDefault();
-                                      setDragOverZone(zoneKey);
-                                    }}
-                                    onDragLeave={() =>
-                                      setDragOverZone((z) => (z === zoneKey ? null : z))
-                                    }
-                                    onDrop={(e) => {
-                                      e.preventDefault();
-                                      setDragOverZone(null);
-                                      const emp = e.dataTransfer.getData("text/plain");
-                                      if (emp) void reassign(a, role, emp);
-                                    }}
-                                    className={[
-                                      "flex items-center gap-1 rounded px-1 transition-colors",
-                                      isOver ? "bg-dn-gold/30 ring-1 ring-dn-gold" : "",
-                                    ].join(" ")}
-                                    data-testid={`slot-${role}-${a.duty_day_key}`}
-                                  >
-                                    <span className="text-[10px] font-semibold text-dn-steel">
-                                      {role}
-                                    </span>
-                                    <span
-                                      draggable
-                                      onDragStart={(e) => e.dataTransfer.setData("text/plain", id)}
-                                      className="cursor-grab truncate text-dn-muted"
-                                      title="Drag onto another duty to move this crew"
+                {days.map((d) => {
+                  const dayAssignments = byDate.get(d) ?? [];
+                  const holidayName = holidayByDate.get(d);
+                  return (
+                    <div
+                      key={d}
+                      className={[
+                        "rounded-md border p-2 min-h-[100px]",
+                        holidayName
+                          ? "bg-amber-50 border-amber-200"
+                          : "bg-dn-fog border-dn-steel-lt",
+                      ].join(" ")}
+                    >
+                      <div className="font-mono text-xs text-dn-steel mb-1">{d}</div>
+                      {holidayName && (
+                        <div
+                          className="text-xs font-medium text-amber-700 mb-1 truncate"
+                          title={holidayName}
+                        >
+                          🏛 {holidayName}
+                        </div>
+                      )}
+                      {dayAssignments.length === 0 ? (
+                        <div className="text-xs text-dn-muted">—</div>
+                      ) : (
+                        <ul className="space-y-1">
+                          {dayAssignments.map((a) => (
+                            <li
+                              key={a.duty_day_key}
+                              className="bg-white rounded border border-dn-steel-lt px-2 py-1 text-xs"
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="font-mono">{a.aircraft_reg}</span>
+                                <Badge tone="steel">{a.aircraft_type}</Badge>
+                              </div>
+                              <div className="mt-0.5 space-y-0.5">
+                                {(["CAPT", "FO"] as const).map((role) => {
+                                  const id = role === "CAPT" ? a.captain_id : a.fo_id;
+                                  const zoneKey = `${a.duty_day_key}:${role}`;
+                                  const isOver = dragOverZone === zoneKey;
+                                  return (
+                                    <div
+                                      key={role}
+                                      onDragOver={(e) => {
+                                        e.preventDefault();
+                                        setDragOverZone(zoneKey);
+                                      }}
+                                      onDragLeave={() =>
+                                        setDragOverZone((z) => (z === zoneKey ? null : z))
+                                      }
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        setDragOverZone(null);
+                                        const emp = e.dataTransfer.getData("text/plain");
+                                        if (emp) void reassign(a, role, emp);
+                                      }}
+                                      className={[
+                                        "flex items-center gap-1 rounded px-1 transition-colors",
+                                        isOver ? "bg-dn-gold/30 ring-1 ring-dn-gold" : "",
+                                      ].join(" ")}
+                                      data-testid={`slot-${role}-${a.duty_day_key}`}
                                     >
-                                      {crewLabel(id)}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <div className="flex items-center justify-between mt-1">
-                              {savingKey === a.duty_day_key ? (
-                                <span className="text-[10px] text-dn-muted">checking FTL…</span>
-                              ) : a.legality_state ? (
-                                <Badge tone={legalityTone(a.legality_state)}>
-                                  {a.legality_state}
-                                </Badge>
-                              ) : (
-                                <span />
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => setEditing(a)}
-                                className="text-dn-steel underline text-xs"
-                                data-testid={`amend-btn-${a.duty_day_key}`}
-                              >
-                                amend
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                );
-              })}
+                                      <span className="text-[10px] font-semibold text-dn-steel">
+                                        {role}
+                                      </span>
+                                      <span
+                                        draggable
+                                        onDragStart={(e) =>
+                                          e.dataTransfer.setData("text/plain", id)
+                                        }
+                                        className="cursor-grab truncate text-dn-muted"
+                                        title="Drag onto another duty to move this crew"
+                                      >
+                                        {crewLabel(id)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                {savingKey === a.duty_day_key ? (
+                                  <span className="text-[10px] text-dn-muted">checking FTL…</span>
+                                ) : a.legality_state ? (
+                                  <Badge tone={legalityTone(a.legality_state)}>
+                                    {a.legality_state}
+                                  </Badge>
+                                ) : (
+                                  <span />
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setEditing(a)}
+                                  className="text-dn-steel underline text-xs"
+                                  data-testid={`amend-btn-${a.duty_day_key}`}
+                                >
+                                  amend
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
