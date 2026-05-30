@@ -176,3 +176,23 @@ def auth_client(
         c.headers["Authorization"] = f"Bearer {token}"
         yield c, seeded_user
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def web_client(
+    db_engine,  # type: ignore[no-untyped-def]
+    db_session: Session,
+    seeded_user: User,
+) -> Iterator[tuple[TestClient, User]]:
+    """Browser-style client bound to ``db_session`` — *not* pre-authenticated and
+    with no forced ``Authorization`` header, so it exercises the httpOnly-cookie
+    session + CSRF path the dashboard actually uses."""
+    app = create_app()
+
+    def _override_get_db() -> Iterator[Session]:
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override_get_db
+    with TestClient(app) as c:
+        yield c, seeded_user
+    app.dependency_overrides.clear()

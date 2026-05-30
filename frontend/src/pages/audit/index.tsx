@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { api, ApiError, tokenStore } from "@/lib/api";
+import { api, ApiError, authFetch } from "@/lib/api";
 
 type AuditPack = {
   id: string;
@@ -89,9 +89,7 @@ export function AuditPage() {
 
   async function startDownload(id: string) {
     try {
-      const resp = await fetch(`/api/v1/audit/packs/${id}/download`, {
-        headers: { Authorization: `Bearer ${tokenStore.getAccess() ?? ""}` },
-      });
+      const resp = await authFetch(`/api/v1/audit/packs/${id}/download`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
@@ -110,9 +108,7 @@ export function AuditPage() {
   async function downloadPayroll() {
     try {
       const url = `/api/v1/reports/payroll.csv?date_from=${periodFrom}&date_to=${periodTo}`;
-      const resp = await fetch(url, {
-        headers: { Authorization: `Bearer ${tokenStore.getAccess() ?? ""}` },
-      });
+      const resp = await authFetch(url);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
       const objectUrl = URL.createObjectURL(blob);

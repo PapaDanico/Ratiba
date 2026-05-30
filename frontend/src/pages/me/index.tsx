@@ -350,7 +350,7 @@ export function CrewMePage() {
   const [profile, setProfile] = useState<PilotProfile | null>(() => pilotStore.getProfile());
   const [tab, setTab] = useState<Tab>("today");
 
-  if (!profile || !pilotStore.getToken()) {
+  if (!profile) {
     return <PairingScreen onPaired={setProfile} />;
   }
 

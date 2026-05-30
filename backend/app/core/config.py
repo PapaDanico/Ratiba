@@ -50,6 +50,11 @@ class Settings(BaseSettings):
         default=60, alias="JWT_ACCESS_TOKEN_EXPIRE_MINUTES"
     )
     jwt_refresh_token_expire_days: int = Field(default=30, alias="JWT_REFRESH_TOKEN_EXPIRE_DAYS")
+    # Browser sessions carry their JWTs in httpOnly cookies (defence against XSS
+    # token theft). Set COOKIE_SECURE=true wherever the dashboard is served over
+    # HTTPS so the cookies are only ever sent on secure connections. Local dev /
+    # tests run over plain HTTP, so the default is False.
+    cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
 
     # Compliance
     kdpa_data_region: str = Field(default="ke-1", alias="KDPA_DATA_REGION")

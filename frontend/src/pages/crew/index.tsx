@@ -4,7 +4,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { api, ApiError, tokenStore } from "@/lib/api";
+import { api, ApiError, authFetch } from "@/lib/api";
 
 type Crew = {
   id: string;
@@ -189,10 +189,7 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
     setError(null);
     try {
       const url = `/api/v1/roster/crew/${crew.id}/monthly-pdf?year=${year}&month=${month}`;
-      const token = tokenStore.getAccess();
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await authFetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const link = document.createElement("a");
