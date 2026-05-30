@@ -21,11 +21,16 @@ server {
     # and Render's edge rejects the handshake (no SNI = wrong certificate).
     resolver 8.8.8.8 valid=30s ipv6=off;
 
-    # Proxy backend routes: API, health, FastAPI docs
+    # Proxy backend routes: API, health, FastAPI docs.
+    # Capture the full path so we can re-append it: with a *variable* proxy_pass
+    # in a regex location, nginx does NOT append the original request URI, so
+    # without this the path would be dropped and every /api call would hit the
+    # backend root ("/") — login etc. would 404. $request_uri keeps the query
+    # string too.
     location ~ ^/(api|healthz|version|docs|redoc|openapi\.json) {
         # Use a variable so nginx resolves per-request (enables SNI).
         set $upstream $BACKEND_URL;
-        proxy_pass $upstream;
+        proxy_pass $upstream$request_uri;
         proxy_ssl_server_name on;
         proxy_http_version 1.1;
         proxy_set_header Host $BACKEND_HOST;
