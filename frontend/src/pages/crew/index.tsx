@@ -4,6 +4,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ShareButtons } from "@/components/ui/ShareButtons";
 import { api, ApiError, authFetch } from "@/lib/api";
 
 type Crew = {
@@ -365,24 +366,8 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const link = code ? `${window.location.origin}/crew/me?pair=${code}` : null;
-
-  // Share the magic link straight to the pilot. WhatsApp/SMS/Email are deep
-  // links (no server-side WhatsApp channel needed); the recipient is pre-filled
-  // from the crew record when we have a phone/email.
-  const shareMessage = link
-    ? `Pair your Ratiba crew app — open this link on your phone: ${link}`
-    : "";
-  const phoneDigits = (crew.phone_number ?? "").replace(/\D/g, ""); // wa.me wants digits only
-  const smsPhone = (crew.phone_number ?? "").replace(/\s/g, ""); // keep a leading +, drop spaces
-  const whatsappHref = link
-    ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(shareMessage)}`
-    : "#";
-  const smsHref = link ? `sms:${smsPhone}?&body=${encodeURIComponent(shareMessage)}` : "#";
-  const emailHref = link
-    ? `mailto:${crew.email ?? ""}?subject=${encodeURIComponent(
-        "Ratiba crew app pairing",
-      )}&body=${encodeURIComponent(shareMessage)}`
-    : "#";
+  // Share the magic link straight to the pilot via their own messaging app.
+  const shareMessage = `Pair your Ratiba crew app — open this link on your phone: ${link}`;
 
   useEffect(() => {
     if (!open) return;
@@ -461,31 +446,13 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
               <Button size="sm" className="w-full" onClick={copy}>
                 {copied ? "Copied ✓" : "Copy pairing link"}
               </Button>
-              <div className="grid grid-cols-3 gap-1">
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded border border-dn-steel-lt px-1 py-1 text-center text-[11px] text-dn-steel hover:border-dn-gold hover:text-dn-dark"
-                  data-testid={`pair-share-whatsapp-${crew.id}`}
-                >
-                  WhatsApp
-                </a>
-                <a
-                  href={smsHref}
-                  className="rounded border border-dn-steel-lt px-1 py-1 text-center text-[11px] text-dn-steel hover:border-dn-gold hover:text-dn-dark"
-                  data-testid={`pair-share-sms-${crew.id}`}
-                >
-                  SMS
-                </a>
-                <a
-                  href={emailHref}
-                  className="rounded border border-dn-steel-lt px-1 py-1 text-center text-[11px] text-dn-steel hover:border-dn-gold hover:text-dn-dark"
-                  data-testid={`pair-share-email-${crew.id}`}
-                >
-                  Email
-                </a>
-              </div>
+              <ShareButtons
+                message={shareMessage}
+                phone={crew.phone_number}
+                email={crew.email}
+                subject="Ratiba crew app pairing"
+                testidPrefix={`pair-share-${crew.id}`}
+              />
               <p className="text-[10px] text-dn-muted">
                 Or dictate the code <span className="font-mono text-dn-steel">{code}</span>
                 {expiresAt ? ` · expires ${new Date(expiresAt).toLocaleString()}` : ""}
