@@ -235,8 +235,8 @@ export function DashboardPage() {
       )}
       <DemoGuide />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Link to="/leave" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/leave" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Pending leave</CardTitle>
             </CardHeader>
@@ -248,8 +248,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/swaps" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/swaps" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Pending swaps</CardTitle>
             </CardHeader>
@@ -261,8 +261,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/currency" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/currency" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Currency status</CardTitle>
             </CardHeader>
@@ -282,8 +282,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/fatigue" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/fatigue" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Fatigue watch</CardTitle>
             </CardHeader>
@@ -297,8 +297,8 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/notices" className="block transition hover:opacity-90">
-          <Card>
+        <Link to="/notices" className="block">
+          <Card interactive>
             <CardHeader>
               <CardTitle>Notices</CardTitle>
             </CardHeader>

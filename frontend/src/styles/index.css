@@ -82,6 +82,20 @@
 }
 
 /*
+ * Calm-grid polish for every `rtable` on desktop: a smooth hover highlight so
+ * the eye tracks across wide rows. Per-table rhythm/opacity (e.g. hover-reveal
+ * actions) stay in the component since they vary; this is the shared baseline.
+ */
+@media (min-width: 641px) {
+  table.rtable tbody tr {
+    transition: background-color 0.15s ease;
+  }
+  table.rtable tbody tr:hover {
+    background-color: #f7efe0; /* DN_FOG */
+  }
+}
+
+/*
  * Responsive data tables: on phones, collapse each row into a labelled
  * card (label from the cell's data-label, value on the right). Tag a
  * <table> with `rtable` and give each <td> a data-label.
