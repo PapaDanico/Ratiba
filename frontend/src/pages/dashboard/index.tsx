@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { api, ApiError } from "@/lib/api";
+import { safeStorage } from "@/lib/safeStorage";
 import { useAuth } from "@/lib/auth";
 
 const GUIDE_COLLAPSE_KEY = "ratiba.guide.collapsed";
@@ -47,14 +48,12 @@ const GUIDE_STEPS: Array<{ title: string; tab: string; detail: string }> = [
 ];
 
 function DemoGuide() {
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem(GUIDE_COLLAPSE_KEY) === "1",
-  );
+  const [collapsed, setCollapsed] = useState(() => safeStorage.get(GUIDE_COLLAPSE_KEY) === "1");
 
   function toggle() {
     const next = !collapsed;
     setCollapsed(next);
-    localStorage.setItem(GUIDE_COLLAPSE_KEY, next ? "1" : "0");
+    safeStorage.set(GUIDE_COLLAPSE_KEY, next ? "1" : "0");
   }
 
   return (

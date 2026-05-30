@@ -186,13 +186,30 @@ def web_client(
 ) -> Iterator[tuple[TestClient, User]]:
     """Browser-style client bound to ``db_session`` — *not* pre-authenticated and
     with no forced ``Authorization`` header, so it exercises the httpOnly-cookie
-    session + CSRF path the dashboard actually uses."""
+    session + CSRF path the dashboard actually uses.
+
+    Pins the cookie policy to ``SameSite=Lax`` / not-Secure for the duration of
+    the test: ``TestClient`` speaks plain HTTP, and a ``Secure`` cookie is never
+    returned over HTTP — so without this the cookie round-trip would break
+    whenever the ambient ``COOKIE_SECURE`` / ``COOKIE_SAMESITE`` env is set for a
+    real deployment (e.g. the web preview, which uses ``None``/Secure)."""
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    prev = (settings.cookie_secure, settings.cookie_samesite)
+    object.__setattr__(settings, "cookie_secure", False)
+    object.__setattr__(settings, "cookie_samesite", "lax")
+
     app = create_app()
 
     def _override_get_db() -> Iterator[Session]:
         yield db_session
 
     app.dependency_overrides[get_db] = _override_get_db
-    with TestClient(app) as c:
-        yield c, seeded_user
-    app.dependency_overrides.clear()
+    try:
+        with TestClient(app) as c:
+            yield c, seeded_user
+    finally:
+        app.dependency_overrides.clear()
+        object.__setattr__(settings, "cookie_secure", prev[0])
+        object.__setattr__(settings, "cookie_samesite", prev[1])

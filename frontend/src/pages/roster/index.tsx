@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { api, ApiError } from "@/lib/api";
+import { safeStorage } from "@/lib/safeStorage";
 import { useToast } from "@/lib/toast";
 import { AmendModal } from "@/components/roster/AmendModal";
 
@@ -349,14 +350,13 @@ export function RosterPage() {
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(addDays(todayIso(), 27));
   const [density, setDensity] = useState<"comfortable" | "compact">(
-    () =>
-      (localStorage.getItem("ratiba.roster.density") as "comfortable" | "compact") ?? "comfortable",
+    () => (safeStorage.get("ratiba.roster.density") as "comfortable" | "compact") ?? "comfortable",
   );
   const compact = density === "compact";
   function toggleDensity() {
     const next = compact ? "comfortable" : "compact";
     setDensity(next);
-    localStorage.setItem("ratiba.roster.density", next);
+    safeStorage.set("ratiba.roster.density", next);
   }
   const [rows, setRows] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
