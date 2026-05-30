@@ -49,19 +49,64 @@ function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // A one-tap pairing link carries ?pair=CODE; auto-redeem it on arrival.
+  const [autoPairing, setAutoPairing] = useState(
+    () => new URLSearchParams(window.location.search).get("pair") !== null,
+  );
+
+  async function pair(raw: string): Promise<void> {
+    const profile = await pilotPair(raw.trim().toUpperCase());
+    onPaired(profile);
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      const profile = await pilotPair(code.trim().toUpperCase());
-      onPaired(profile);
+      await pair(code);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pairing failed");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  useEffect(() => {
+    const linkCode = new URLSearchParams(window.location.search).get("pair");
+    if (!linkCode) return;
+    // Strip the code from the URL so it isn't bookmarked/shared or re-run.
+    window.history.replaceState(null, "", window.location.pathname);
+    setCode(linkCode.toUpperCase());
+    void pair(linkCode)
+      .catch((err: unknown) => {
+        setError(
+          err instanceof Error
+            ? `${err.message} — enter the code manually below.`
+            : "Pairing link failed — enter the code manually below.",
+        );
+      })
+      .finally(() => setAutoPairing(false));
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (autoPairing) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-dn-fog px-4">
+        <Card className="w-full max-w-sm">
+          <CardBody className="space-y-2 text-center">
+            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel">
+              Ratiba · Crew
+            </p>
+            <h1 className="font-display text-2xl text-dn-dark">Pairing your device…</h1>
+            <p className="text-sm text-dn-muted" data-testid="pairing-auto">
+              One moment while we link this device to your roster.
+            </p>
+          </CardBody>
+        </Card>
+      </main>
+    );
   }
 
   return (

@@ -355,6 +355,106 @@ function CalendarFeedButton({ crew }: { crew: Crew }) {
   );
 }
 
+function PairDeviceButton({ crew }: { crew: Crew }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const link = code ? `${window.location.origin}/crew/me?pair=${code}` : null;
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  async function generate() {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const res = await api<{ code: string; expires_at: string }>(
+        `/api/v1/crew/${crew.id}/pairing-token`,
+        { method: "POST" },
+      );
+      setCode(res.code);
+      setExpiresAt(res.expires_at);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to issue pairing code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    // Always mint a fresh single-use code when (re)opening.
+    if (next) await generate();
+  }
+
+  async function copy() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={toggle}
+        data-testid={`pair-device-btn-${crew.id}`}
+      >
+        Pair device
+      </Button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-dn-dark">Pair {crew.employee_no}&rsquo;s device</p>
+          <p className="text-xs text-dn-muted">
+            Send this one-tap link — opening it on the pilot&rsquo;s phone pairs the{" "}
+            <span className="font-mono">/crew/me</span> view automatically. Single-use.
+          </p>
+          {busy ? (
+            <p className="text-xs text-dn-muted">Issuing…</p>
+          ) : error ? (
+            <p className="text-xs text-dn-red">{error}</p>
+          ) : link ? (
+            <>
+              <textarea
+                readOnly
+                value={link}
+                className="w-full text-[10px] font-mono border border-dn-steel-lt rounded p-1 h-16"
+                onFocus={(e) => e.currentTarget.select()}
+                data-testid={`pair-link-${crew.id}`}
+              />
+              <Button size="sm" className="w-full" onClick={copy}>
+                {copied ? "Copied ✓" : "Copy pairing link"}
+              </Button>
+              <p className="text-[10px] text-dn-muted">
+                Or dictate the code <span className="font-mono text-dn-steel">{code}</span>
+                {expiresAt ? ` · expires ${new Date(expiresAt).toLocaleString()}` : ""}
+              </p>
+            </>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
@@ -444,6 +544,7 @@ export function CrewPage() {
                       <div className="flex gap-2">
                         <RosterPdfButton crew={c} />
                         <CalendarFeedButton crew={c} />
+                        <PairDeviceButton crew={c} />
                         <CrossOpFtlButton crew={c} />
                       </div>
                     </td>
