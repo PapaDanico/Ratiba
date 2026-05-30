@@ -148,6 +148,7 @@ def import_crew(
                         faith_flags[k.strip()] = v.strip().lower() in ("1", "true", "yes")
             email = (row.get("email") or "").strip() or None
             phone = (row.get("phone_number") or "").strip() or None
+            whatsapp = (row.get("whatsapp_number") or "").strip() or None
             if emp in existing:
                 crew = existing[emp]
                 crew.first_name = row["first_name"].strip()
@@ -165,6 +166,8 @@ def import_crew(
                     crew.email = email
                 if phone is not None:
                     crew.phone_number = phone
+                if whatsapp is not None:
+                    crew.whatsapp_number = whatsapp
                 result.updated += 1
             else:
                 session.add(
