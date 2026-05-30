@@ -5,6 +5,7 @@
  * localStorage, as the "this device is paired" marker. */
 
 import { authFetch, api } from "./api";
+import { safeStorage } from "./safeStorage";
 
 const PILOT_PROFILE_KEY = "ratiba.pilot_profile";
 
@@ -17,7 +18,7 @@ export type PilotProfile = {
 
 export const pilotStore = {
   getProfile: (): PilotProfile | null => {
-    const raw = localStorage.getItem(PILOT_PROFILE_KEY);
+    const raw = safeStorage.get(PILOT_PROFILE_KEY);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as PilotProfile;
@@ -26,10 +27,10 @@ export const pilotStore = {
     }
   },
   set: (profile: PilotProfile) => {
-    localStorage.setItem(PILOT_PROFILE_KEY, JSON.stringify(profile));
+    safeStorage.set(PILOT_PROFILE_KEY, JSON.stringify(profile));
   },
   clear: () => {
-    localStorage.removeItem(PILOT_PROFILE_KEY);
+    safeStorage.remove(PILOT_PROFILE_KEY);
     // Best-effort clear of the readable CSRF marker; the server expires the
     // httpOnly pilot cookie on its own schedule / on a 401.
     document.cookie = "rt_csrf=; Max-Age=0; path=/";
