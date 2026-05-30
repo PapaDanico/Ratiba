@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SortableTh } from "@/components/ui/SortableTh";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { useSort } from "@/lib/useSort";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -55,12 +57,22 @@ function label(value: string): string {
   return DOC_TYPES.find((d) => d.value === value)?.label ?? value;
 }
 
+type DocSortKey = "crew" | "type" | "expires" | "state";
+
 export function DocumentsPage() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [crew, setCrew] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const { sort, toggle, sorted } = useSort<DocSortKey>(null);
+  const visibleDocs = sorted(docs, {
+    crew: (d) => d.crew_name.toLowerCase(),
+    type: (d) => d.doc_type,
+    // Empty expiry sorts last in asc.
+    expires: (d) => d.expiry_date ?? "9999-12-31",
+    state: (d) => ({ RED: 0, AMBER: 1, GREEN: 2, NA: 3 })[d.state],
+  });
 
   // Add-form state
   const [crewId, setCrewId] = useState("");
@@ -249,18 +261,26 @@ export function DocumentsPage() {
             <table className="rtable min-w-full text-sm" data-testid="documents-table">
               <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
-                  <th className="py-3 pr-4 font-medium">Crew</th>
-                  <th className="py-3 pr-4 font-medium">Type</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Crew" col="crew" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Type" col="type" sort={sort} onSort={toggle} />
+                  </th>
                   <th className="py-3 pr-4 font-medium">Number</th>
                   <th className="py-3 pr-4 font-medium">Authority</th>
-                  <th className="py-3 pr-4 font-medium">Expires</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Expires" col="expires" sort={sort} onSort={toggle} />
+                  </th>
                   <th className="py-3 pr-4 font-medium">Days left</th>
-                  <th className="py-3 pr-4 font-medium">State</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="State" col="state" sort={sort} onSort={toggle} />
+                  </th>
                   <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
-                {docs.map((d) => (
+                {visibleDocs.map((d) => (
                   <tr key={d.id}>
                     <td data-label="Crew" className="py-3 pr-4">
                       <span className="text-dn-dark">{d.crew_name}</span>{" "}

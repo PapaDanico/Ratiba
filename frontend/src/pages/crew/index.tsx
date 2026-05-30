@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ShareButtons } from "@/components/ui/ShareButtons";
 import { api, ApiError, authFetch } from "@/lib/api";
+import { SortableTh } from "@/components/ui/SortableTh";
+import { useSort } from "@/lib/useSort";
 
 type Crew = {
   id: string;
@@ -466,10 +468,19 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
   );
 }
 
+type CrewSortKey = "employee_no" | "name" | "role" | "base";
+
 export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { sort, toggle, sorted } = useSort<CrewSortKey>(null);
+  const visibleRows = sorted(rows, {
+    employee_no: (c) => c.employee_no,
+    name: (c) => `${c.first_name} ${c.last_name}`.toLowerCase(),
+    role: (c) => c.role,
+    base: (c) => c.base_station,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -509,11 +520,19 @@ export function CrewPage() {
             <table className="rtable min-w-full text-sm" data-testid="crew-table">
               <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
-                  <th className="py-3 pr-4 font-medium">Employee #</th>
-                  <th className="py-3 pr-4 font-medium">Name</th>
-                  <th className="py-3 pr-4 font-medium">Role</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Employee #" col="employee_no" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Name" col="name" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Role" col="role" sort={sort} onSort={toggle} />
+                  </th>
                   <th className="py-3 pr-4 font-medium">Category</th>
-                  <th className="py-3 pr-4 font-medium">Base</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Base" col="base" sort={sort} onSort={toggle} />
+                  </th>
                   <th className="py-3 pr-4 font-medium">Email</th>
                   <th className="py-3 pr-4 font-medium">Phone</th>
                   <th className="py-3 pr-4 font-medium">Status</th>
@@ -521,7 +540,7 @@ export function CrewPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
-                {rows.map((c) => (
+                {visibleRows.map((c) => (
                   <tr key={c.id} className="group transition-colors hover:bg-dn-fog">
                     <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel">
                       {c.employee_no}
