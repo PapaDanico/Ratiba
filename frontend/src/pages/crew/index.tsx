@@ -506,52 +506,55 @@ export function CrewPage() {
             <table className="rtable min-w-full text-sm" data-testid="crew-table">
               <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
-                  <th className="py-2 pr-4 font-medium">Employee #</th>
-                  <th className="py-2 pr-4 font-medium">Name</th>
-                  <th className="py-2 pr-4 font-medium">Role</th>
-                  <th className="py-2 pr-4 font-medium">Category</th>
-                  <th className="py-2 pr-4 font-medium">Base</th>
-                  <th className="py-2 pr-4 font-medium">Email</th>
-                  <th className="py-2 pr-4 font-medium">Phone</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-4 font-medium">Actions</th>
+                  <th className="py-3 pr-4 font-medium">Employee #</th>
+                  <th className="py-3 pr-4 font-medium">Name</th>
+                  <th className="py-3 pr-4 font-medium">Role</th>
+                  <th className="py-3 pr-4 font-medium">Category</th>
+                  <th className="py-3 pr-4 font-medium">Base</th>
+                  <th className="py-3 pr-4 font-medium">Email</th>
+                  <th className="py-3 pr-4 font-medium">Phone</th>
+                  <th className="py-3 pr-4 font-medium">Status</th>
+                  <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
                 {rows.map((c) => (
-                  <tr key={c.id} className="hover:bg-dn-fog">
-                    <td data-label="Employee #" className="py-2 pr-4 font-mono text-dn-steel">
+                  <tr key={c.id} className="group transition-colors hover:bg-dn-fog">
+                    <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel">
                       {c.employee_no}
                     </td>
-                    <td data-label="Name" className="py-2 pr-4 text-dn-dark">
+                    <td data-label="Name" className="py-3 pr-4 text-dn-dark">
                       {c.first_name} {c.last_name}
                     </td>
-                    <td data-label="Role" className="py-2 pr-4">
+                    <td data-label="Role" className="py-3 pr-4">
                       <Badge tone="steel">{c.role}</Badge>
                     </td>
-                    <td data-label="Category" className="py-2 pr-4">
+                    <td data-label="Category" className="py-3 pr-4">
                       <Badge tone={CATEGORY_TONE[c.crew_category]}>
                         {CATEGORY_LABEL[c.crew_category]}
                       </Badge>
                     </td>
-                    <td data-label="Base" className="py-2 pr-4 font-mono">
+                    <td data-label="Base" className="py-3 pr-4 font-mono">
                       {c.base_station}
                     </td>
-                    <td data-label="Email" className="py-2 pr-4 text-xs text-dn-muted">
+                    <td data-label="Email" className="py-3 pr-4 text-xs text-dn-muted">
                       {c.email ?? "—"}
                     </td>
-                    <td data-label="Phone" className="py-2 pr-4 font-mono text-xs">
+                    <td data-label="Phone" className="py-3 pr-4 font-mono text-xs">
                       {c.phone_number ?? "—"}
                     </td>
-                    <td data-label="Status" className="py-2 pr-4">
+                    <td data-label="Status" className="py-3 pr-4">
                       {c.active ? (
                         <Badge tone="green">Active</Badge>
                       ) : (
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td data-label="" className="py-2 pr-4">
-                      <div className="flex gap-2">
+                    {/* Actions recede until the row is hovered/focused — calmer grid,
+                        but kept full-opacity on touch (no hover) and on focus-within
+                        for keyboard users. */}
+                    <td data-label="" className="py-3 pr-4">
+                      <div className="flex flex-wrap justify-end gap-2 opacity-70 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 md:opacity-60">
                         <RosterPdfButton crew={c} />
                         <CalendarFeedButton crew={c} />
                         <PairDeviceButton crew={c} />
