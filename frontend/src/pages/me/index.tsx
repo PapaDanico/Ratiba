@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -72,9 +72,14 @@ function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void
     }
   }
 
+  const autoPairAttempted = useRef(false);
   useEffect(() => {
+    // Guard against React StrictMode's double-invoked effect (and any remount):
+    // the pairing code is single-use, so redeeming it twice would 400.
+    if (autoPairAttempted.current) return;
     const linkCode = new URLSearchParams(window.location.search).get("pair");
     if (!linkCode) return;
+    autoPairAttempted.current = true;
     // Strip the code from the URL so it isn't bookmarked/shared or re-run.
     window.history.replaceState(null, "", window.location.pathname);
     setCode(linkCode.toUpperCase());
