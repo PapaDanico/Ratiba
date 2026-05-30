@@ -135,7 +135,12 @@ export async function login(email: string, password: string): Promise<void> {
 }
 
 export function logout(): void {
-  // Best-effort server-side revocation + cookie clear, then drop the local marker.
+  // Best-effort server-side revocation. The CSRF marker must stay readable until
+  // the request is actually dispatched: clearing it synchronously races the
+  // keepalive fetch and strips the double-submit cookie (leaving only the
+  // header), which the server then rejects with 403 — silently skipping
+  // revocation. The logout *response* clears all cookies; we only drop the
+  // local marker once the request has settled.
   const headers = new Headers();
   withCsrf(headers, "POST");
   void fetch("/api/v1/auth/logout", {
@@ -143,6 +148,7 @@ export function logout(): void {
     headers,
     credentials: "include",
     keepalive: true,
-  }).catch(() => {});
-  session.clear();
+  })
+    .catch(() => {})
+    .finally(() => session.clear());
 }
