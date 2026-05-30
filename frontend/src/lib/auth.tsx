@@ -16,7 +16,7 @@ export type CurrentUser = {
 type AuthContextValue = {
   user: CurrentUser | null;
   status: "unknown" | "authenticated" | "anonymous" | "loading";
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, onWaking?: () => void) => Promise<void>;
   logout: () => void;
 };
 
@@ -48,10 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshMe]);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, onWaking?: () => void) => {
       setStatus("loading");
       try {
-        await apiLogin(email, password);
+        await apiLogin(email, password, onWaking);
         await refreshMe();
       } catch (err) {
         setStatus("anonymous");
