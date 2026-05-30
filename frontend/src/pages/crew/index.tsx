@@ -4,6 +4,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ShareButtons } from "@/components/ui/ShareButtons";
 import { api, ApiError, authFetch } from "@/lib/api";
 
 type Crew = {
@@ -365,6 +366,8 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const link = code ? `${window.location.origin}/crew/me?pair=${code}` : null;
+  // Share the magic link straight to the pilot via their own messaging app.
+  const shareMessage = `Pair your Ratiba crew app — open this link on your phone: ${link}`;
 
   useEffect(() => {
     if (!open) return;
@@ -443,6 +446,13 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
               <Button size="sm" className="w-full" onClick={copy}>
                 {copied ? "Copied ✓" : "Copy pairing link"}
               </Button>
+              <ShareButtons
+                message={shareMessage}
+                phone={crew.phone_number}
+                email={crew.email}
+                subject="Ratiba crew app pairing"
+                testidPrefix={`pair-share-${crew.id}`}
+              />
               <p className="text-[10px] text-dn-muted">
                 Or dictate the code <span className="font-mono text-dn-steel">{code}</span>
                 {expiresAt ? ` · expires ${new Date(expiresAt).toLocaleString()}` : ""}

@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     at_api_key: str = Field(default="", alias="AT_API_KEY")
     at_username: str = Field(default="", alias="AT_USERNAME")
     at_sender_id: str = Field(default="Ratiba", alias="AT_SENDER_ID")
+    # Africa's Talking WhatsApp: the registered WhatsApp sender number. WhatsApp
+    # delivery is skipped unless this and AT_API_KEY/AT_USERNAME are all set.
+    at_whatsapp_number: str = Field(default="", alias="AT_WHATSAPP_NUMBER")
 
     # Audit pack storage (Phase 5 — local FS; Phase 6 — S3 if bucket set)
     audit_pack_dir: str = Field(default="/app/audit_packs", alias="AUDIT_PACK_DIR")

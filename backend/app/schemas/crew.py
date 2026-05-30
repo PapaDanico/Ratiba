@@ -45,6 +45,7 @@ class CrewOut(BaseModel):
     faith_observance_flags: dict[str, bool]
     email: str | None = None
     phone_number: str | None = None
+    whatsapp_number: str | None = None
     person_ref: str | None = None
 
 
@@ -62,6 +63,7 @@ class CrewIn(BaseModel):
     faith_observance_flags: dict[str, bool] = Field(default_factory=dict)
     email: str | None = Field(default=None, max_length=255)
     phone_number: str | None = Field(default=None, max_length=32)
+    whatsapp_number: str | None = Field(default=None, max_length=32)
     person_ref: str | None = Field(default=None, max_length=64)
 
 
@@ -75,6 +77,7 @@ class CrewPatch(BaseModel):
     faith_observance_flags: dict[str, bool] | None = None
     email: str | None = Field(default=None, max_length=255)
     phone_number: str | None = Field(default=None, max_length=32)
+    whatsapp_number: str | None = Field(default=None, max_length=32)
     person_ref: str | None = Field(default=None, max_length=64)
 
 

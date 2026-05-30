@@ -1,4 +1,4 @@
-"""Best-effort outbound notice delivery across Telegram, email, and SMS.
+"""Best-effort outbound notice delivery across Telegram, email, SMS, and WhatsApp.
 
 All channels are optional — a channel is skipped when its credentials are not
 configured.  Failures are logged but never raised; a notice is always
@@ -10,6 +10,8 @@ Channels:
 - **SMS** (Africa's Talking): crew with a ``phone_number`` in E.164 format
   receive a condensed SMS — useful for critical ops comms in regions with
   intermittent data coverage.
+- **WhatsApp** (Africa's Talking): crew with an opt-in ``whatsapp_number``
+  receive the full message — kept separate from SMS so the two don't both fire.
 """
 
 from __future__ import annotations
@@ -174,6 +176,56 @@ def _push_sms(phone_numbers: list[str], text: str) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Africa's Talking WhatsApp
+# ---------------------------------------------------------------------------
+
+# AT's WhatsApp ("Chat") send endpoint. Confirm the exact payload against the
+# current Africa's Talking WhatsApp API docs before go-live, as with SMS.
+_AT_WHATSAPP_URL = "https://chat.africastalking.com/whatsapp/message/send"
+
+
+def _push_whatsapp(phone_numbers: list[str], text: str) -> int:
+    """Send a WhatsApp message via Africa's Talking. No-ops unless AT_API_KEY,
+    AT_USERNAME and AT_WHATSAPP_NUMBER are all configured. Best-effort: a failure
+    on one recipient never blocks the others."""
+    settings = get_settings()
+    api_key = settings.at_api_key.strip()
+    username = settings.at_username.strip()
+    wa_number = settings.at_whatsapp_number.strip()
+    if not api_key or not username or not wa_number:
+        return 0
+
+    sent = 0
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            for phone in phone_numbers:
+                try:
+                    resp = client.post(
+                        _AT_WHATSAPP_URL,
+                        headers={
+                            "Accept": "application/json",
+                            "Content-Type": "application/json",
+                            "apiKey": api_key,
+                        },
+                        json={
+                            "username": username,
+                            "waNumber": wa_number,
+                            "phoneNumber": phone,
+                            "body": {"message": text},
+                        },
+                    )
+                    if resp.status_code in (200, 201):
+                        sent += 1
+                    else:
+                        log.warning("AT WhatsApp → %s: %s", resp.status_code, resp.text[:200])
+                except Exception as exc:
+                    log.warning("AT WhatsApp send failed for %s: %r", phone, exc)
+    except Exception as exc:
+        log.warning("AT WhatsApp request failed: %r", exc)
+    return sent
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
@@ -197,6 +249,7 @@ def push_notice(session: Session, notice: Notice) -> int:
     ]
     email_addrs: list[str] = [c.email for c in crew_rows if c.email]
     phone_numbers: list[str] = [c.phone_number for c in crew_rows if c.phone_number]
+    whatsapp_numbers: list[str] = [c.whatsapp_number for c in crew_rows if c.whatsapp_number]
 
     total = 0
 
@@ -208,6 +261,9 @@ def push_notice(session: Session, notice: Notice) -> int:
 
     if phone_numbers and settings.at_api_key.strip():
         total += _push_sms(phone_numbers, text_sms)
+
+    if whatsapp_numbers and settings.at_whatsapp_number.strip():
+        total += _push_whatsapp(whatsapp_numbers, text_long)
 
     return total
 
@@ -265,6 +321,8 @@ def notify_crew_member(session: Session, *, crew_id: uuid.UUID, subject: str, bo
         )
     if crew.phone_number and settings.at_api_key.strip():
         total += _push_sms([crew.phone_number], f"{subject}: {body}")
+    if crew.whatsapp_number and settings.at_whatsapp_number.strip():
+        total += _push_whatsapp([crew.whatsapp_number], f"{subject}\n\n{body}")
     return total
 
 

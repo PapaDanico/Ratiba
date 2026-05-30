@@ -4,6 +4,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Badge } from "@/components/ui/Badge";
+import { ShareButtons } from "@/components/ui/ShareButtons";
 import { pilotApi, pilotPair, pilotStore, type PilotProfile } from "@/lib/pilotAuth";
 import { cn } from "@/lib/cn";
 
@@ -229,6 +230,26 @@ function DutyToday() {
           </Badge>
         </p>
       )}
+      <div className="pt-2">
+        <p className="text-[10px] text-dn-muted mb-1">Share this duty</p>
+        <ShareButtons
+          message={
+            `My Ratiba duty ${d.date_local}: ${d.aircraft_reg}` +
+            `${d.aircraft_type ? ` (${d.aircraft_type})` : ""}` +
+            `${d.sector_ids?.length ? `, sectors ${d.sector_ids.join(", ")}` : ""}` +
+            `${
+              d.report_time
+                ? `, report ${new Date(d.report_time).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`
+                : ""
+            }.`
+          }
+          subject="My Ratiba duty"
+          testidPrefix="me-share-today"
+        />
+      </div>
     </div>
   );
 }
@@ -256,21 +277,29 @@ function Roster() {
   if (!state.data?.duty_days.length) {
     return <p className="text-sm text-dn-muted">No duty days in the next 14 days.</p>;
   }
+  const rosterMsg =
+    "My Ratiba roster:\n" +
+    state.data.duty_days
+      .map((d) => `${d.date_local}: ${d.aircraft_reg} ${d.role_on_duty}`)
+      .join("\n");
   return (
-    <ul className="space-y-3" data-testid="me-roster-list">
-      {state.data.duty_days.map((d, i) => (
-        <li key={i} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-sm text-dn-steel">{d.date_local}</span>
-            <Badge tone="steel">{d.aircraft_type}</Badge>
-          </div>
-          <p className="mt-1 text-dn-dark">
-            {d.aircraft_reg} · {d.role_on_duty}
-          </p>
-          <p className="text-xs text-dn-muted">Sectors: {d.sector_ids.join(", ")}</p>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-3">
+      <ShareButtons message={rosterMsg} subject="My Ratiba roster" testidPrefix="me-share-roster" />
+      <ul className="space-y-3" data-testid="me-roster-list">
+        {state.data.duty_days.map((d, i) => (
+          <li key={i} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-sm text-dn-steel">{d.date_local}</span>
+              <Badge tone="steel">{d.aircraft_type}</Badge>
+            </div>
+            <p className="mt-1 text-dn-dark">
+              {d.aircraft_reg} · {d.role_on_duty}
+            </p>
+            <p className="text-xs text-dn-muted">Sectors: {d.sector_ids.join(", ")}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
