@@ -30,23 +30,26 @@ class _FakeResp:
         self.text = ""
 
 
-class _FakeClient:
-    """Records WhatsApp POSTs and returns 200."""
+def _fake_client_factory(calls: list[dict[str, object]]) -> type:
+    """Build an httpx.Client stand-in that records POSTs into ``calls``."""
 
-    calls: list[dict[str, object]] = []
+    class _FakeClient:
+        def __init__(self, *_a: object, **_k: object) -> None:
+            pass
 
-    def __init__(self, *_a: object, **_k: object) -> None:
-        pass
+        def __enter__(self) -> _FakeClient:
+            return self
 
-    def __enter__(self) -> _FakeClient:
-        return self
+        def __exit__(self, *_a: object) -> bool:
+            return False
 
-    def __exit__(self, *_a: object) -> bool:
-        return False
+        def post(
+            self, url: str, *, headers: dict | None = None, json: dict | None = None
+        ) -> _FakeResp:
+            calls.append({"url": url, "json": json})
+            return _FakeResp(200)
 
-    def post(self, url: str, *, headers: dict | None = None, json: dict | None = None) -> _FakeResp:
-        _FakeClient.calls.append({"url": url, "json": json})
-        return _FakeResp(200)
+    return _FakeClient
 
 
 def test_push_whatsapp_noops_without_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -60,12 +63,12 @@ def test_push_whatsapp_sends_when_configured(monkeypatch: pytest.MonkeyPatch) ->
         "get_settings",
         lambda: _settings(at_api_key="k", at_username="u", at_whatsapp_number="+254799"),
     )
-    _FakeClient.calls = []
-    monkeypatch.setattr(notify.httpx, "Client", _FakeClient)
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(notify.httpx, "Client", _fake_client_factory(calls))
     sent = notify._push_whatsapp(["+254700000001", "+254700000002"], "roster out")
     assert sent == 2
-    assert len(_FakeClient.calls) == 2
-    payload = _FakeClient.calls[0]["json"]
+    assert len(calls) == 2
+    payload = calls[0]["json"]
     assert payload["waNumber"] == "+254799"
     assert payload["phoneNumber"] == "+254700000001"
     assert payload["body"]["message"] == "roster out"

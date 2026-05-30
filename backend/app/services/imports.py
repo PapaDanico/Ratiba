@@ -187,6 +187,7 @@ def import_crew(
                         faith_observance_flags=faith_flags,
                         email=email,
                         phone_number=phone,
+                        whatsapp_number=whatsapp,
                     )
                 )
                 result.inserted += 1
