@@ -348,6 +348,16 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
 export function RosterPage() {
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(addDays(todayIso(), 27));
+  const [density, setDensity] = useState<"comfortable" | "compact">(
+    () =>
+      (localStorage.getItem("ratiba.roster.density") as "comfortable" | "compact") ?? "comfortable",
+  );
+  const compact = density === "compact";
+  function toggleDensity() {
+    const next = compact ? "comfortable" : "compact";
+    setDensity(next);
+    localStorage.setItem("ratiba.roster.density", next);
+  }
   const [rows, setRows] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -587,6 +597,15 @@ export function RosterPage() {
               </div>
               <Button
                 size="sm"
+                variant="secondary"
+                onClick={toggleDensity}
+                data-testid="density-toggle"
+                title="Toggle calendar density"
+              >
+                {compact ? "Comfortable" : "Compact"}
+              </Button>
+              <Button
+                size="sm"
                 onClick={autoGenerate}
                 disabled={generating}
                 data-testid="auto-generate-btn"
@@ -684,7 +703,8 @@ export function RosterPage() {
                     <div
                       key={d}
                       className={[
-                        "rounded-md border p-2 min-h-[100px]",
+                        "rounded-md border",
+                        compact ? "p-1 min-h-[64px]" : "p-2 min-h-[100px]",
                         holidayName
                           ? "bg-amber-50 border-amber-200"
                           : "bg-dn-fog border-dn-steel-lt",
@@ -706,7 +726,10 @@ export function RosterPage() {
                           {dayAssignments.map((a) => (
                             <li
                               key={a.duty_day_key}
-                              className="bg-white rounded border border-dn-steel-lt px-2 py-1 text-xs"
+                              className={[
+                                "bg-white rounded border border-dn-steel-lt text-xs",
+                                compact ? "px-1 py-0.5" : "px-2 py-1",
+                              ].join(" ")}
                             >
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-mono">{a.aircraft_reg}</span>
