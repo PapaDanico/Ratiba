@@ -31,6 +31,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
 from decimal import Decimal
+from itertools import pairwise
 from typing import Any, Final
 from zoneinfo import ZoneInfo
 
@@ -73,6 +74,12 @@ LIMITS: Final[dict[str, Any]] = {
     "min_sleep_opportunity_h": 8.0,  # CAA-AC-OPS033 §4.6.1 / §4.6.8
     "rest_at_limit_window_h": 0.5,  # within 0.5 h of floor → AT_LIMIT
     "rest_derogation_window_h": 1.0,  # 0.5 h below floor → REQUIRES_FRMS_DEROGATION
+    # Weekly recovery rest. CAA-AC-OPS033 §4.6.2 emphasises a weekly recovery
+    # period (two local nights restore alertness). The numeric floor is an
+    # operator-scheme value; the conservative baseline requires at least one
+    # rest period this long within any rolling 7-day window.
+    "weekly_rest_floor_h": 36.0,
+    "weekly_rest_window_days": 7,
     # Cumulative duty hours.
     "cumul_duty_7d_h": 60.0,
     "cumul_duty_28d_h": 190.0,
@@ -174,6 +181,10 @@ class FdpInput:
     discretion_uses_last_90d: int = 0
     standby_hours_before_call: Decimal = Decimal("0")
     standby_type: str = "NONE"  # "NONE" | "SHORT_CALL" | "LONG_CALL"
+    # Protected sleep opportunity (hours) in the 24 h before a reserve call-out
+    # (CAA-AC-OPS033 §4.6.8). Defaults to a clearly-compliant value so a duty
+    # that doesn't supply it is never spuriously flagged.
+    reserve_sleep_opportunity_h: Decimal = Decimal("10")
 
     @property
     def local_report_time(self) -> datetime:
@@ -758,6 +769,110 @@ def rule_discretion(fdp: FdpInput) -> FtlVerdict:
     )
 
 
+def rule_reserve_sleep_opportunity(fdp: FdpInput) -> FtlVerdict:
+    """Reserve crew must get a protected sleep opportunity before being called.
+
+    CAA-AC-OPS033 §4.6.8: a reserve (short- or long-call standby) crew member
+    must have an 8 h protected sleep opportunity in the 24 h preceding the
+    flight they are called for. Only applicable while on standby.
+    """
+    rule_id = "KCAR-P8-RESERVE-SLEEP"
+    if fdp.standby_type == "NONE":
+        return FtlVerdict(
+            legality_state=LegalityState.LEGAL,
+            rule_id=rule_id,
+            reason="not on reserve/standby — sleep-opportunity rule not applicable",
+            regulation_ref=REGULATION_REF,
+            rules_applied=[rule_id],
+            metadata={"applicable": False},
+        )
+
+    floor = float(_active_limits.get()["min_sleep_opportunity_h"])
+    actual = float(fdp.reserve_sleep_opportunity_h)
+    state = _state_for_undershoot(
+        actual,
+        floor,
+        at_limit_margin_h=float(_active_limits.get()["rest_at_limit_window_h"]),
+        derogation_margin_h=float(_active_limits.get()["rest_derogation_window_h"]),
+    )
+    return FtlVerdict(
+        legality_state=state,
+        rule_id=rule_id,
+        reason=(
+            f"reserve ({fdp.standby_type.lower().replace('_', '-')}) sleep opportunity "
+            f"{actual:.2f}h against protected floor {floor:.1f}h"
+        ),
+        regulation_ref=REGULATION_REF,
+        rules_applied=[rule_id],
+        metadata={
+            "applicable": True,
+            "standby_type": fdp.standby_type,
+            "sleep_opportunity_h": actual,
+            "floor_h": floor,
+        },
+    )
+
+
+def rule_weekly_rest(fdp: FdpInput) -> FtlVerdict:
+    """At least one weekly-recovery rest within any rolling 7-day window.
+
+    CAA-AC-OPS033 §4.6.2 emphasises a weekly recovery period. The engine flags
+    a duty whose preceding 7-day window contains no rest period of at least the
+    operator's ``weekly_rest_floor_h`` (baseline 36 h). Conservative: it needs
+    enough recent duty history to evaluate, and counts the implicit rest at the
+    start of the window, so a sparse roster is never spuriously flagged.
+    """
+    rule_id = "KCAR-P8-WEEKLY-REST"
+    floor = float(_active_limits.get()["weekly_rest_floor_h"])
+    window_days = int(_active_limits.get()["weekly_rest_window_days"])
+    window_start = fdp.report_time - timedelta(days=window_days)
+
+    duties = sorted(
+        [(h.report_time, h.off_duty_time) for h in fdp.history]
+        + [(fdp.report_time, fdp.off_duty_time)]
+    )
+    in_window = [d for d in duties if d[1] >= window_start]
+    if len(in_window) < 2:
+        return FtlVerdict(
+            legality_state=LegalityState.LEGAL,
+            rule_id=rule_id,
+            reason="insufficient duty history in the 7-day window — rule not applicable",
+            regulation_ref=REGULATION_REF,
+            rules_applied=[rule_id],
+            metadata={"applicable": False},
+        )
+
+    # Longest continuous rest in the window: the implicit gap from the window
+    # start to the first duty, plus every gap between consecutive duties.
+    gaps = [_hours_between(window_start, in_window[0][0])]
+    gaps += [_hours_between(prev[1], nxt[0]) for prev, nxt in pairwise(in_window)]
+    longest = max(gaps)
+
+    state = _state_for_undershoot(
+        longest,
+        floor,
+        at_limit_margin_h=float(_active_limits.get()["rest_at_limit_window_h"]),
+        derogation_margin_h=float(_active_limits.get()["rest_derogation_window_h"]),
+    )
+    return FtlVerdict(
+        legality_state=state,
+        rule_id=rule_id,
+        reason=(
+            f"longest rest in the {window_days}-day window {longest:.2f}h "
+            f"against weekly-recovery floor {floor:.1f}h"
+        ),
+        regulation_ref=REGULATION_REF,
+        rules_applied=[rule_id],
+        metadata={
+            "applicable": True,
+            "longest_rest_h": longest,
+            "floor_h": floor,
+            "window_days": window_days,
+            "duties_in_window": len(in_window),
+        },
+    )
+
+
 # -----------------------------------------------------------------------------
 # Orchestration
 # -----------------------------------------------------------------------------
@@ -777,6 +892,8 @@ _ALL_RULES: Final[tuple[Any, ...]] = (
     rule_split_duty,
     rule_timezone_recovery,
     rule_discretion,
+    rule_reserve_sleep_opportunity,
+    rule_weekly_rest,
 )
 
 
@@ -841,4 +958,6 @@ def all_rule_ids() -> list[str]:
         "KCAR-P8-SPLIT-DUTY",
         "KCAR-P8-TZ-RECOVERY",
         "KCAR-P8-DISCRETION",
+        "KCAR-P8-RESERVE-SLEEP",
+        "KCAR-P8-WEEKLY-REST",
     ]

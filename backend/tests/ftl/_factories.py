@@ -38,6 +38,7 @@ def fdp(
     at_home: bool = True,
     standby_type: str = "NONE",
     standby_h: float = 0.0,
+    reserve_sleep_h: float = 10.0,
     prior: FdpHistoryEntry | None = None,
     history: tuple[FdpHistoryEntry, ...] = (),
     discretion_uses_90d: int = 0,
@@ -69,6 +70,7 @@ def fdp(
         discretion_uses_last_90d=discretion_uses_90d,
         standby_hours_before_call=Decimal(str(standby_h)),
         standby_type=standby_type,
+        reserve_sleep_opportunity_h=Decimal(str(reserve_sleep_h)),
     )
 
 
