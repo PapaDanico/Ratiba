@@ -44,14 +44,21 @@ type PairResponse = {
   operator_id: string;
 };
 
+// In-memory pilot token (never persisted). Auth prefers the httpOnly rt_pilot
+// cookie; this Bearer fallback keeps the session alive where the cookie can't
+// round-trip — the cross-site preview iframe with third-party cookies blocked.
+let memPilotToken: string | null = null;
+
 export async function pilotPair(code: string): Promise<PilotProfile> {
-  // The pairing response also sets the httpOnly pilot cookie; we only keep the
-  // display profile (pilot_token in the body is ignored by the browser).
+  // The pairing response sets the httpOnly pilot cookie AND returns the token in
+  // the body; we keep the token in memory as a cross-site fallback (cookies
+  // preferred when they work) and the non-sensitive profile in localStorage.
   const body = await api<PairResponse>("/api/v1/auth/pilot-pair", {
     method: "POST",
     body: JSON.stringify({ code }),
     skipAuth: true,
   });
+  memPilotToken = body.pilot_token;
   const profile: PilotProfile = {
     crew_id: body.crew_id,
     employee_no: body.employee_no,
@@ -62,14 +69,19 @@ export async function pilotPair(code: string): Promise<PilotProfile> {
   return profile;
 }
 
-/** Call a pilot-scoped endpoint — auth rides on the httpOnly cookie + CSRF. */
+/** Call a pilot-scoped endpoint — auth rides on the httpOnly cookie + CSRF,
+ * with an in-memory Bearer fallback for cookie-blocked (cross-site) contexts. */
 export async function pilotApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers ?? {});
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
+  if (memPilotToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${memPilotToken}`);
+  }
   const resp = await authFetch(path, { ...init, headers });
   if (resp.status === 401) {
+    memPilotToken = null;
     pilotStore.clear();
     throw new Error("Pilot session expired — please re-pair.");
   }
