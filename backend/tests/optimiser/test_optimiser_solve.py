@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date, timedelta
 
 import pytest
 
@@ -12,6 +12,7 @@ from app.services.optimiser import OptimiserInput, build_duty_days
 from tests.optimiser._factories import (
     BASE_TZ,
     make_crew,
+    make_sectors_for_day,
     medium_scenario,
     small_scenario,
     with_leave,
@@ -137,6 +138,40 @@ def test_no_captain_available_returns_unassigned() -> None:
     assert result.status in ("OPTIMAL", "FEASIBLE")
     assert result.assignments == ()
     assert len(result.unassigned_duty_days) >= 1
+
+
+def test_weekly_rest_forces_a_day_off_for_a_lone_crew_pair() -> None:
+    # One CAPT + one FO, one aircraft, seven days. Without the weekly-recovery
+    # constraint the pair would fly all seven; the rolling-window rule caps each
+    # crew at six duty days, so exactly one duty day is left uncovered.
+    horizon_from = date(2026, 6, 15)
+    sectors = []
+    for i in range(7):
+        sectors.extend(
+            make_sectors_for_day(
+                day=horizon_from + timedelta(days=i),
+                aircraft_reg="5Y-LONE",
+                aircraft_type="DH8D",
+                count=1,
+            )
+        )
+    input_ = OptimiserInput(
+        horizon_from=horizon_from,
+        horizon_to=horizon_from + timedelta(days=6),
+        crew=(
+            make_crew(crew_id="CAP-1", role=CrewRole.CAPT),
+            make_crew(crew_id="FO-1", role=CrewRole.FO),
+        ),
+        sectors=tuple(sectors),
+        base_tz=BASE_TZ,
+        timeout_s=15.0,
+    )
+    result = optimiser.solve(input_)
+    assert result.status in ("OPTIMAL", "FEASIBLE")
+    assert len(result.assignments) <= 6
+    assert len(result.unassigned_duty_days) >= 1
+    cap_days = sum(1 for a in result.assignments if a.captain_id == "CAP-1")
+    assert cap_days <= 6, f"captain flew {cap_days} of 7 days — weekly rest not enforced"
 
 
 def test_empty_horizon_is_infeasible() -> None:

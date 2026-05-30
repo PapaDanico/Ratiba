@@ -467,6 +467,25 @@ def solve(input: OptimiserInput, *, limits: dict[str, Any] | None = None) -> Opt
                         <= round(block_cap * HOURS_SCALE)
                     )
 
+        # ---- Hard constraint: weekly recovery rest ----
+        # At least one rest day in every rolling N-day window (proxy for
+        # CAA-AC-OPS033 §4.6.2; the duty-level KCAR-P8-WEEKLY-REST rule validates
+        # the 36 h figure at publish). Only full in-horizon windows are bound —
+        # a tail window that runs past the horizon can't evidence a missing rest,
+        # and coverage slacks mean an over-tight crew pool degrades to unassigned
+        # duties rather than infeasibility.
+        weekly_window = int(eff_limits.get("weekly_rest_window_days", 7))
+        weekly_dates = sorted({dd.date_local for dd, _ in per_dd_role_vars})
+        for start in weekly_dates:
+            end = start + timedelta(days=weekly_window - 1)
+            if end > input.horizon_to:
+                continue
+            window_presence = [
+                presence for dd, presence in per_dd_role_vars if start <= dd.date_local <= end
+            ]
+            if window_presence:
+                model.Add(sum(window_presence) <= weekly_window - 1)
+
     # ---- Soft constraints (objective) ----
     objective_terms: list[Any] = []
 

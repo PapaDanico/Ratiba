@@ -98,6 +98,7 @@ def _to_engine(payload: FdpInputIn) -> ftl_engine.FdpInput:
         discretion_uses_last_90d=payload.discretion_uses_last_90d,
         standby_hours_before_call=payload.standby_hours_before_call,
         standby_type=payload.standby_type,
+        reserve_sleep_opportunity_h=payload.reserve_sleep_opportunity_h,
     )
 
 

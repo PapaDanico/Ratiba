@@ -360,7 +360,14 @@ export function RosterPage() {
   const [crew, setCrew] = useState<CrewFull[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [dragOverZone, setDragOverZone] = useState<string | null>(null);
+  const [draggingRole, setDraggingRole] = useState<"CAPT" | "FO" | null>(null);
   const toast = useToast();
+
+  // A captain may operate either seat; an FO may only fill the FO seat.
+  function roleFits(crewRole: string | undefined, slot: "CAPT" | "FO"): boolean {
+    if (crewRole === "CAPT") return true;
+    return slot === "FO" && crewRole === "FO";
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -391,6 +398,12 @@ export function RosterPage() {
   async function reassign(a: Assignment, role: "CAPT" | "FO", newEmpNo: string) {
     const currentEmp = role === "CAPT" ? a.captain_id : a.fo_id;
     if (newEmpNo === currentEmp) return; // dropped onto the same crew
+    const newRole = crewByEmpNo.get(newEmpNo)?.role;
+    if (!roleFits(newRole, role)) {
+      // Don't burn a request the backend will reject — explain instead.
+      toast.show(`${newEmpNo} (${newRole ?? "?"}) isn't rated for the ${role} seat`, "error");
+      return;
+    }
     const newCaptainEmp = role === "CAPT" ? newEmpNo : a.captain_id;
     const newFoEmp = role === "FO" ? newEmpNo : a.fo_id;
 
@@ -644,7 +657,11 @@ export function RosterPage() {
                         <span
                           key={c.id}
                           draggable
-                          onDragStart={(e) => e.dataTransfer.setData("text/plain", c.employee_no)}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", c.employee_no);
+                            setDraggingRole(c.role === "CAPT" ? "CAPT" : "FO");
+                          }}
+                          onDragEnd={() => setDraggingRole(null)}
                           className="cursor-grab rounded-full border border-dn-steel-lt bg-white px-2 py-0.5 text-xs hover:border-dn-gold"
                           data-testid={`crew-chip-${c.employee_no}`}
                           title={`${c.first_name} ${c.last_name} · ${c.role}`}
@@ -698,12 +715,22 @@ export function RosterPage() {
                                   const id = role === "CAPT" ? a.captain_id : a.fo_id;
                                   const zoneKey = `${a.duty_day_key}:${role}`;
                                   const isOver = dragOverZone === zoneKey;
+                                  const valid =
+                                    draggingRole === null || roleFits(draggingRole, role);
+                                  const cls =
+                                    isOver && valid
+                                      ? "bg-dn-gold/30 ring-1 ring-dn-gold"
+                                      : draggingRole !== null && valid
+                                        ? "ring-1 ring-dn-gold/40"
+                                        : draggingRole !== null && !valid
+                                          ? "opacity-40"
+                                          : "";
                                   return (
                                     <div
                                       key={role}
                                       onDragOver={(e) => {
                                         e.preventDefault();
-                                        setDragOverZone(zoneKey);
+                                        if (valid) setDragOverZone(zoneKey);
                                       }}
                                       onDragLeave={() =>
                                         setDragOverZone((z) => (z === zoneKey ? null : z))
@@ -716,7 +743,7 @@ export function RosterPage() {
                                       }}
                                       className={[
                                         "flex items-center gap-1 rounded px-1 transition-colors",
-                                        isOver ? "bg-dn-gold/30 ring-1 ring-dn-gold" : "",
+                                        cls,
                                       ].join(" ")}
                                       data-testid={`slot-${role}-${a.duty_day_key}`}
                                     >
@@ -725,9 +752,12 @@ export function RosterPage() {
                                       </span>
                                       <span
                                         draggable
-                                        onDragStart={(e) =>
-                                          e.dataTransfer.setData("text/plain", id)
-                                        }
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.setData("text/plain", id);
+                                          const r = crewByEmpNo.get(id)?.role;
+                                          setDraggingRole(r === "CAPT" ? "CAPT" : "FO");
+                                        }}
+                                        onDragEnd={() => setDraggingRole(null)}
                                         className="cursor-grab truncate text-dn-muted"
                                         title="Drag onto another duty to move this crew"
                                       >

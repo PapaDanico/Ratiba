@@ -42,13 +42,18 @@ def new_csrf_token() -> str:
 
 
 def _set(response: Response, key: str, value: str, *, max_age: int, http_only: bool) -> None:
+    settings = get_settings()
+    samesite = settings.cookie_samesite
+    # SameSite=None is only honoured on Secure cookies, so force Secure in that
+    # (cross-site) mode regardless of COOKIE_SECURE.
+    secure = settings.cookie_secure or samesite == "none"
     response.set_cookie(
         key=key,
         value=value,
         max_age=max_age,
         httponly=http_only,
-        secure=get_settings().cookie_secure,
-        samesite="lax",
+        secure=secure,
+        samesite=samesite,
         path="/",
     )
 
