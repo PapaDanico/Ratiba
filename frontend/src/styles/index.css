@@ -96,6 +96,18 @@
     background-color: #f7efe0; /* DN_FOG */
   }
   /*
+   * Sticky header for long tables: the column labels stay visible while the
+   * body scrolls. Opt-in via `sticky-head` on the <thead>. Desktop only — on
+   * mobile the table collapses to cards and the head is hidden anyway.
+   */
+  thead.sticky-head th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #f7efe0; /* DN_FOG — matches page bg so rows slide under cleanly */
+  }
+
+  /*
    * Row action clusters recede until the row is hovered or focused (keyboard),
    * so the data reads calm and controls surface when reached for. Desktop only:
    * on touch (no hover) they stay full-opacity via the absence of this rule.
@@ -113,27 +125,35 @@
 /*
  * Responsive data tables: on phones, collapse each row into a labelled
  * card (label from the cell's data-label, value on the right). Tag a
- * <table> with `rtable` and give each <td> a data-label.
+ * <table> with `rtable` (or the equivalent alias `responsive-table`) and give
+ * each <td> a data-label.
  */
 @media (max-width: 640px) {
-  table.rtable thead {
+  table.rtable thead,
+  table.responsive-table thead {
     display: none;
   }
   table.rtable,
   table.rtable tbody,
   table.rtable tr,
-  table.rtable td {
+  table.rtable td,
+  table.responsive-table,
+  table.responsive-table tbody,
+  table.responsive-table tr,
+  table.responsive-table td {
     display: block;
     width: 100%;
   }
-  table.rtable tr {
+  table.rtable tr,
+  table.responsive-table tr {
     border: 1px solid #d0e8f5;
     border-radius: 10px;
     padding: 6px 12px;
     margin-bottom: 10px;
     background: #fff;
   }
-  table.rtable td {
+  table.rtable td,
+  table.responsive-table td {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -142,7 +162,8 @@
     border: none !important;
     text-align: right;
   }
-  table.rtable td::before {
+  table.rtable td::before,
+  table.responsive-table td::before {
     content: attr(data-label);
     font-size: 10px;
     font-weight: 600;
@@ -153,11 +174,13 @@
     flex-shrink: 0;
   }
   /* Action cells (no label) span the full width, buttons left-aligned. */
-  table.rtable td[data-label=""] {
+  table.rtable td[data-label=""],
+  table.responsive-table td[data-label=""] {
     justify-content: flex-start;
     padding-top: 8px !important;
   }
-  table.rtable td[data-label=""]::before {
+  table.rtable td[data-label=""]::before,
+  table.responsive-table td[data-label=""]::before {
     content: none;
   }
 }

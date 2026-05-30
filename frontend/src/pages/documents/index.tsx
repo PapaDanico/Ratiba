@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -237,13 +238,15 @@ export function DocumentsPage() {
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : docs.length === 0 ? (
-          <p className="text-sm text-dn-muted" data-testid="documents-empty">
-            No documents recorded yet.
-          </p>
+          <EmptyState
+            icon="📄"
+            title="No documents recorded yet"
+            hint="Add crew licences, medicals and certificates to track their expiry here."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="documents-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
                   <th className="py-3 pr-4 font-medium">Crew</th>
                   <th className="py-3 pr-4 font-medium">Type</th>

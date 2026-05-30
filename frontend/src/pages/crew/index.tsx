@@ -4,6 +4,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ShareButtons } from "@/components/ui/ShareButtons";
 import { api, ApiError, authFetch } from "@/lib/api";
 
@@ -498,13 +499,15 @@ export function CrewPage() {
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-dn-muted">
-            No crew yet. Create one via the API or wait for the import flow in Phase 6.
-          </p>
+          <EmptyState
+            icon="👥"
+            title="No crew yet"
+            hint="Import your roster via the Import page, or add crew through the API."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="crew-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
                   <th className="py-3 pr-4 font-medium">Employee #</th>
                   <th className="py-3 pr-4 font-medium">Name</th>

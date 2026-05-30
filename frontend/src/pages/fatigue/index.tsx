@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -94,11 +95,15 @@ export function FatiguePage() {
         ) : error ? (
           <p className="text-sm text-dn-red">{error}</p>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-dn-muted">No duties in this period.</p>
+          <EmptyState
+            icon="🌙"
+            title="No duties in this period"
+            hint="Fatigue scoring appears once crew have published duties in the selected window."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm responsive-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
                   <th className="py-2 pr-4 font-medium">Role</th>
