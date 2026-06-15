@@ -1,4 +1,6 @@
 #!/bin/sh
+set -e
+
 # Keep the free-tier ratiba-api web service warm so it doesn't cold-start (and
 # return 502 during the ~30-60s wake) on a real user's first request.
 #
@@ -8,15 +10,17 @@
 # API_URL is the public base URL of the ratiba-api service, e.g.
 #   https://ratiba-api.onrender.com
 # Set it on this cron service after the first deploy (sync: false in render.yaml).
-set -u
 
-if [ -z "${API_URL:-}" ]; then
-    echo "keepwarm: API_URL not set — skipping"
+API_URL="${API_URL:-https://ratiba-api.onrender.com}"
+
+echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] Pinging $API_URL/healthz to keep warm..."
+
+if curl -sf "$API_URL/healthz" > /dev/null 2>&1; then
+    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ✓ Healthz OK (200)"
+    exit 0
+else
+    STATUS=$?
+    echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ✗ Healthz failed (exit code: $STATUS)"
+    # Non-fatal: a single failed ping (e.g. mid-deploy) must not fail the cron run.
     exit 0
 fi
-
-URL="${API_URL%/}/healthz"
-code=$(curl -fsS -o /dev/null -w "%{http_code}" --max-time 60 "$URL" 2>/dev/null || echo "000")
-echo "keepwarm: GET $URL -> $code"
-# Non-fatal: a single failed ping (e.g. mid-deploy) must not fail the cron run.
-exit 0
