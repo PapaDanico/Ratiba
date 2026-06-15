@@ -1,5 +1,5 @@
 services:
-  # ── Backend API ────────────────────────────────────────────────────────────
+  # ── Backend API ──────────────────────────────────────────────────────────────
   - type: web
     name: ratiba-api
     env: docker
@@ -86,20 +86,20 @@ services:
       - key: SECRET_KEY
         generateValue: true
 
-  # ── Keep-warm ping ───────────────────────────────────────────────────────
-  # Pings the public /healthz every 10 min so the free-tier ratiba-api web
-  # service doesn't spin down (and cold-start 502 on a user's first request).
-  # Set API_URL to https://ratiba-api.onrender.com after the first deploy.
+  # ── Keep-warm cron (prevent cold-start spindown) ──────────────────────────
+  # Free-tier Render spins down inactive services. This pings /healthz every 10 min
+  # to keep ratiba-api warm and responsive. Set API_URL to prod after first deploy.
   - type: cron
     name: ratiba-keepwarm
     env: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
     dockerCommand: ./keepwarm-cron.sh
-    schedule: "*/10 * * * *"  # every 10 minutes (under the ~15 min idle spindown)
+    schedule: "*/10 * * * *"  # Every 10 minutes
     plan: free
     envVars:
       - key: API_URL
+        value: ""  # ← MANUAL STEP: Set to https://ratiba-api.onrender.com after first deploy (sync: false)
         sync: false
 
   # ── Redis ──────────────────────────────────────────────────────────────────
