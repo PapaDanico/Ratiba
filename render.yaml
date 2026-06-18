@@ -86,6 +86,22 @@ services:
       - key: SECRET_KEY
         generateValue: true
 
+  # ── Keep-warm ping ───────────────────────────────────────────────────────
+  # Pings the public /healthz every 10 min so the free-tier ratiba-api web
+  # service doesn't spin down (and cold-start 502 on a user's first request).
+  # Set API_URL to https://ratiba-api.onrender.com after the first deploy.
+  - type: cron
+    name: ratiba-keepwarm
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    dockerCommand: ./keepwarm-cron.sh
+    schedule: "*/10 * * * *"  # every 10 minutes (under the ~15 min idle spindown)
+    plan: free
+    envVars:
+      - key: API_URL
+        sync: false
+
   # ── Redis ──────────────────────────────────────────────────────────────────
   - type: redis
     name: ratiba-redis
