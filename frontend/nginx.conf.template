@@ -38,7 +38,18 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
-        proxy_connect_timeout 10s;
+        # Render free-tier backends spin down after ~15 min idle and take
+        # 30-60s to cold-start. A short connect timeout would 502 ("Something
+        # went wrong" on login) before the backend finishes waking, so allow
+        # the full cold-start window to connect. The keep-warm cron normally
+        # prevents the spin-down; this is the safety net for the first request
+        # after an idle period.
+        proxy_connect_timeout 75s;
+        # Don't fail the first request mid-wake: if the upstream errors or
+        # times out, retry it (covers the brief window as the instance comes up).
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 3;
+        proxy_next_upstream_timeout 90s;
     }
 
     # SPA fallback — all non-asset paths serve index.html
