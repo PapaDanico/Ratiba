@@ -301,19 +301,13 @@ function AddRecurringForm({
         </div>
         <div>
           <Label htmlFor="r-type">Type</Label>
-          <select
-            id="r-type"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
-            required
-          >
+          <Select id="r-type" value={type} onChange={(e) => setType(e.target.value)} required>
             {aircraftTypes.map((t) => (
               <option key={t.icao} value={t.icao}>
                 {t.icao}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <Label htmlFor="r-std">Departure (UTC)</Label>

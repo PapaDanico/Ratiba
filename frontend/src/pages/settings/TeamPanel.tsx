@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { Select } from "@/components/ui/Select";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { Modal } from "@/components/ui/Modal";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
@@ -120,7 +122,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             separate crew app and are not listed here.
           </p>
 
-          {error && <p className="text-sm text-dn-red mb-3">{error}</p>}
+          {error && <ErrorAlert message={error} className="mb-3" />}
 
           {members === null ? (
             <p className="text-sm text-dn-muted">Loading…</p>
@@ -152,12 +154,12 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                           {isSelf ? (
                             <Badge tone="steel">{ROLE_LABEL[m.role]}</Badge>
                           ) : (
-                            <select
+                            <Select
                               value={m.role}
                               onChange={(e) =>
                                 patch(m.id, { role: e.target.value as Member["role"] })
                               }
-                              className="rounded-md border border-dn-steel-lt px-2 py-1 text-xs"
+                              className="text-xs"
                               data-testid={`role-${m.email}`}
                             >
                               {ROLE_OPTIONS.map((r) => (
@@ -165,7 +167,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                                   {r.label}
                                 </option>
                               ))}
-                            </select>
+                            </Select>
                           )}
                         </td>
                         <td data-label="Status" className="py-2 pr-4">
@@ -230,11 +232,10 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             </div>
             <div>
               <Label htmlFor="member-role">Role</Label>
-              <select
+              <Select
                 id="member-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as Member["role"])}
-                className="w-full rounded-md border border-dn-steel-lt px-3 py-2 text-sm"
                 data-testid="member-role"
               >
                 {ROLE_OPTIONS.map((r) => (
@@ -242,7 +243,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                     {r.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="member-password">Temporary password</Label>
@@ -259,8 +260,12 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                 At least 8 characters. Share it with the member; they sign in with it.
               </p>
             </div>
-            {inviteErr && <p className="text-sm text-dn-red">{inviteErr}</p>}
-            {inviteOk && <p className="text-sm text-dn-green">{inviteOk}</p>}
+            {inviteErr && <ErrorAlert message={inviteErr} />}
+            {inviteOk && (
+              <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green">
+                {inviteOk}
+              </div>
+            )}
             <Button type="submit" disabled={inviting} data-testid="member-submit">
               {inviting ? "Adding…" : "Add member"}
             </Button>

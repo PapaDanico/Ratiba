@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { Select } from "@/components/ui/Select";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 import { AmendModal } from "@/components/roster/AmendModal";
 
@@ -199,11 +201,10 @@ export function IropPage() {
           <div className="flex flex-wrap items-end gap-3 mb-4">
             <div className="min-w-[16rem]">
               <Label htmlFor="irop-crew">Crew</Label>
-              <select
+              <Select
                 id="irop-crew"
                 value={crewId}
                 onChange={(e) => setCrewId(e.target.value)}
-                className="w-full rounded-md border border-dn-steel-lt px-3 py-2 text-sm"
                 data-testid="irop-crew-select"
               >
                 <option value="">Select crew…</option>
@@ -212,7 +213,7 @@ export function IropPage() {
                     {c.employee_no} — {c.first_name} {c.last_name} ({c.role})
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="irop-date">Date</Label>
@@ -264,7 +265,7 @@ export function IropPage() {
             </Button>
           </div>
 
-          {assessErr && <p className="text-sm text-dn-red">{assessErr}</p>}
+          {assessErr && <ErrorAlert message={assessErr} />}
 
           {result && (
             <div className="rounded-md border border-dn-steel-lt p-4" data-testid="irop-result">
@@ -358,11 +359,10 @@ export function IropPage() {
             </div>
             <div>
               <Label htmlFor="relief-role">Role</Label>
-              <select
+              <Select
                 id="relief-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="rounded-md border border-dn-steel-lt px-3 py-2 text-sm"
                 data-testid="relief-role-select"
               >
                 {ROLE_OPTIONS.map((r) => (
@@ -370,7 +370,7 @@ export function IropPage() {
                     {r}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="w-32">
               <Label htmlFor="relief-ac">Aircraft type</Label>
@@ -386,8 +386,12 @@ export function IropPage() {
             </Button>
           </div>
 
-          {reliefErr && <p className="text-sm text-dn-red">{reliefErr}</p>}
-          {amended && <p className="text-sm text-dn-green">{amended}</p>}
+          {reliefErr && <ErrorAlert message={reliefErr} />}
+          {amended && (
+            <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green mb-4">
+              {amended}
+            </div>
+          )}
           {alts && result?.duty_day_key && result.crew_role_on_duty && (
             <p className="text-xs text-dn-muted mb-2">
               Assessed duty <span className="font-mono">{result.duty_day_key}</span> — apply a

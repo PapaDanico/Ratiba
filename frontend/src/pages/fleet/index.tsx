@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { Select } from "@/components/ui/Select";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 
 type AircraftType = {
@@ -114,11 +116,11 @@ export function FleetPage() {
             </div>
             <div>
               <Label htmlFor="type">Aircraft type</Label>
-              <select
+              <Select
                 id="type"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="block rounded-md border border-dn-steel-lt bg-white px-3 py-2 text-sm min-w-[20rem]"
+                className="min-w-[20rem]"
                 data-testid="fleet-type"
               >
                 {[...byCategory.entries()].map(([cat, list]) => (
@@ -130,13 +132,13 @@ export function FleetPage() {
                     ))}
                   </optgroup>
                 ))}
-              </select>
+              </Select>
             </div>
             <Button type="submit" disabled={adding} data-testid="fleet-add">
               {adding ? "Adding…" : "Add aircraft"}
             </Button>
           </form>
-          {error && <p className="mt-3 text-sm text-dn-red">{error}</p>}
+          {error && <ErrorAlert message={error} className="mt-3" />}
           <p className="mt-3 text-xs text-dn-muted">
             The list covers the types common to sub-scale East &amp; Central African operators —
             turboprops, light utility, regional jets, and smaller narrowbodies. Don&apos;t see

@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { Select } from "@/components/ui/Select";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 
 type Category = "OPERATIONAL" | "FLEET" | "SAFETY" | "SOCIAL";
@@ -110,11 +112,10 @@ export function NoticesPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <Label htmlFor="cat">Category</Label>
-                <select
+                <Select
                   id="cat"
                   value={category}
                   onChange={(e) => setCategory(e.target.value as Category)}
-                  className="block w-full rounded-md border border-dn-steel-lt bg-white px-3 py-2 text-sm"
                   data-testid="notice-category"
                 >
                   {CATEGORIES.map((c) => (
@@ -122,15 +123,14 @@ export function NoticesPage() {
                       {c.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="sev">Severity</Label>
-                <select
+                <Select
                   id="sev"
                   value={severity}
                   onChange={(e) => setSeverity(e.target.value as Severity)}
-                  className="block w-full rounded-md border border-dn-steel-lt bg-white px-3 py-2 text-sm"
                   data-testid="notice-severity"
                 >
                   {SEVERITIES.map((s) => (
@@ -138,7 +138,7 @@ export function NoticesPage() {
                       {s}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
             <div>
@@ -195,7 +195,7 @@ export function NoticesPage() {
                 Pin to top
               </label>
             </div>
-            {error && <p className="text-sm text-dn-red">{error}</p>}
+            {error && <ErrorAlert message={error} />}
             <Button type="submit" disabled={posting} data-testid="notice-post">
               {posting ? "Posting…" : "Post + push to crew"}
             </Button>
