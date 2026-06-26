@@ -1,12 +1,6 @@
 import { cn } from "@/lib/cn";
 
-export function ErrorAlert({
-  message,
-  className,
-}: {
-  message: string;
-  className?: string;
-}) {
+export function ErrorAlert({ message, className }: { message: string; className?: string }) {
   return (
     <div
       role="alert"
