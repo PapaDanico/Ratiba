@@ -191,10 +191,7 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
     setError(null);
     try {
       const url = `/api/v1/roster/crew/${crew.id}/monthly-pdf?year=${year}&month=${month}`;
-      const token = tokenStore.getAccess();
-      const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await authFetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const link = document.createElement("a");
@@ -360,10 +357,128 @@ function CalendarFeedButton({ crew }: { crew: Crew }) {
   );
 }
 
+function PairDeviceButton({ crew }: { crew: Crew }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const link = code ? `${window.location.origin}/crew/me?pair=${code}` : null;
+  // Share the magic link straight to the pilot via their own messaging app.
+  const shareMessage = `Pair your Ratiba crew app — open this link on your phone: ${link}`;
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  async function generate() {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const res = await api<{ code: string; expires_at: string }>(
+        `/api/v1/crew/${crew.id}/pairing-token`,
+        { method: "POST" },
+      );
+      setCode(res.code);
+      setExpiresAt(res.expires_at);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to issue pairing code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    // Always mint a fresh single-use code when (re)opening.
+    if (next) await generate();
+  }
+
+  async function copy() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={toggle}
+        data-testid={`pair-device-btn-${crew.id}`}
+      >
+        Pair device
+      </Button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+          <p className="text-xs font-medium text-dn-dark">Pair {crew.employee_no}&rsquo;s device</p>
+          <p className="text-xs text-dn-muted">
+            Send this one-tap link — opening it on the pilot&rsquo;s phone pairs the{" "}
+            <span className="font-mono">/crew/me</span> view automatically. Single-use.
+          </p>
+          {busy ? (
+            <p className="text-xs text-dn-muted">Issuing…</p>
+          ) : error ? (
+            <p className="text-xs text-dn-red">{error}</p>
+          ) : link ? (
+            <>
+              <textarea
+                readOnly
+                value={link}
+                className="w-full text-[10px] font-mono border border-dn-steel-lt rounded p-1 h-16"
+                onFocus={(e) => e.currentTarget.select()}
+                data-testid={`pair-link-${crew.id}`}
+              />
+              <Button size="sm" className="w-full" onClick={copy}>
+                {copied ? "Copied ✓" : "Copy pairing link"}
+              </Button>
+              <ShareButtons
+                message={shareMessage}
+                phone={crew.phone_number}
+                email={crew.email}
+                subject="Ratiba crew app pairing"
+                testidPrefix={`pair-share-${crew.id}`}
+              />
+              <p className="text-[10px] text-dn-muted">
+                Or dictate the code <span className="font-mono text-dn-steel">{code}</span>
+                {expiresAt ? ` · expires ${new Date(expiresAt).toLocaleString()}` : ""}
+              </p>
+            </>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type CrewSortKey = "employee_no" | "name" | "role" | "base";
+
 export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { sort, toggle, sorted } = useSort<CrewSortKey>(null);
+  const visibleRows = sorted(rows, {
+    employee_no: (c) => c.employee_no,
+    name: (c) => `${c.first_name} ${c.last_name}`.toLowerCase(),
+    role: (c) => c.role,
+    base: (c) => c.base_station,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -393,62 +508,76 @@ export function CrewPage() {
         ) : error ? (
           <ErrorAlert message={error} />
         ) : rows.length === 0 ? (
-          <p className="text-sm text-dn-muted">
-            No crew yet. Create one via the API or wait for the import flow in Phase 6.
-          </p>
+          <EmptyState
+            icon="👥"
+            title="No crew yet"
+            hint="Import your roster via the Import page, or add crew through the API."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="crew-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
-                  <th className="py-2 pr-4 font-medium">Employee #</th>
-                  <th className="py-2 pr-4 font-medium">Name</th>
-                  <th className="py-2 pr-4 font-medium">Role</th>
-                  <th className="py-2 pr-4 font-medium">Category</th>
-                  <th className="py-2 pr-4 font-medium">Base</th>
-                  <th className="py-2 pr-4 font-medium">Email</th>
-                  <th className="py-2 pr-4 font-medium">Phone</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-4 font-medium">Actions</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Employee #" col="employee_no" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Name" col="name" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Role" col="role" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">Category</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Base" col="base" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">Email</th>
+                  <th className="py-3 pr-4 font-medium">Phone</th>
+                  <th className="py-3 pr-4 font-medium">Status</th>
+                  <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
-                {rows.map((c) => (
-                  <tr key={c.id} className="hover:bg-dn-fog">
-                    <td data-label="Employee #" className="py-2 pr-4 font-mono text-dn-steel">
+                {visibleRows.map((c) => (
+                  <tr key={c.id} className="group transition-colors hover:bg-dn-fog">
+                    <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel">
                       {c.employee_no}
                     </td>
-                    <td data-label="Name" className="py-2 pr-4 text-dn-dark">
+                    <td data-label="Name" className="py-3 pr-4 text-dn-dark">
                       {c.first_name} {c.last_name}
                     </td>
-                    <td data-label="Role" className="py-2 pr-4">
+                    <td data-label="Role" className="py-3 pr-4">
                       <Badge tone="steel">{c.role}</Badge>
                     </td>
-                    <td data-label="Category" className="py-2 pr-4">
+                    <td data-label="Category" className="py-3 pr-4">
                       <Badge tone={CATEGORY_TONE[c.crew_category]}>
                         {CATEGORY_LABEL[c.crew_category]}
                       </Badge>
                     </td>
-                    <td data-label="Base" className="py-2 pr-4 font-mono">
+                    <td data-label="Base" className="py-3 pr-4 font-mono">
                       {c.base_station}
                     </td>
-                    <td data-label="Email" className="py-2 pr-4 text-xs text-dn-muted">
+                    <td data-label="Email" className="py-3 pr-4 text-xs text-dn-muted">
                       {c.email ?? "—"}
                     </td>
-                    <td data-label="Phone" className="py-2 pr-4 font-mono text-xs">
+                    <td data-label="Phone" className="py-3 pr-4 font-mono text-xs">
                       {c.phone_number ?? "—"}
                     </td>
-                    <td data-label="Status" className="py-2 pr-4">
+                    <td data-label="Status" className="py-3 pr-4">
                       {c.active ? (
                         <Badge tone="green">Active</Badge>
                       ) : (
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td data-label="" className="py-2 pr-4">
-                      <div className="flex gap-2">
+                    {/* Actions recede until the row is hovered/focused — calmer grid,
+                        but kept full-opacity on touch (no hover) and on focus-within
+                        for keyboard users. */}
+                    <td data-label="" className="py-3 pr-4">
+                      <div className="row-actions flex flex-wrap justify-end gap-2">
                         <RosterPdfButton crew={c} />
                         <CalendarFeedButton crew={c} />
+                        <PairDeviceButton crew={c} />
                         <CrossOpFtlButton crew={c} />
                       </div>
                     </td>

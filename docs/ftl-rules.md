@@ -33,8 +33,8 @@ Each rule below maps 1:1 to a pure function in that module, and to ≥1 test in
 | §4.6.1 | Min rest **typically 10 h**, protecting **8 h sleep opportunity** | `rest_away_floor_h = 10`, `min_sleep_opportunity_h = 8` (home floor 12 h is more restrictive) |
 | §4.6.1 | Rest after an extended FDP **≥ preceding duty period** | `rule_min_rest`: `floor = max(floor, preceding_duty)` |
 | §3.4 / §4.6.7 | Commander's discretion: report each use; **>2 h over limits → report to the Authority**; required rest increased by the overrun | `discretion_max_extension_h = 2`; >2 h flagged not-plannable |
-| §4.6.8 | Reserve: **8 h protected sleep opportunity** in 24 h before the called flight | `min_sleep_opportunity_h` (reserve-specific rule = roadmap) |
-| §4.6.2 | Weekly recovery emphasised (two nights restores alertness) | weekly-rest rule = roadmap (operator scheme value needed) |
+| §4.6.8 | Reserve: **8 h protected sleep opportunity** in 24 h before the called flight | `rule_reserve_sleep_opportunity` → `KCAR-P8-RESERVE-SLEEP` (`min_sleep_opportunity_h`) |
+| §4.6.2 | Weekly recovery emphasised (two nights restores alertness) | `rule_weekly_rest` → `KCAR-P8-WEEKLY-REST` (`weekly_rest_floor_h`, operator-overridable) |
 
 > **Status:** working baseline aligned to CAP 371 / EASA conventions and to
 > the explicit CAA-AC-OPS033 figures above. The **FDP table, cumulative
@@ -206,6 +206,31 @@ reduce rest by up to **1:00 h**. Each use must be logged with reason.
 Repeated use (>3 in any 90-day window) raises `AT_LIMIT` even when the
 extension itself is permitted, surfaces in the audit pack, and triggers
 Crewing Officer review.
+
+### 10. Reserve sleep opportunity
+
+**Rule ID:** `KCAR-P8-RESERVE-SLEEP`
+**Function:** `rule_reserve_sleep_opportunity`
+**Citation:** CAA-AC-OPS033 §4.6.8
+
+A reserve (short- or long-call standby) crew member must have an **8 h
+protected sleep opportunity** in the 24 h before the flight they are called
+for (`min_sleep_opportunity_h`). Applicable only while on standby; a duty
+that doesn't carry a sleep-opportunity figure is treated as compliant.
+
+### 11. Weekly recovery rest
+
+**Rule ID:** `KCAR-P8-WEEKLY-REST`
+**Function:** `rule_weekly_rest`
+**Citation:** CAA-AC-OPS033 §4.6.2
+
+The preceding rolling **7-day** window must contain at least one rest period
+of `weekly_rest_floor_h` (baseline **36 h** — an operator-scheme value). The
+engine takes the longest continuous rest in the window (counting the implicit
+rest at the window start) and grades it against the floor. Conservative: it
+needs ≥2 duties in the window to evaluate, so a sparse roster is never
+spuriously flagged. The optimiser validates each draft FDP without history, so
+this rule only engages on published/validated rosters and in the audit pack.
 
 ## Aggregation
 

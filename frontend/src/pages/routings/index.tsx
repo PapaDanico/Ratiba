@@ -563,7 +563,7 @@ export function RoutingsPage() {
         </CardHeader>
         <CardBody>
           {loading ? (
-            <p className="text-sm text-dn-muted">Loading…</p>
+            <TableSkeleton rows={6} cols={9} />
           ) : error ? (
             <ErrorAlert message={error} />
           ) : rows.length === 0 ? (

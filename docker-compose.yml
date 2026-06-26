@@ -80,11 +80,16 @@ services:
     env_file: .env
     environment:
       BACKEND_URL: http://backend:8000
+      # Shared pilot-session store so multiple bot replicas (and restarts)
+      # keep pairings. Falls back to in-process if Redis is unreachable.
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./bot:/app
     depends_on:
       backend:
         condition: service_healthy
+      redis:
+        condition: service_started
 
 volumes:
   db_data:

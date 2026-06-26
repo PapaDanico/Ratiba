@@ -104,7 +104,7 @@ function RecurrencySection() {
       </CardHeader>
       <CardBody>
         {loading ? (
-          <p className="text-sm text-dn-muted">Loading…</p>
+          <TableSkeleton rows={6} cols={6} />
         ) : error ? (
           <ErrorAlert message={error} />
         ) : items.length === 0 ? (
@@ -321,7 +321,7 @@ function TypeRatingsSection() {
         </form>
 
         {loading ? (
-          <p className="text-sm text-dn-muted">Loading…</p>
+          <TableSkeleton rows={6} cols={6} />
         ) : error ? (
           <ErrorAlert message={error} />
         ) : ratings.length === 0 ? (

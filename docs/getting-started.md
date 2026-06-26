@@ -2,7 +2,8 @@
 
 This guide takes you from a fresh `git clone` to a populated dashboard
 with two operators, mixed currency states, a 14-day published roster,
-pending leave + swap requests, and a downloadable KCAA audit pack.
+pending leave + swap requests, and a one-click KCAA audit pack you can
+generate and download from the Audit packs page.
 
 ## Prerequisites
 
@@ -32,8 +33,12 @@ docker compose up --build
 docker compose exec backend alembic upgrade head
 
 # 5. Populate two demo operators with crew, currencies, a roster, and
-#    a generated audit pack.
+#    pending leave + swap requests.
 docker compose exec backend python scripts/seed.py --demo
+
+#    Audit-pack PDFs are generated on demand (the Audit packs page) to keep the
+#    seed light on small instances. To pre-generate one per operator, set:
+#    docker compose exec -e RATIBA_SEED_AUDIT_PACKS=1 backend python scripts/seed.py --demo
 ```
 
 ## What you have now
@@ -60,10 +65,12 @@ through the dashboard for a 10-minute evaluation.
 The Telegram bot stays idle unless you set `TELEGRAM_BOT_TOKEN` — fine
 for the evaluation. To try the `/crew/me` mobile-first web view:
 
-1. Click into a crew member from the dashboard's Crew page.
-2. Issue a pairing code (button on the crew row).
-3. Open http://localhost:3000/crew/me in a phone-sized browser window.
-4. Enter the code.
+1. On the dashboard's Crew page, click **"Pair device"** on a crew row.
+2. Copy the one-tap pairing **link** it shows (or share it via the
+   WhatsApp / SMS / Email buttons).
+3. Open that link in a phone-sized browser window — it **auto-pairs** on
+   arrival. (You can also open `http://localhost:3000/crew/me` and paste the
+   raw code manually.)
 
 You're now seeing the same surface a pilot would see in Telegram.
 

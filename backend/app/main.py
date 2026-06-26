@@ -3,22 +3,40 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator
+import secrets
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Literal
 
 import sentry_sdk
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app import __version__
 from app.api.v1 import api_router
 from app.core.config import get_settings
+from app.core.cookies import AUTH_COOKIES, CSRF_COOKIE, CSRF_HEADER
 from app.core.database import engine
 from app.core.job_queue import use_redis_queue
 from app.core.logging import configure_logging
 from app.schemas.health import HealthResponse, ReadyResponse, VersionResponse
+
+_CSRF_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
+
+#: Public session-establishment endpoints. They are authorised by body
+#: credentials (email/password, pairing code), never by an ambient session
+#: cookie, so CSRF doesn't apply — and a request may legitimately arrive
+#: carrying an unrelated, stale auth cookie (e.g. logging in as an officer on a
+#: device that still holds a pilot cookie).
+_CSRF_EXEMPT_PATHS = frozenset(
+    {
+        "/api/v1/auth/login",
+        "/api/v1/auth/pilot-pair",
+        "/api/v1/auth/demo-workspace",
+    }
+)
 
 
 @asynccontextmanager
@@ -66,6 +84,32 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         openapi_url="/openapi.json",
     )
+
+    # CSRF (double-submit token). Registered before CORS so CORS stays the
+    # outermost layer (Starlette runs the last-added middleware first) and even
+    # a rejected request still carries the right CORS headers.
+    #
+    # Only cookie-authenticated unsafe requests are checked: an explicit
+    # ``Authorization: Bearer`` header is not an ambient credential (so the bot,
+    # API clients, and the Bearer-based test suite are exempt), and an
+    # unauthenticated request (login, pairing) carries no auth cookie yet.
+    @app.middleware("http")
+    async def csrf_protect(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        if request.method not in _CSRF_SAFE_METHODS and request.url.path not in _CSRF_EXEMPT_PATHS:
+            auth = request.headers.get("Authorization", "")
+            is_bearer = auth.lower().startswith("bearer ")
+            has_auth_cookie = any(name in request.cookies for name in AUTH_COOKIES)
+            if not is_bearer and has_auth_cookie:
+                header = request.headers.get(CSRF_HEADER)
+                cookie = request.cookies.get(CSRF_COOKIE)
+                if not header or not cookie or not secrets.compare_digest(header, cookie):
+                    return JSONResponse(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        content={"detail": "CSRF token missing or invalid"},
+                    )
+        return await call_next(request)
 
     app.add_middleware(
         CORSMiddleware,

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Badge } from "@/components/ui/Badge";
+import { ShareButtons } from "@/components/ui/ShareButtons";
 import { pilotApi, pilotPair, pilotStore, type PilotProfile } from "@/lib/pilotAuth";
 import { cn } from "@/lib/cn";
 
@@ -49,19 +50,69 @@ function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // A one-tap pairing link carries ?pair=CODE; auto-redeem it on arrival.
+  const [autoPairing, setAutoPairing] = useState(
+    () => new URLSearchParams(window.location.search).get("pair") !== null,
+  );
+
+  async function pair(raw: string): Promise<void> {
+    const profile = await pilotPair(raw.trim().toUpperCase());
+    onPaired(profile);
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      const profile = await pilotPair(code.trim().toUpperCase());
-      onPaired(profile);
+      await pair(code);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pairing failed");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  const autoPairAttempted = useRef(false);
+  useEffect(() => {
+    // Guard against React StrictMode's double-invoked effect (and any remount):
+    // the pairing code is single-use, so redeeming it twice would 400.
+    if (autoPairAttempted.current) return;
+    const linkCode = new URLSearchParams(window.location.search).get("pair");
+    if (!linkCode) return;
+    autoPairAttempted.current = true;
+    // Strip the code from the URL so it isn't bookmarked/shared or re-run.
+    window.history.replaceState(null, "", window.location.pathname);
+    setCode(linkCode.toUpperCase());
+    void pair(linkCode)
+      .catch((err: unknown) => {
+        setError(
+          err instanceof Error
+            ? `${err.message} — enter the code manually below.`
+            : "Pairing link failed — enter the code manually below.",
+        );
+      })
+      .finally(() => setAutoPairing(false));
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (autoPairing) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-dn-fog px-4">
+        <Card className="w-full max-w-sm">
+          <CardBody className="space-y-2 text-center">
+            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel">
+              Ratiba · Crew
+            </p>
+            <h1 className="font-display text-2xl text-dn-dark">Pairing your device…</h1>
+            <p className="text-sm text-dn-muted" data-testid="pairing-auto">
+              One moment while we link this device to your roster.
+            </p>
+          </CardBody>
+        </Card>
+      </main>
+    );
   }
 
   return (
@@ -179,6 +230,26 @@ function DutyToday() {
           </Badge>
         </p>
       )}
+      <div className="pt-2">
+        <p className="text-[10px] text-dn-muted mb-1">Share this duty</p>
+        <ShareButtons
+          message={
+            `My Ratiba duty ${d.date_local}: ${d.aircraft_reg}` +
+            `${d.aircraft_type ? ` (${d.aircraft_type})` : ""}` +
+            `${d.sector_ids?.length ? `, sectors ${d.sector_ids.join(", ")}` : ""}` +
+            `${
+              d.report_time
+                ? `, report ${new Date(d.report_time).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}`
+                : ""
+            }.`
+          }
+          subject="My Ratiba duty"
+          testidPrefix="me-share-today"
+        />
+      </div>
     </div>
   );
 }
@@ -206,21 +277,29 @@ function Roster() {
   if (!state.data?.duty_days.length) {
     return <p className="text-sm text-dn-muted">No duty days in the next 14 days.</p>;
   }
+  const rosterMsg =
+    "My Ratiba roster:\n" +
+    state.data.duty_days
+      .map((d) => `${d.date_local}: ${d.aircraft_reg} ${d.role_on_duty}`)
+      .join("\n");
   return (
-    <ul className="space-y-3" data-testid="me-roster-list">
-      {state.data.duty_days.map((d, i) => (
-        <li key={i} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-sm text-dn-steel">{d.date_local}</span>
-            <Badge tone="steel">{d.aircraft_type}</Badge>
-          </div>
-          <p className="mt-1 text-dn-dark">
-            {d.aircraft_reg} · {d.role_on_duty}
-          </p>
-          <p className="text-xs text-dn-muted">Sectors: {d.sector_ids.join(", ")}</p>
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-3">
+      <ShareButtons message={rosterMsg} subject="My Ratiba roster" testidPrefix="me-share-roster" />
+      <ul className="space-y-3" data-testid="me-roster-list">
+        {state.data.duty_days.map((d, i) => (
+          <li key={i} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-sm text-dn-steel">{d.date_local}</span>
+              <Badge tone="steel">{d.aircraft_type}</Badge>
+            </div>
+            <p className="mt-1 text-dn-dark">
+              {d.aircraft_reg} · {d.role_on_duty}
+            </p>
+            <p className="text-xs text-dn-muted">Sectors: {d.sector_ids.join(", ")}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -350,7 +429,7 @@ export function CrewMePage() {
   const [profile, setProfile] = useState<PilotProfile | null>(() => pilotStore.getProfile());
   const [tab, setTab] = useState<Tab>("today");
 
-  if (!profile || !pilotStore.getToken()) {
+  if (!profile) {
     return <PairingScreen onPaired={setProfile} />;
   }
 

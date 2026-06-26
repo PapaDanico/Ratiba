@@ -153,7 +153,7 @@ export function FleetPage() {
         </CardHeader>
         <CardBody>
           {loading ? (
-            <p className="text-sm text-dn-muted">Loading…</p>
+            <TableSkeleton rows={5} cols={3} />
           ) : fleet.length === 0 ? (
             <p className="text-sm text-dn-muted" data-testid="no-fleet">
               No aircraft registered yet.

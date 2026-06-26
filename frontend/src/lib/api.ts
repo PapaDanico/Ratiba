@@ -1,25 +1,74 @@
 /**
- * Thin fetch wrapper with bearer token + auto-refresh.
+ * Thin fetch wrapper for the crewing-officer dashboard.
  *
- * Tokens live in localStorage. Production migrates to httpOnly cookies once
- * the dashboard's deployment shape is fixed in Phase 6.
+ * Primary auth is **httpOnly cookies** set by the backend (XSS-safe — JS never
+ * sees the JWT): we send them with `credentials: "include"` and echo the
+ * readable `rt_csrf` cookie in an `X-CSRF-Token` header (double-submit CSRF).
+ *
+ * Fallback: in some contexts the browser won't round-trip the cookies — most
+ * notably the Claude Code web preview, which embeds the app in a cross-site
+ * iframe where third-party cookies are blocked. The backend also returns the
+ * token pair in the login/refresh *body*, so we keep them **in memory** (never
+ * localStorage — that would reintroduce the XSS-exfiltration risk) and send the
+ * access token as a `Bearer` header. Cookies are preferred when they work; the
+ * in-memory copy just keeps a cross-site session alive for the page's lifetime
+ * (lost on refresh, which is acceptable for the preview).
  */
 
-const ACCESS_KEY = "ratiba.access_token";
-const REFRESH_KEY = "ratiba.refresh_token";
+const CSRF_COOKIE = "rt_csrf";
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export const tokenStore = {
-  getAccess: (): string | null => localStorage.getItem(ACCESS_KEY),
-  getRefresh: (): string | null => localStorage.getItem(REFRESH_KEY),
-  set: (access: string, refresh?: string) => {
-    localStorage.setItem(ACCESS_KEY, access);
-    if (refresh) localStorage.setItem(REFRESH_KEY, refresh);
-  },
-  clear: () => {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+// In-memory token fallback (module-scoped; not persisted).
+let memAccess: string | null = null;
+let memRefresh: string | null = null;
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  const value = match?.[1];
+  return value !== undefined ? decodeURIComponent(value) : null;
+}
+
+/**
+ * Session helpers. A session exists if either the readable CSRF cookie is
+ * present (cookie auth) or we hold an in-memory access token (cross-site
+ * fallback).
+ */
+export const session = {
+  isAuthed: (): boolean => readCookie(CSRF_COOKIE) !== null || memAccess !== null,
+  csrf: (): string | null => readCookie(CSRF_COOKIE),
+  /** Best-effort local clear of the cookie marker + in-memory tokens. */
+  clear: (): void => {
+    document.cookie = `${CSRF_COOKIE}=; Max-Age=0; path=/`;
+    memAccess = null;
+    memRefresh = null;
   },
 };
+
+function withCsrf(headers: Headers, method: string): void {
+  if (UNSAFE_METHODS.has(method.toUpperCase())) {
+    const csrf = session.csrf();
+    if (csrf) headers.set("X-CSRF-Token", csrf);
+  }
+}
+
+/** Add the in-memory access token as a Bearer header when we have one. */
+function withBearer(headers: Headers): void {
+  if (memAccess && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${memAccess}`);
+  }
+}
+
+/**
+ * Raw, credentialed fetch for blob downloads and file uploads — adds the auth
+ * cookies, the Bearer fallback, and the CSRF header but leaves body/response
+ * handling to the caller.
+ */
+export function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers ?? {});
+  withCsrf(headers, init.method ?? "GET");
+  withBearer(headers);
+  return fetch(path, { ...init, headers, credentials: "include" });
+}
 
 function messageFromBody(status: number, body: unknown): string {
   if (typeof body === "object" && body !== null && "detail" in body) {
@@ -50,41 +99,61 @@ export class ApiError extends Error {
   }
 }
 
-async function refreshAccess(): Promise<string | null> {
-  const refresh = tokenStore.getRefresh();
-  if (!refresh) return null;
-  const resp = await fetch("/api/v1/auth/refresh", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refresh }),
-  });
-  if (!resp.ok) return null;
-  // Refresh tokens rotate: store the new pair (the old refresh is now revoked).
-  const body = (await resp.json()) as { access_token: string; refresh_token?: string };
-  tokenStore.set(body.access_token, body.refresh_token);
-  return body.access_token;
+type TokenPair = { access_token?: string; refresh_token?: string };
+
+/** Capture the token pair from a login/refresh response body into memory. */
+async function captureTokens(resp: Response): Promise<void> {
+  try {
+    const body = (await resp.clone().json()) as TokenPair;
+    if (body.access_token) memAccess = body.access_token;
+    if (body.refresh_token) memRefresh = body.refresh_token;
+  } catch {
+    /* non-JSON or empty — ignore */
+  }
+}
+
+/**
+ * Rotate the session. Prefers the cookie-based refresh; if we're running on the
+ * in-memory fallback (cookies blocked), sends the stored refresh token in the
+ * body. Returns true on success and updates the in-memory tokens.
+ */
+async function refreshAccess(): Promise<boolean> {
+  const headers = new Headers();
+  withCsrf(headers, "POST");
+  const reqInit: RequestInit = { method: "POST", headers, credentials: "include" };
+  if (memRefresh) {
+    headers.set("Content-Type", "application/json");
+    reqInit.body = JSON.stringify({ refresh_token: memRefresh });
+  }
+  const resp = await fetch("/api/v1/auth/refresh", reqInit);
+  if (resp.ok) await captureTokens(resp);
+  return resp.ok;
 }
 
 export async function api<T = unknown>(
   path: string,
   init: RequestInit & { skipAuth?: boolean } = {},
 ): Promise<T> {
-  const { skipAuth, ...rest } = init;
+  const { skipAuth: _skipAuth, ...rest } = init;
+  const method = rest.method ?? "GET";
   const headers = new Headers(rest.headers ?? {});
   if (rest.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (!skipAuth) {
-    const token = tokenStore.getAccess();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-  }
+  withCsrf(headers, method);
+  if (!_skipAuth) withBearer(headers);
 
-  let resp = await fetch(path, { ...rest, headers });
-  if (resp.status === 401 && !skipAuth) {
-    const fresh = await refreshAccess();
-    if (fresh) {
-      headers.set("Authorization", `Bearer ${fresh}`);
-      resp = await fetch(path, { ...rest, headers });
+  let resp = await fetch(path, { ...rest, headers, credentials: "include" });
+  if (resp.status === 401 && !_skipAuth) {
+    if (await refreshAccess()) {
+      // Session rotated; rebuild headers (CSRF + Bearer may have changed) and retry.
+      const retryHeaders = new Headers(rest.headers ?? {});
+      if (rest.body && !retryHeaders.has("Content-Type")) {
+        retryHeaders.set("Content-Type", "application/json");
+      }
+      withCsrf(retryHeaders, method);
+      withBearer(retryHeaders);
+      resp = await fetch(path, { ...rest, headers: retryHeaders, credentials: "include" });
     }
   }
   if (!resp.ok) {
@@ -100,29 +169,75 @@ export async function api<T = unknown>(
   return (await resp.json()) as T;
 }
 
-export async function login(
-  email: string,
-  password: string,
-): Promise<{ access_token: string; refresh_token: string }> {
-  const body = await api<{ access_token: string; refresh_token: string }>("/api/v1/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-    skipAuth: true,
-  });
-  tokenStore.set(body.access_token, body.refresh_token);
-  return body;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Log in, transparently riding out a server cold-start. On a free-tier host the
+ * API can be asleep on the first request and the proxy returns 502/503/504 (or
+ * the fetch network-errors) for ~30-60s while it wakes — which otherwise shows
+ * the user a scary "something went wrong". We retry those *transient* failures
+ * with backoff, calling `onWaking` so the form can show a "waking the server…"
+ * hint. A 401 (bad credentials) is NOT transient and rejects immediately.
+ */
+export async function login(email: string, password: string, onWaking?: () => void): Promise<void> {
+  // Total budget ~45s: covers a typical free-tier cold start.
+  const delays = [0, 1500, 3000, 5000, 8000, 8000, 8000, 8000];
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < delays.length; attempt++) {
+    if (attempt > 0) {
+      onWaking?.();
+      await sleep(delays[attempt] ?? 8000);
+    }
+    let resp: Response;
+    try {
+      resp = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
+    } catch (netErr) {
+      // Network error (server not reachable yet) — transient, keep retrying.
+      lastErr = netErr;
+      continue;
+    }
+    if (resp.ok) {
+      await captureTokens(resp);
+      return;
+    }
+    // 5xx / 502 / 503 / 504 → cold-start; retry. Anything else (401, 400, 429)
+    // is a real answer — surface it immediately.
+    if (resp.status >= 500) {
+      lastErr = new ApiError(resp.status, await resp.text().catch(() => null));
+      continue;
+    }
+    let body: unknown = null;
+    try {
+      body = await resp.json();
+    } catch {
+      body = await resp.text();
+    }
+    throw new ApiError(resp.status, body);
+  }
+  // Exhausted retries — the server never woke.
+  throw lastErr instanceof ApiError ? lastErr : new ApiError(503, "server unavailable");
 }
 
 export function logout(): void {
-  // Best-effort server-side revocation of the refresh token, then clear locally.
-  const refresh = tokenStore.getRefresh();
-  if (refresh) {
-    void fetch("/api/v1/auth/logout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refresh }),
-      keepalive: true,
-    }).catch(() => {});
-  }
-  tokenStore.clear();
+  // Best-effort server-side revocation. The CSRF marker must stay readable until
+  // the request is actually dispatched: clearing it synchronously races the
+  // keepalive fetch and strips the double-submit cookie (leaving only the
+  // header), which the server then rejects with 403 — silently skipping
+  // revocation. The logout *response* clears all cookies; we only drop the
+  // local marker once the request has settled.
+  const headers = new Headers();
+  withCsrf(headers, "POST");
+  void fetch("/api/v1/auth/logout", {
+    method: "POST",
+    headers,
+    credentials: "include",
+    keepalive: true,
+  })
+    .catch(() => {})
+    .finally(() => session.clear());
 }

@@ -4,18 +4,16 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.cookies import ACCESS_COOKIE, PILOT_COOKIE, bearer_or_cookie
 from app.core.database import get_db
 from app.core.security import decode_token
 from app.models import Crew, Operator, User
 from app.models.user import UserRole
-
-_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 # Roles permitted to perform staff write actions (create/update/delete operator
 # data, approvals, publish, imports). A future restricted ``PILOT`` *user* role
@@ -29,10 +27,15 @@ STAFF_WRITER_ROLES: tuple[UserRole, ...] = (
 
 
 def get_current_user(
-    token: str | None = Depends(_oauth2_scheme),
+    request: Request,
     session: Session = Depends(get_db),
 ) -> User:
-    """Resolve the bearer token to a User row. Raises 401 on any failure."""
+    """Resolve the access token to a User row. Raises 401 on any failure.
+
+    The token comes from an ``Authorization: Bearer`` header (bot / API
+    clients / tests) or, for browser sessions, the httpOnly ``rt_access``
+    cookie."""
+    token = bearer_or_cookie(request, ACCESS_COOKIE)
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -105,15 +108,16 @@ def get_current_operator(
 
 
 def get_current_pilot(
-    token: str | None = Depends(_oauth2_scheme),
+    request: Request,
     session: Session = Depends(get_db),
 ) -> Crew:
     """Resolve a pilot JWT (sub=``crew:<uuid>``) to a Crew row.
 
     Pilots authenticate via :func:`app.core.security.create_pilot_token`,
-    issued by ``POST /api/v1/auth/pilot-pair``. Same Bearer-header shape as
-    user tokens so the bot and the /crew/me web view share one client.
+    issued by ``POST /api/v1/auth/pilot-pair``. The bot sends it as a Bearer
+    header; the ``/crew/me`` web view sends the httpOnly ``rt_pilot`` cookie.
     """
+    token = bearer_or_cookie(request, PILOT_COOKIE)
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

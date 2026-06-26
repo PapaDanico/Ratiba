@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { api, login as apiLogin, logout as apiLogout, tokenStore } from "./api";
+import { api, login as apiLogin, logout as apiLogout, session } from "./api";
 
 export type CurrentUser = {
   id: string;
@@ -16,7 +16,7 @@ export type CurrentUser = {
 type AuthContextValue = {
   user: CurrentUser | null;
   status: "unknown" | "authenticated" | "anonymous" | "loading";
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, onWaking?: () => void) => Promise<void>;
   logout: () => void;
 };
 
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthContextValue["status"]>("unknown");
 
   const refreshMe = useCallback(async () => {
-    if (!tokenStore.getAccess()) {
+    if (!session.isAuthed()) {
       setStatus("anonymous");
       setUser(null);
       return;
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(me);
       setStatus("authenticated");
     } catch {
-      tokenStore.clear();
+      session.clear();
       setUser(null);
       setStatus("anonymous");
     }
@@ -48,10 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshMe]);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, onWaking?: () => void) => {
       setStatus("loading");
       try {
-        await apiLogin(email, password);
+        await apiLogin(email, password, onWaking);
         await refreshMe();
       } catch (err) {
         setStatus("anonymous");

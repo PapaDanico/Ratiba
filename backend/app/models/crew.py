@@ -86,6 +86,9 @@ class Crew(UUIDMixin, TimestampMixin, OperatorScopedMixin, Base):
     telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     phone_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Opt-in WhatsApp number (Africa's Talking). Separate from phone_number so
+    # SMS and WhatsApp don't both fire for the same crew member.
+    whatsapp_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Stable cross-operator identity for the same human (e.g. licence number).
     # Lets a pilot shared across operators be linked for cumulative-FTL
     # aggregation (opt-in, later phase). Indexed; not unique (distinct operators

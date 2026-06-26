@@ -18,13 +18,15 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [waking, setWaking] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setWaking(false);
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email, password, () => setWaking(true));
       navigate("/", { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -34,6 +36,7 @@ export function LoginPage() {
       }
     } finally {
       setSubmitting(false);
+      setWaking(false);
     }
   }
 
@@ -190,7 +193,7 @@ export function LoginPage() {
                     disabled={submitting}
                     data-testid="login-submit"
                   >
-                    {submitting ? "Signing in…" : "Sign in"}
+                    {waking ? "Waking the server…" : submitting ? "Signing in…" : "Sign in"}
                   </Button>
                 </form>
               ) : (

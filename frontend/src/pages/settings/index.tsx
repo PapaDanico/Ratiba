@@ -129,9 +129,7 @@ export function SettingsPage() {
     setExporting(true);
     setExportErr(null);
     try {
-      const resp = await fetch("/api/v1/settings/operator/export", {
-        headers: { Authorization: `Bearer ${tokenStore.getAccess() ?? ""}` },
-      });
+      const resp = await authFetch("/api/v1/settings/operator/export");
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
       const disposition = resp.headers.get("content-disposition") ?? "";

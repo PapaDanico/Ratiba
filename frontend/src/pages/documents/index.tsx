@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SortableTh } from "@/components/ui/SortableTh";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import { useSort } from "@/lib/useSort";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -56,12 +60,22 @@ function label(value: string): string {
   return DOC_TYPES.find((d) => d.value === value)?.label ?? value;
 }
 
+type DocSortKey = "crew" | "type" | "expires" | "state";
+
 export function DocumentsPage() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [crew, setCrew] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const { sort, toggle, sorted } = useSort<DocSortKey>(null);
+  const visibleDocs = sorted(docs, {
+    crew: (d) => d.crew_name.toLowerCase(),
+    type: (d) => d.doc_type,
+    // Empty expiry sorts last in asc.
+    expires: (d) => d.expiry_date ?? "9999-12-31",
+    state: (d) => ({ RED: 0, AMBER: 1, GREEN: 2, NA: 3 })[d.state],
+  });
 
   // Add-form state
   const [crewId, setCrewId] = useState("");
@@ -243,51 +257,61 @@ export function DocumentsPage() {
         </form>
 
         {loading ? (
-          <p className="text-sm text-dn-muted">Loading…</p>
+          <TableSkeleton rows={6} cols={8} />
         ) : error ? (
           <ErrorAlert message={error} />
         ) : docs.length === 0 ? (
-          <p className="text-sm text-dn-muted" data-testid="documents-empty">
-            No documents recorded yet.
-          </p>
+          <EmptyState
+            icon="📄"
+            title="No documents recorded yet"
+            hint="Add crew licences, medicals and certificates to track their expiry here."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="documents-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
-                  <th className="py-2 pr-4 font-medium">Crew</th>
-                  <th className="py-2 pr-4 font-medium">Type</th>
-                  <th className="py-2 pr-4 font-medium">Number</th>
-                  <th className="py-2 pr-4 font-medium">Authority</th>
-                  <th className="py-2 pr-4 font-medium">Expires</th>
-                  <th className="py-2 pr-4 font-medium">Days left</th>
-                  <th className="py-2 pr-4 font-medium">State</th>
-                  <th className="py-2 pr-4 font-medium" />
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Crew" col="crew" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Type" col="type" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">Number</th>
+                  <th className="py-3 pr-4 font-medium">Authority</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="Expires" col="expires" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium">Days left</th>
+                  <th className="py-3 pr-4 font-medium">
+                    <SortableTh label="State" col="state" sort={sort} onSort={toggle} />
+                  </th>
+                  <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
-                {docs.map((d) => (
-                  <tr key={d.id} className="hover:bg-dn-fog">
-                    <td data-label="Crew" className="py-2 pr-4">
+                {visibleDocs.map((d) => (
+                  <tr key={d.id}>
+                    <td data-label="Crew" className="py-3 pr-4">
                       <span className="text-dn-dark">{d.crew_name}</span>{" "}
                       <span className="font-mono text-xs text-dn-muted">({d.employee_no})</span>
                     </td>
-                    <td data-label="Type" className="py-2 pr-4">
+                    <td data-label="Type" className="py-3 pr-4">
                       {label(d.doc_type)}
                     </td>
-                    <td data-label="Number" className="py-2 pr-4 font-mono text-xs">
+                    <td data-label="Number" className="py-3 pr-4 font-mono text-xs">
                       {d.document_number ?? "—"}
                     </td>
-                    <td data-label="Authority" className="py-2 pr-4 text-xs">
+                    <td data-label="Authority" className="py-3 pr-4 text-xs">
                       {d.issuing_authority ?? "—"}
                     </td>
-                    <td data-label="Expires" className="py-2 pr-4 font-mono">
+                    <td data-label="Expires" className="py-3 pr-4 font-mono">
                       {d.expiry_date ?? "—"}
                     </td>
-                    <td data-label="Days left" className="py-2 pr-4 font-mono">
+                    <td data-label="Days left" className="py-3 pr-4 font-mono">
                       {d.days_remaining === null ? "—" : d.days_remaining}
                     </td>
-                    <td data-label="State" className="py-2 pr-4">
+                    <td data-label="State" className="py-3 pr-4">
                       {d.state === "NA" ? (
                         <span className="text-xs text-dn-muted">no expiry</span>
                       ) : (

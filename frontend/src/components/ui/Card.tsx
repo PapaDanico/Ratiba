@@ -1,11 +1,19 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-export function Card({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {
+type CardProps = HTMLAttributes<HTMLDivElement> & {
+  /** Subtle shadow lift + raise on hover — for interactive/clickable cards
+   * (e.g. dashboard attention tiles). Off by default so static panels stay put. */
+  interactive?: boolean;
+};
+
+export function Card({ className, children, interactive = false, ...rest }: CardProps) {
   return (
     <div
       className={cn(
         "rounded-lg border border-dn-sand bg-white shadow-sm overflow-hidden",
+        interactive &&
+          "transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none",
         className,
       )}
       {...rest}
