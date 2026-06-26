@@ -65,7 +65,7 @@ export function Modal({
       document.removeEventListener("keydown", onKey, true);
       previouslyFocused?.focus?.();
     };
-  }, [onClose]);
+  }, [onClose, disableEscape]);
 
   return (
     <div
