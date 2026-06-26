@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 
@@ -21,6 +23,13 @@ export function SwapsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    id: string;
+    status: "APPROVED" | "REJECTED";
+    request: SwapRequest;
+  } | null>(null);
+
   async function reload() {
     setLoading(true);
     try {
@@ -38,15 +47,17 @@ export function SwapsPage() {
     void reload();
   }, []);
 
-  async function decide(id: string, status: "APPROVED" | "REJECTED") {
-    setBusy(id);
+  async function confirmDecision() {
+    if (!confirmModal) return;
+    setBusy(confirmModal.id);
     try {
-      await api(`/api/v1/swap/${id}`, {
+      await api(`/api/v1/swap/${confirmModal.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: confirmModal.status }),
       });
       await reload();
-      toast.show(`Swap ${status.toLowerCase()}`, "success");
+      toast.show(`Swap ${confirmModal.status.toLowerCase()}`, "success");
+      setConfirmModal(null);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Decision failed";
       setError(msg);
@@ -54,6 +65,10 @@ export function SwapsPage() {
     } finally {
       setBusy(null);
     }
+  }
+
+  function showConfirm(request: SwapRequest, status: "APPROVED" | "REJECTED") {
+    setConfirmModal({ id: request.id, status, request });
   }
 
   return (
@@ -65,7 +80,7 @@ export function SwapsPage() {
         {loading ? (
           <p className="text-sm text-dn-muted">Loading…</p>
         ) : error ? (
-          <p className="text-sm text-dn-red">{error}</p>
+          <ErrorAlert message={error} />
         ) : rows.length === 0 ? (
           <p className="text-sm text-dn-muted" data-testid="no-pending-swap">
             No pending swap requests.
@@ -91,7 +106,7 @@ export function SwapsPage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => decide(r.id, "REJECTED")}
+                    onClick={() => showConfirm(r, "REJECTED")}
                     disabled={busy === r.id}
                     data-testid={`reject-swap-${r.id}`}
                   >
@@ -99,7 +114,7 @@ export function SwapsPage() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => decide(r.id, "APPROVED")}
+                    onClick={() => showConfirm(r, "APPROVED")}
                     disabled={busy === r.id}
                     data-testid={`approve-swap-${r.id}`}
                   >
@@ -109,6 +124,61 @@ export function SwapsPage() {
               </li>
             ))}
           </ul>
+        )}
+
+        {confirmModal && (
+          <Modal
+            title={`${confirmModal.status === "APPROVED" ? "Approve" : "Reject"} swap request`}
+            onClose={() => setConfirmModal(null)}
+            disableEscape={busy === confirmModal.id}
+          >
+            <div className="space-y-4">
+              <div className="bg-dn-fog rounded p-3 space-y-2">
+                <div>
+                  <span className="text-xs text-dn-muted">Crew swap</span>
+                  <div className="font-mono text-sm">
+                    {confirmModal.request.crew_id_initiator.slice(0, 8)}… ↔{" "}
+                    {confirmModal.request.crew_id_counterparty.slice(0, 8)}…
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs text-dn-muted">Flight/FDP</span>
+                  <div className="font-medium">{confirmModal.request.fdp_or_sector_ref}</div>
+                </div>
+                {confirmModal.request.reason && (
+                  <div>
+                    <span className="text-xs text-dn-muted">Reason</span>
+                    <div className="text-sm">{confirmModal.request.reason}</div>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-dn-dark">
+                {confirmModal.status === "APPROVED"
+                  ? "Approve this swap request?"
+                  : "Reject this swap request?"}
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setConfirmModal(null)}
+                  disabled={busy === confirmModal.id}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant={confirmModal.status === "APPROVED" ? "primary" : "secondary"}
+                  onClick={confirmDecision}
+                  disabled={busy === confirmModal.id}
+                >
+                  {busy === confirmModal.id
+                    ? "Processing…"
+                    : confirmModal.status === "APPROVED"
+                      ? "Approve"
+                      : "Reject"}
+                </Button>
+              </div>
+            </div>
+          </Modal>
         )}
       </CardBody>
     </Card>

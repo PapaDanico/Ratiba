@@ -16,12 +16,14 @@ export function Modal({
   children,
   testId,
   maxWidth = "max-w-md",
+  disableEscape = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   testId?: string;
   maxWidth?: string;
+  disableEscape?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -34,8 +36,10 @@ export function Modal({
 
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
+        if (!disableEscape) {
+          e.stopPropagation();
+          onClose();
+        }
         return;
       }
       if (e.key === "Tab") {
@@ -61,7 +65,7 @@ export function Modal({
       document.removeEventListener("keydown", onKey, true);
       previouslyFocused?.focus?.();
     };
-  }, [onClose]);
+  }, [onClose, disableEscape]);
 
   return (
     <div

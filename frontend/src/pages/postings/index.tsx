@@ -3,7 +3,9 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 
 type PostingCrew = {
@@ -89,23 +91,25 @@ function AssignControl({
   }
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <select
-        value={crewId}
-        onChange={(e) => setCrewId(e.target.value)}
-        className="rounded-md border border-dn-steel-lt px-2 py-1.5 text-sm"
-        aria-label="Crew to assign"
-      >
-        {crew.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.first_name} {c.last_name} ({c.employee_no})
-          </option>
-        ))}
-      </select>
-      <Button size="sm" variant="secondary" onClick={assign} disabled={busy || !crewId}>
-        {busy ? "Assigning…" : "Assign to posting"}
-      </Button>
-      {err && <span className="text-xs text-dn-red">{err}</span>}
+    <div className="mt-3 space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={crewId}
+          onChange={(e) => setCrewId(e.target.value)}
+          aria-label="Crew to assign"
+          className="w-auto"
+        >
+          {crew.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.first_name} {c.last_name} ({c.employee_no})
+            </option>
+          ))}
+        </Select>
+        <Button size="sm" variant="secondary" onClick={assign} disabled={busy || !crewId}>
+          {busy ? "Assigning…" : "Assign to posting"}
+        </Button>
+      </div>
+      {err && <ErrorAlert message={err} />}
     </div>
   );
 }
@@ -225,18 +229,17 @@ export function PostingsPage() {
             </div>
             <div>
               <Label htmlFor="p-type">Type</Label>
-              <select
+              <Select
                 id="p-type"
                 value={ptype}
                 onChange={(e) => setPtype(e.target.value as Posting["type"])}
-                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
               >
                 {POSTING_TYPES.map(([v, label]) => (
                   <option key={v} value={v}>
                     {label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="p-start">Start</Label>
@@ -267,18 +270,18 @@ export function PostingsPage() {
             <Label htmlFor="p-notes">Notes (optional)</Label>
             <Input id="p-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="space-y-3">
             <Button type="submit" disabled={busy} data-testid="create-posting">
               {busy ? "Creating…" : "Create posting"}
             </Button>
-            {formErr && <span className="text-sm text-dn-red">{formErr}</span>}
+            {formErr && <ErrorAlert message={formErr} />}
           </div>
         </form>
 
         {loading ? (
           <p className="text-sm text-dn-muted">Loading…</p>
         ) : error ? (
-          <p className="text-sm text-dn-red">{error}</p>
+          <ErrorAlert message={error} />
         ) : postings.length === 0 ? (
           <p className="text-sm text-dn-muted">No postings yet. Create one above.</p>
         ) : (

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { DnLogo } from "@/components/ui/DnLogo";
 import { useAuth } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
@@ -184,16 +185,7 @@ export function LoginPage() {
                       data-testid="login-password"
                     />
                   </div>
-                  {error && (
-                    <p className="text-sm text-dn-red" role="alert" data-testid="login-error">
-                      {error}
-                    </p>
-                  )}
-                  {waking && !error && (
-                    <p className="text-sm text-dn-muted" role="status" data-testid="login-waking">
-                      Waking the server — this can take up to a minute on first use. Hang tight…
-                    </p>
-                  )}
+                  {error && <ErrorAlert message={error} />}
                   <Button
                     type="submit"
                     className="w-full mt-2"
@@ -251,11 +243,7 @@ export function LoginPage() {
                       data-testid="create-password"
                     />
                   </div>
-                  {error && (
-                    <p className="text-sm text-dn-red" role="alert" data-testid="create-error">
-                      {error}
-                    </p>
-                  )}
+                  {error && <ErrorAlert message={error} />}
                   <Button
                     type="submit"
                     className="w-full mt-2"

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 
@@ -22,6 +24,13 @@ export function LeavePage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    id: string;
+    status: "APPROVED" | "REJECTED";
+    request: LeaveRequest;
+  } | null>(null);
+
   async function reload() {
     setLoading(true);
     try {
@@ -39,15 +48,17 @@ export function LeavePage() {
     void reload();
   }, []);
 
-  async function decide(id: string, status: "APPROVED" | "REJECTED") {
-    setBusy(id);
+  async function confirmDecision() {
+    if (!confirmModal) return;
+    setBusy(confirmModal.id);
     try {
-      await api(`/api/v1/leave/${id}`, {
+      await api(`/api/v1/leave/${confirmModal.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: confirmModal.status }),
       });
       await reload();
-      toast.show(`Leave ${status.toLowerCase()}`, "success");
+      toast.show(`Leave ${confirmModal.status.toLowerCase()}`, "success");
+      setConfirmModal(null);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Decision failed";
       setError(msg);
@@ -55,6 +66,10 @@ export function LeavePage() {
     } finally {
       setBusy(null);
     }
+  }
+
+  function showConfirm(request: LeaveRequest, status: "APPROVED" | "REJECTED") {
+    setConfirmModal({ id: request.id, status, request });
   }
 
   return (
@@ -66,7 +81,7 @@ export function LeavePage() {
         {loading ? (
           <p className="text-sm text-dn-muted">Loading…</p>
         ) : error ? (
-          <p className="text-sm text-dn-red">{error}</p>
+          <ErrorAlert message={error} />
         ) : rows.length === 0 ? (
           <p className="text-sm text-dn-muted" data-testid="no-pending-leave">
             No pending requests. Nicely done.
@@ -92,7 +107,7 @@ export function LeavePage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => decide(r.id, "REJECTED")}
+                    onClick={() => showConfirm(r, "REJECTED")}
                     disabled={busy === r.id}
                     data-testid={`reject-leave-${r.id}`}
                   >
@@ -100,7 +115,7 @@ export function LeavePage() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => decide(r.id, "APPROVED")}
+                    onClick={() => showConfirm(r, "APPROVED")}
                     disabled={busy === r.id}
                     data-testid={`approve-leave-${r.id}`}
                   >
@@ -110,6 +125,60 @@ export function LeavePage() {
               </li>
             ))}
           </ul>
+        )}
+
+        {confirmModal && (
+          <Modal
+            title={`${confirmModal.status === "APPROVED" ? "Approve" : "Reject"} leave request`}
+            onClose={() => setConfirmModal(null)}
+            disableEscape={busy === confirmModal.id}
+          >
+            <div className="space-y-4">
+              <div className="bg-dn-fog rounded p-3 space-y-2">
+                <div>
+                  <span className="text-xs text-dn-muted">Type</span>
+                  <div className="font-medium">{confirmModal.request.type}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-dn-muted">Dates</span>
+                  <div className="font-mono">
+                    {confirmModal.request.date_from} → {confirmModal.request.date_to}
+                  </div>
+                </div>
+                {confirmModal.request.note && (
+                  <div>
+                    <span className="text-xs text-dn-muted">Note</span>
+                    <div className="text-sm">{confirmModal.request.note}</div>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-dn-dark">
+                {confirmModal.status === "APPROVED"
+                  ? "Approve this leave request?"
+                  : "Reject this leave request?"}
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setConfirmModal(null)}
+                  disabled={busy === confirmModal.id}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant={confirmModal.status === "APPROVED" ? "primary" : "secondary"}
+                  onClick={confirmDecision}
+                  disabled={busy === confirmModal.id}
+                >
+                  {busy === confirmModal.id
+                    ? "Processing…"
+                    : confirmModal.status === "APPROVED"
+                      ? "Approve"
+                      : "Reject"}
+                </Button>
+              </div>
+            </div>
+          </Modal>
         )}
       </CardBody>
     </Card>

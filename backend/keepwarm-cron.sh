@@ -1,15 +1,8 @@
 #!/bin/sh
 set -e
 
-# Keep the free-tier ratiba-api web service warm so it doesn't cold-start (and
-# return 502 during the ~30-60s wake) on a real user's first request.
-#
-# Render free web services spin down after ~15 min idle; this cron pings the
-# public /healthz every 10 min to keep it up. /healthz needs no auth.
-#
-# API_URL is the public base URL of the ratiba-api service, e.g.
-#   https://ratiba-api.onrender.com
-# Set it on this cron service after the first deploy (sync: false in render.yaml).
+# Keep-warm cron: ping API healthz every 10 min to prevent Render free-tier cold-start.
+# Invoked by: render.yaml ratiba-keepwarm cron service, schedule: "*/10 * * * *"
 
 API_URL="${API_URL:-https://ratiba-api.onrender.com}"
 
@@ -21,6 +14,6 @@ if curl -sf "$API_URL/healthz" > /dev/null 2>&1; then
 else
     STATUS=$?
     echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] ✗ Healthz failed (exit code: $STATUS)"
-    # Non-fatal: a single failed ping (e.g. mid-deploy) must not fail the cron run.
+    # Don't fail the cron (exit 0) even if unreachable — Render will log it.
     exit 0
 fi

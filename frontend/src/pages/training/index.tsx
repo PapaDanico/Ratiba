@@ -3,8 +3,10 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
-import { TableSkeleton } from "@/components/ui/Skeleton";
+import { Modal } from "@/components/ui/Modal";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 
 type Crew = {
@@ -86,17 +88,17 @@ function RecurrencySection() {
           <CardTitle>Recurrency — expiring qualifications</CardTitle>
           <div className="flex items-center gap-2 text-sm text-dn-muted">
             <span>Within</span>
-            <select
+            <Select
               value={withinDays}
               onChange={(e) => setWithinDays(Number(e.target.value))}
-              className="rounded-md border border-dn-steel-lt px-2 py-1 text-sm"
               data-testid="recurrency-window"
+              className="w-auto"
             >
               <option value={30}>30 days</option>
               <option value={60}>60 days</option>
               <option value={90}>90 days</option>
               <option value={180}>180 days</option>
-            </select>
+            </Select>
           </div>
         </div>
       </CardHeader>
@@ -104,7 +106,7 @@ function RecurrencySection() {
         {loading ? (
           <TableSkeleton rows={6} cols={6} />
         ) : error ? (
-          <p className="text-sm text-dn-red">{error}</p>
+          <ErrorAlert message={error} />
         ) : items.length === 0 ? (
           <p className="text-sm text-dn-muted" data-testid="recurrency-empty">
             Nothing expiring in this window. ✅
@@ -166,6 +168,10 @@ function TypeRatingsSection() {
   const [validUntil, setValidUntil] = useState(addYears(todayIso(), 1));
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
+
+  // Delete confirmation state
+  const [deleteModal, setDeleteModal] = useState<TypeRating | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,12 +235,17 @@ function TypeRatingsSection() {
     }
   }
 
-  async function remove(id: string) {
+  async function confirmDelete() {
+    if (!deleteModal) return;
+    setDeleting(true);
     try {
-      await api(`/api/v1/training/type-ratings/${id}`, { method: "DELETE" });
+      await api(`/api/v1/training/type-ratings/${deleteModal.id}`, { method: "DELETE" });
       setReloadKey((k) => k + 1);
+      setDeleteModal(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to delete");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -252,11 +263,10 @@ function TypeRatingsSection() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <Label htmlFor="tr-crew">Crew</Label>
-              <select
+              <Select
                 id="tr-crew"
                 value={crewId}
                 onChange={(e) => setCrewId(e.target.value)}
-                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
                 required
               >
                 {crew.map((c) => (
@@ -264,15 +274,14 @@ function TypeRatingsSection() {
                     {c.first_name} {c.last_name} ({c.employee_no})
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="tr-type">Aircraft type</Label>
-              <select
+              <Select
                 id="tr-type"
                 value={acType}
                 onChange={(e) => setAcType(e.target.value)}
-                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
                 required
               >
                 {types.map((t) => (
@@ -280,7 +289,7 @@ function TypeRatingsSection() {
                     {t.icao}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="tr-from">Valid from</Label>
@@ -303,7 +312,7 @@ function TypeRatingsSection() {
               />
             </div>
           </div>
-          {formErr && <p className="text-sm text-dn-red">{formErr}</p>}
+          {formErr && <ErrorAlert message={formErr} />}
           <div className="flex justify-end">
             <Button type="submit" disabled={busy || !crewId} data-testid="add-rating-submit">
               {busy ? "Adding…" : "Add type rating"}
@@ -314,7 +323,7 @@ function TypeRatingsSection() {
         {loading ? (
           <TableSkeleton rows={6} cols={6} />
         ) : error ? (
-          <p className="text-sm text-dn-red">{error}</p>
+          <ErrorAlert message={error} />
         ) : ratings.length === 0 ? (
           <p className="text-sm text-dn-muted" data-testid="ratings-empty">
             No type ratings recorded yet.
@@ -358,7 +367,7 @@ function TypeRatingsSection() {
                     <td data-label="" className="py-2 pr-4">
                       <button
                         type="button"
-                        onClick={() => remove(r.id)}
+                        onClick={() => setDeleteModal(r)}
                         className="text-dn-red underline text-xs"
                         data-testid={`delete-rating-${r.id}`}
                       >
@@ -370,6 +379,33 @@ function TypeRatingsSection() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {deleteModal && (
+          <Modal
+            title="Remove type rating"
+            onClose={() => setDeleteModal(null)}
+            disableEscape={deleting}
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-dn-dark">
+                Remove {deleteModal.aircraft_type} rating for {deleteModal.crew_name}? This action
+                cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setDeleteModal(null)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button variant="danger" onClick={confirmDelete} disabled={deleting}>
+                  {deleting ? "Removing…" : "Remove"}
+                </Button>
+              </div>
+            </div>
+          </Modal>
         )}
       </CardBody>
     </Card>

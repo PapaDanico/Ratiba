@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { Select } from "@/components/ui/Select";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 import { safeStorage } from "@/lib/safeStorage";
 import { useToast } from "@/lib/toast";
@@ -213,11 +215,10 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div>
               <Label htmlFor="d-crew">Crew</Label>
-              <select
+              <Select
                 id="d-crew"
                 value={crewId}
                 onChange={(e) => setCrewId(e.target.value)}
-                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
                 required
               >
                 {crew.map((c) => (
@@ -225,20 +226,15 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
                     {c.first_name} {c.last_name} ({c.employee_no})
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="d-type">Duty</Label>
-              <select
-                id="d-type"
-                value={dutyType}
-                onChange={(e) => setDutyType(e.target.value)}
-                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
-              >
+              <Select id="d-type" value={dutyType} onChange={(e) => setDutyType(e.target.value)}>
                 <option value="STANDBY_SHORT">Standby (short-call)</option>
                 <option value="STANDBY_LONG">Standby (long-call)</option>
                 <option value="OFF">Day off</option>
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="d-date">Date</Label>
@@ -275,7 +271,7 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
               </>
             )}
           </div>
-          {error && <p className="text-sm text-dn-red">{error}</p>}
+          {error && <ErrorAlert message={error} />}
           <div className="flex justify-end">
             <Button type="submit" disabled={busy || !crewId} data-testid="assign-duty-submit">
               {busy ? "Assigning…" : "Assign duty"}
@@ -582,10 +578,10 @@ export function RosterPage() {
               {/* Holiday country picker */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-dn-muted">Holidays:</span>
-                <select
+                <Select
                   value={holidayCountry}
                   onChange={(e) => setHolidayCountry(e.target.value)}
-                  className="rounded-md border border-dn-steel-lt px-2 py-1 text-xs font-mono"
+                  className="rounded-md text-xs font-mono"
                   data-testid="holiday-country-select"
                 >
                   {COUNTRY_OPTIONS.map((c) => (
@@ -593,7 +589,7 @@ export function RosterPage() {
                       {c.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <Button
                 size="sm"
@@ -662,7 +658,7 @@ export function RosterPage() {
           {loading ? (
             <p className="text-sm text-dn-muted">Loading…</p>
           ) : error ? (
-            <p className="text-sm text-dn-red">{error}</p>
+            <ErrorAlert message={error} />
           ) : (
             <>
               {rows.length > 0 && crew.length > 0 && (

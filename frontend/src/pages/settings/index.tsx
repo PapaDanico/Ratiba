@@ -3,7 +3,9 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { api, ApiError, authFetch } from "@/lib/api";
+import { Select } from "@/components/ui/Select";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { api, ApiError, tokenStore } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { TeamPanel } from "./TeamPanel";
@@ -195,7 +197,7 @@ export function SettingsPage() {
         <Card>
           <CardBody>
             {error ? (
-              <p className="text-sm text-dn-red">{error}</p>
+              <ErrorAlert message={error} />
             ) : (
               <p className="text-sm text-dn-muted">Loading…</p>
             )}
@@ -237,11 +239,10 @@ export function SettingsPage() {
             </div>
             <div>
               <Label htmlFor="timezone">Home timezone</Label>
-              <select
+              <Select
                 id="timezone"
                 value={op.timezone}
                 onChange={(e) => setOp({ ...op, timezone: e.target.value })}
-                className="w-full rounded-md border border-dn-steel-lt px-3 py-2 text-sm"
                 data-testid="operator-timezone-select"
               >
                 {!TIMEZONE_OPTIONS.some((t) => t.value === op.timezone) && (
@@ -252,7 +253,7 @@ export function SettingsPage() {
                     {t.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="mt-1 text-xs text-dn-muted">
                 Anchors circadian (window-of-circadian-low) fatigue scoring to the operator&apos;s
                 home base.
@@ -292,8 +293,12 @@ export function SettingsPage() {
               ))}
             </fieldset>
 
-            {error && <p className="text-sm text-dn-red">{error}</p>}
-            {saved && <p className="text-sm text-dn-green">Saved.</p>}
+            {error && <ErrorAlert message={error} />}
+            {saved && (
+              <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green">
+                Saved.
+              </div>
+            )}
             <Button type="submit" disabled={saving} data-testid="settings-save">
               {saving ? "Saving…" : "Save changes"}
             </Button>
@@ -353,7 +358,7 @@ export function SettingsPage() {
                 Downloads your operator profile, team logins and crew roster — KDPA 2019
                 data-portability. Credentials are never included.
               </p>
-              {exportErr && <p className="mt-1 text-sm text-dn-red">{exportErr}</p>}
+              {exportErr && <ErrorAlert message={exportErr} className="mt-1" />}
             </div>
           )}
         </CardBody>
