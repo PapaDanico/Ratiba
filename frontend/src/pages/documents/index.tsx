@@ -3,7 +3,10 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
+import { Modal } from "@/components/ui/Modal";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 
 type Crew = {
@@ -70,6 +73,10 @@ export function DocumentsPage() {
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
 
+  // Delete confirmation state
+  const [deleteModal, setDeleteModal] = useState<Doc | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -133,12 +140,17 @@ export function DocumentsPage() {
     }
   }
 
-  async function remove(id: string) {
+  async function confirmDelete() {
+    if (!deleteModal) return;
+    setDeleting(true);
     try {
-      await api(`/api/v1/documents/${id}`, { method: "DELETE" });
+      await api(`/api/v1/documents/${deleteModal.id}`, { method: "DELETE" });
       setReloadKey((k) => k + 1);
+      setDeleteModal(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to delete");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -157,11 +169,10 @@ export function DocumentsPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div>
               <Label htmlFor="doc-crew">Crew</Label>
-              <select
+              <Select
                 id="doc-crew"
                 value={crewId}
                 onChange={(e) => setCrewId(e.target.value)}
-                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
                 required
               >
                 {crew.map((c) => (
@@ -169,15 +180,14 @@ export function DocumentsPage() {
                     {c.first_name} {c.last_name} ({c.employee_no})
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="doc-type">Document type</Label>
-              <select
+              <Select
                 id="doc-type"
                 value={docType}
                 onChange={(e) => setDocType(e.target.value)}
-                className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
                 required
               >
                 {DOC_TYPES.map((d) => (
@@ -185,7 +195,7 @@ export function DocumentsPage() {
                     {d.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="doc-number">Document no.</Label>
@@ -224,7 +234,7 @@ export function DocumentsPage() {
               />
             </div>
           </div>
-          {formErr && <p className="text-sm text-dn-red">{formErr}</p>}
+          {formErr && <ErrorAlert message={formErr} />}
           <div className="flex justify-end">
             <Button type="submit" disabled={busy || !crewId} data-testid="add-document-submit">
               {busy ? "Adding…" : "Add document"}
@@ -235,7 +245,7 @@ export function DocumentsPage() {
         {loading ? (
           <p className="text-sm text-dn-muted">Loading…</p>
         ) : error ? (
-          <p className="text-sm text-dn-red">{error}</p>
+          <ErrorAlert message={error} />
         ) : docs.length === 0 ? (
           <p className="text-sm text-dn-muted" data-testid="documents-empty">
             No documents recorded yet.
@@ -287,7 +297,7 @@ export function DocumentsPage() {
                     <td data-label="" className="py-2 pr-4">
                       <button
                         type="button"
-                        onClick={() => remove(d.id)}
+                        onClick={() => setDeleteModal(d)}
                         className="text-dn-red underline text-xs"
                         data-testid={`delete-document-${d.id}`}
                       >
@@ -299,6 +309,37 @@ export function DocumentsPage() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {deleteModal && (
+          <Modal
+            title="Remove document"
+            onClose={() => setDeleteModal(null)}
+            disableEscape={deleting}
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-dn-dark">
+                Remove {deleteModal.doc_type} document for {deleteModal.crew_name}? This action
+                cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setDeleteModal(null)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? "Removing…" : "Remove"}
+                </Button>
+              </div>
+            </div>
+          </Modal>
         )}
       </CardBody>
     </Card>

@@ -3,7 +3,10 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
+import { Modal } from "@/components/ui/Modal";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError } from "@/lib/api";
 
 type Sector = {
@@ -171,11 +174,10 @@ function AddRoutingForm({
         </div>
         <div>
           <Label htmlFor="type">Type</Label>
-          <select
+          <Select
             id="type"
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full rounded-md border border-dn-steel-lt px-2 py-2 text-sm"
             required
           >
             {aircraftTypes.map((t) => (
@@ -183,10 +185,10 @@ function AddRoutingForm({
                 {t.icao}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
-      {error && <p className="text-sm text-dn-red">{error}</p>}
+      {error && <ErrorAlert message={error} />}
       <div className="flex justify-end">
         <Button type="submit" disabled={busy} data-testid="add-routing-submit">
           {busy ? "Adding…" : "Add routing"}
@@ -405,7 +407,7 @@ function AddRecurringForm({
           </button>
         </div>
       </div>
-      {error && <p className="text-sm text-dn-red">{error}</p>}
+      {error && <ErrorAlert message={error} />}
       <div className="flex justify-end">
         <Button
           type="submit"
@@ -429,6 +431,10 @@ export function RoutingsPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [mode, setMode] = useState<"single" | "recurring">("single");
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Delete confirmation state
+  const [deleteModal, setDeleteModal] = useState<Sector | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -463,12 +469,17 @@ export function RoutingsPage() {
     };
   }, [from, to, reloadKey]);
 
-  async function remove(id: string) {
+  async function confirmDelete() {
+    if (!deleteModal) return;
+    setDeleting(true);
     try {
-      await api(`/api/v1/sectors/${id}`, { method: "DELETE" });
+      await api(`/api/v1/sectors/${deleteModal.id}`, { method: "DELETE" });
       setReloadKey((k) => k + 1);
+      setDeleteModal(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to delete routing");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -565,7 +576,7 @@ export function RoutingsPage() {
           {loading ? (
             <p className="text-sm text-dn-muted">Loading…</p>
           ) : error ? (
-            <p className="text-sm text-dn-red">{error}</p>
+            <ErrorAlert message={error} />
           ) : rows.length === 0 ? (
             <p className="text-sm text-dn-muted" data-testid="routings-empty">
               No routings in this window. Add flights above, then go to Roster → Auto-generate.
@@ -620,7 +631,7 @@ export function RoutingsPage() {
                         {s.status === "PLANNED" && (
                           <button
                             type="button"
-                            onClick={() => remove(s.id)}
+                            onClick={() => setDeleteModal(s)}
                             className="text-dn-red underline text-xs"
                             data-testid={`delete-routing-${s.id}`}
                           >
@@ -633,6 +644,37 @@ export function RoutingsPage() {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {deleteModal && (
+            <Modal
+              title="Delete routing"
+              onClose={() => setDeleteModal(null)}
+              disableEscape={deleting}
+            >
+              <div className="space-y-4">
+                <p className="text-sm text-dn-dark">
+                  Delete {deleteModal.flight_no} on {deleteModal.date}? This action cannot be
+                  undone.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setDeleteModal(null)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting…" : "Delete"}
+                  </Button>
+                </div>
+              </div>
+            </Modal>
           )}
         </CardBody>
       </Card>
