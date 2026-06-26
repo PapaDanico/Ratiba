@@ -174,12 +174,7 @@ function AddRoutingForm({
         </div>
         <div>
           <Label htmlFor="type">Type</Label>
-          <Select
-            id="type"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            required
-          >
+          <Select id="type" value={type} onChange={(e) => setType(e.target.value)} required>
             {aircraftTypes.map((t) => (
               <option key={t.icao} value={t.icao}>
                 {t.icao}
@@ -665,11 +660,7 @@ export function RoutingsPage() {
                   >
                     Cancel
                   </Button>
-                  <Button
-                    variant="danger"
-                    onClick={confirmDelete}
-                    disabled={deleting}
-                  >
+                  <Button variant="danger" onClick={confirmDelete} disabled={deleting}>
                     {deleting ? "Deleting…" : "Delete"}
                   </Button>
                 </div>

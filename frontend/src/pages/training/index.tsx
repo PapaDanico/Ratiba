@@ -400,11 +400,7 @@ function TypeRatingsSection() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  variant="danger"
-                  onClick={confirmDelete}
-                  disabled={deleting}
-                >
+                <Button variant="danger" onClick={confirmDelete} disabled={deleting}>
                   {deleting ? "Removing…" : "Remove"}
                 </Button>
               </div>
