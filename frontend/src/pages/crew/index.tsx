@@ -4,6 +4,8 @@ import { Modal } from "@/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { api, ApiError, tokenStore } from "@/lib/api";
 
 type Crew = {
@@ -84,7 +86,7 @@ function CrossOpFtlButton({ crew }: { crew: Crew }) {
           {busy ? (
             <p className="text-sm text-dn-muted">Loading…</p>
           ) : error ? (
-            <p className="text-sm text-dn-red">{error}</p>
+            <ErrorAlert message={error} />
           ) : data ? (
             <>
               <p className="text-sm text-dn-muted mb-3">
@@ -237,30 +239,30 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
         <div className="absolute right-0 z-20 mt-1 w-52 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
           <p className="text-xs font-medium text-dn-dark">Download monthly roster</p>
           <div className="flex gap-2">
-            <select
+            <Select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
+              className="flex-1 text-xs py-1"
             >
               {months.map((m, i) => (
                 <option key={i} value={i + 1}>
                   {m}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="flex-1 text-xs border border-dn-steel-lt rounded px-1 py-1"
+              className="flex-1 text-xs py-1"
             >
               {years.map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
-          {error && <p className="text-xs text-dn-red">{error}</p>}
+          {error && <ErrorAlert message={error} />}
           <Button size="sm" className="w-full" onClick={download} disabled={busy}>
             {busy ? "Generating…" : "Download PDF"}
           </Button>
@@ -338,7 +340,7 @@ function CalendarFeedButton({ crew }: { crew: Crew }) {
           {busy ? (
             <p className="text-xs text-dn-muted">Generating…</p>
           ) : error ? (
-            <p className="text-xs text-dn-red">{error}</p>
+            <ErrorAlert message={error} />
           ) : url ? (
             <>
               <textarea
@@ -389,7 +391,7 @@ export function CrewPage() {
         {loading ? (
           <TableSkeleton rows={6} cols={6} />
         ) : error ? (
-          <p className="text-sm text-dn-red">{error}</p>
+          <ErrorAlert message={error} />
         ) : rows.length === 0 ? (
           <p className="text-sm text-dn-muted">
             No crew yet. Create one via the API or wait for the import flow in Phase 6.
