@@ -34,6 +34,7 @@ EXPOSE 8000
 COPY start.sh ./
 COPY worker.sh ./
 COPY digest-cron.sh ./
-RUN chmod +x start.sh worker.sh digest-cron.sh
+COPY keepwarm-cron.sh ./
+RUN chmod +x start.sh worker.sh digest-cron.sh keepwarm-cron.sh
 
 CMD ["./start.sh"]
