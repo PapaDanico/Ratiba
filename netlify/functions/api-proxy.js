@@ -1,15 +1,11 @@
-import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
-
-const BACKEND_URL = process.env.VITE_BACKEND_URL || "http://localhost:8000";
-
 /**
  * API Proxy function — forwards requests to the backend API
  * Handles CORS, authentication headers, and request/response bodies
  */
-const handler: Handler = async (
-  event: HandlerEvent,
-  context: HandlerContext
-) => {
+
+const BACKEND_URL = process.env.VITE_BACKEND_URL || "http://localhost:8000";
+
+exports.handler = async (event, context) => {
   // Only allow specific HTTP methods
   if (!["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"].includes(event.httpMethod)) {
     return {
@@ -37,7 +33,7 @@ const handler: Handler = async (
     const url = `${BACKEND_URL}${path}${queryString}`;
 
     // Prepare request headers
-    const headers: Record<string, string> = {
+    const headers = {
       "Content-Type": event.headers["content-type"] || "application/json",
       "X-Forwarded-For": event.headers["client-ip"] || "unknown",
       "X-Forwarded-Proto": "https",
@@ -57,12 +53,12 @@ const handler: Handler = async (
     const response = await fetch(url, {
       method: event.httpMethod,
       headers,
-      body: event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64").toString() : event.body) : undefined,
+      body: event.body ? event.body : undefined,
     });
 
     // Read response body
     const contentType = response.headers.get("content-type") || "application/json";
-    let responseBody: string | null = null;
+    let responseBody = null;
 
     if (contentType.includes("application/json") || contentType.includes("text")) {
       responseBody = await response.text();
@@ -74,7 +70,7 @@ const handler: Handler = async (
 
     // Extract Set-Cookie headers (important for session tokens)
     const setCookieHeaders = response.headers.get("set-cookie");
-    const responseHeaders: Record<string, string> = {
+    const responseHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -101,5 +97,3 @@ const handler: Handler = async (
     };
   }
 };
-
-export { handler };

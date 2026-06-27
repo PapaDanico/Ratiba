@@ -12,9 +12,8 @@
 
 # Environment variables (set these in Netlify UI or via CLI)
 [build.environment]
-  # Development: http://localhost:8000
-  # Production: https://ratiba-api.onrender.com (or your backend URL)
-  VITE_BACKEND_URL = ""  # ← Set this in Netlify dashboard
+  # Default to Render backend; override in Netlify dashboard if different
+  VITE_BACKEND_URL = "https://ratiba-api.onrender.com"
 
 # Redirects and rewrites
 # ─────────────────────────────────────────────────────────────────────────────
