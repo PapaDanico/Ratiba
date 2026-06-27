@@ -114,71 +114,82 @@ export function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex savanna-dawn tribal-texture">
+    <main className="min-h-screen bg-gradient-to-br from-dn-steel-lt via-white to-dn-steel-lt flex flex-col lg:flex-row">
       {/* Left panel: brand column */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-16 relative">
-        {/* DN Consultancy logo — top */}
+        {/* Logo & Brand — top */}
         <div className="relative z-10">
-          <div className="inline-block rounded-2xl bg-white/95 px-7 py-6 shadow-xl">
-            <DnLogo showText={true} width={220} />
+          <div className="flex items-center gap-3">
+            <DnLogo showText={true} width={200} />
           </div>
+          <p className="mt-4 text-dn-steel text-lg font-light max-w-xs leading-relaxed">
+            Intelligent crew rostering for East African aviation
+          </p>
         </div>
 
-        {/* Ratiba product identity — bottom */}
-        <div className="relative z-10">
-          <div className="tribal-stripe mb-6 w-24" />
-          <h1 className="font-display text-6xl text-dn-gold leading-tight">Ratiba</h1>
-          <p className="mt-3 text-dn-gold/60 text-lg font-light max-w-xs leading-relaxed">
-            Crew rostering for East African aviation operations.
-          </p>
-          <p className="mt-6 font-mono text-xs uppercase tracking-widest text-dn-gold/30">
-            KCAA FTL Scheme · ICAO Annex 6
-          </p>
+        {/* Key benefits — bottom */}
+        <div className="relative z-10 space-y-6">
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
+              ✓
+            </div>
+            <div>
+              <h3 className="font-semibold text-dn-dark">FTL Compliance</h3>
+              <p className="text-sm text-dn-muted">Automatic KCAA regulation validation</p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
+              ✓
+            </div>
+            <div>
+              <h3 className="font-semibold text-dn-dark">Smart Scheduling</h3>
+              <p className="text-sm text-dn-muted">AI-powered roster optimization</p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
+              ✓
+            </div>
+            <div>
+              <h3 className="font-semibold text-dn-dark">Crew Management</h3>
+              <p className="text-sm text-dn-muted">Centralized database with all details</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Right panel: auth form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-16">
+      <div className="flex-1 flex items-center justify-center px-6 py-16 lg:py-0">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
-            {/* Card header strip */}
-            <div className="bg-dn-lava px-8 pt-8 pb-0">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="inline-flex items-center justify-center rounded-md bg-white/95 p-1.5 shadow">
-                  <DnLogo showText={false} width={26} />
-                </span>
-                <span className="font-mono text-xs uppercase tracking-widest text-dn-gold/50">
-                  DN Consultancy
-                </span>
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-dn-steel-lt">
+            {/* Card header */}
+            <div className="bg-gradient-to-r from-dn-steel-lt to-transparent px-8 pt-8 pb-0">
+              <div className="flex items-center gap-2 mb-4">
+                <DnLogo showText={false} width={28} />
+                <span className="text-sm font-semibold text-dn-dark">Ratiba</span>
               </div>
-              <div className="lg:hidden mb-6">
-                <h2 className="font-display text-3xl text-dn-gold">Ratiba</h2>
-                <p className="font-display italic text-sm text-dn-gold/40">
-                  Shaping Africa&apos;s Future, Together.
-                </p>
-              </div>
-              <p className="text-sm text-dn-gold/60 pb-6">
+              <p className="text-sm text-dn-muted pb-6">
                 {mode === "signin"
-                  ? "Sign in to the Crewing Officer dashboard."
-                  : "Create your own demo workspace to explore Ratiba."}
+                  ? "Sign in to your dashboard"
+                  : "Create a demo workspace to try Ratiba"}
               </p>
-              <div className="tribal-stripe -mx-8" />
             </div>
 
             <div className="px-8 py-8 space-y-5">
               {/* Mode toggle */}
-              <div className="flex rounded-md border border-dn-steel-lt overflow-hidden text-sm">
+              <div className="flex rounded-lg border border-dn-steel-lt overflow-hidden text-sm bg-dn-steel-lt/30">
                 <button
                   type="button"
                   onClick={() => {
                     setMode("signin");
                     setError(null);
                   }}
-                  className={
+                  className={`flex-1 py-2.5 font-medium transition-colors ${
                     mode === "signin"
-                      ? "flex-1 py-2 bg-dn-steel text-white"
-                      : "flex-1 py-2 bg-white text-dn-steel"
-                  }
+                      ? "bg-dn-steel text-white shadow-sm"
+                      : "bg-transparent text-dn-steel hover:text-dn-dark"
+                  }`}
                   data-testid="tab-signin"
                 >
                   Sign in
@@ -189,14 +200,14 @@ export function LoginPage() {
                     setMode("create");
                     setError(null);
                   }}
-                  className={
+                  className={`flex-1 py-2.5 font-medium transition-colors ${
                     mode === "create"
-                      ? "flex-1 py-2 bg-dn-steel text-white"
-                      : "flex-1 py-2 bg-white text-dn-steel"
-                  }
+                      ? "bg-dn-steel text-white shadow-sm"
+                      : "bg-transparent text-dn-steel hover:text-dn-dark"
+                  }`}
                   data-testid="tab-create"
                 >
-                  Create demo workspace
+                  Create workspace
                 </button>
               </div>
 
