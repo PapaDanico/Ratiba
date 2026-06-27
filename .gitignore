@@ -56,3 +56,7 @@ Thumbs.db
 
 # Audit packs (generated PDFs)
 backend/audit_packs/
+
+# Database backups (migration artifacts)
+*.sql
+ratiba_backup_*.sql
