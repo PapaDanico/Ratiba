@@ -16,6 +16,18 @@
  */
 
 const CSRF_COOKIE = "rt_csrf";
+
+// Get API base URL from environment or default to relative path (nginx proxy)
+const getApiBase = (): string => {
+  if (typeof window === "undefined") return "";
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL as string;
+  }
+  // Default to /api (nginx proxy handles routing to backend)
+  return "/api";
+};
+
+const API_BASE = getApiBase();
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 // In-memory token fallback (module-scoped; not persisted).
@@ -125,7 +137,7 @@ async function refreshAccess(): Promise<boolean> {
     headers.set("Content-Type", "application/json");
     reqInit.body = JSON.stringify({ refresh_token: memRefresh });
   }
-  const resp = await fetch("/api/v1/auth/refresh", reqInit);
+  const resp = await fetch(`${API_BASE}/v1/auth/refresh`, reqInit);
   if (resp.ok) await captureTokens(resp);
   return resp.ok;
 }
@@ -143,7 +155,9 @@ export async function api<T = unknown>(
   withCsrf(headers, method);
   if (!_skipAuth) withBearer(headers);
 
-  let resp = await fetch(path, { ...rest, headers, credentials: "include" });
+  // Resolve full URL: if path starts with /api, prepend API_BASE; otherwise use as-is
+  const fullPath = path.startsWith("/api") ? `${API_BASE}${path.slice(4)}` : path;
+  let resp = await fetch(fullPath, { ...rest, headers, credentials: "include" });
   if (resp.status === 401 && !_skipAuth) {
     if (await refreshAccess()) {
       // Session rotated; rebuild headers (CSRF + Bearer may have changed) and retry.
@@ -153,7 +167,7 @@ export async function api<T = unknown>(
       }
       withCsrf(retryHeaders, method);
       withBearer(retryHeaders);
-      resp = await fetch(path, { ...rest, headers: retryHeaders, credentials: "include" });
+      resp = await fetch(fullPath, { ...rest, headers: retryHeaders, credentials: "include" });
     }
   }
   if (!resp.ok) {
@@ -190,7 +204,8 @@ export async function login(email: string, password: string, onWaking?: () => vo
     }
     let resp: Response;
     try {
-      resp = await fetch("/api/v1/auth/login", {
+      const loginUrl = `${API_BASE}/v1/auth/login`;
+      resp = await fetch(loginUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -232,7 +247,7 @@ export function logout(): void {
   // local marker once the request has settled.
   const headers = new Headers();
   withCsrf(headers, "POST");
-  void fetch("/api/v1/auth/logout", {
+  void fetch(`${API_BASE}/v1/auth/logout`, {
     method: "POST",
     headers,
     credentials: "include",
