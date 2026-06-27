@@ -164,14 +164,20 @@ def publish(
     except roster_service.RosterPersistenceError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     # Notify assigned crew off the request path (Redis worker in prod).
-    queue.enqueue(
-        "app.tasks.notifications.notify_roster_published",
-        {
-            "operator_id": str(user.operator_id),
-            "horizon_from": payload.horizon_from.isoformat(),
-            "horizon_to": payload.horizon_to.isoformat(),
-        },
-    )
+    # Wrap in try-except so notification failures don't break the publish response.
+    try:
+        queue.enqueue(
+            "app.tasks.notifications.notify_roster_published",
+            {
+                "operator_id": str(user.operator_id),
+                "horizon_from": payload.horizon_from.isoformat(),
+                "horizon_to": payload.horizon_to.isoformat(),
+            },
+        )
+    except Exception as exc:
+        # Log the error but don't fail the response — publish succeeded.
+        import logging
+        logging.exception(f"Failed to enqueue roster notification: {exc}")
     return result
 
 
