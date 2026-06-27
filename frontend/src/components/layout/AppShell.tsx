@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
+import { DnLogo } from "@/components/ui/DnLogo";
 
 const NAV: Array<{ to: string; label: string; end?: boolean }> = [
   { to: "/", label: "Overview", end: true },
@@ -31,7 +32,6 @@ export function AppShell() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Close the mobile menu whenever the route changes.
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
@@ -46,25 +46,28 @@ export function AppShell() {
     : null;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-dn-gold focus:px-3 focus:py-2 focus:text-sm focus:text-dn-lava"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-dn-steel focus:px-3 focus:py-2 focus:text-sm focus:text-white"
       >
         Skip to content
       </a>
-      {/* ── Top bar: dark volcanic header ── */}
-      <header className="bg-dn-lava tribal-texture sticky top-0 z-30">
+      {/* ── Top bar: modern header ── */}
+      <header className="bg-white border-b border-dn-steel-lt sticky top-0 z-30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <span className="font-display text-2xl text-dn-gold tracking-wide">Ratiba</span>
+          <div className="flex items-center gap-2">
+            <DnLogo showText={false} width={28} />
+            <span className="text-lg font-semibold text-dn-dark">Ratiba</span>
+          </div>
 
           {/* Desktop: identity + sign out */}
-          <div className="hidden lg:flex items-center gap-3">
-            {userLabel && <span className="text-sm text-dn-gold/60">{userLabel}</span>}
+          <div className="hidden lg:flex items-center gap-4">
+            {userLabel && <span className="text-sm text-dn-muted">{userLabel}</span>}
             <Button
               variant="ghost"
               size="sm"
-              className="text-dn-gold/70 hover:text-dn-gold hover:bg-white/10"
+              className="text-dn-steel hover:text-dn-dark hover:bg-dn-steel-lt/30"
               onClick={signOut}
             >
               Sign out
@@ -74,7 +77,7 @@ export function AppShell() {
           {/* Mobile: hamburger toggle */}
           <button
             type="button"
-            className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-md text-dn-gold hover:bg-white/10"
+            className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-md text-dn-steel hover:bg-dn-steel-lt/30"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
@@ -108,11 +111,8 @@ export function AppShell() {
           </button>
         </div>
 
-        {/* Maasai geometric stripe separator */}
-        <div className="tribal-stripe" />
-
-        {/* Desktop navigation tabs (wrap gracefully on narrower desktops) */}
-        <nav className="hidden lg:flex mx-auto max-w-7xl px-6 flex-wrap gap-x-1 bg-dn-lava/80">
+        {/* Desktop navigation tabs */}
+        <nav className="hidden lg:flex mx-auto max-w-7xl px-6 flex-wrap gap-x-1 border-t border-dn-steel-lt/50">
           {NAV.map((item) => (
             <NavLink
               key={item.to}
@@ -122,8 +122,8 @@ export function AppShell() {
                 cn(
                   "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
                   isActive
-                    ? "border-dn-gold text-dn-gold"
-                    : "border-transparent text-dn-gold/50 hover:text-dn-gold/80 hover:border-dn-gold/30",
+                    ? "border-dn-steel text-dn-steel"
+                    : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-steel-lt",
                 )
               }
             >
@@ -135,7 +135,7 @@ export function AppShell() {
         {/* Mobile slide-down menu */}
         {menuOpen && (
           <nav
-            className="lg:hidden bg-dn-lava/95 border-t border-dn-gold/10"
+            className="lg:hidden bg-white border-t border-dn-steel-lt/50"
             data-testid="mobile-nav"
           >
             <div className="max-h-[70vh] overflow-y-auto py-2">
@@ -148,22 +148,22 @@ export function AppShell() {
                     cn(
                       "block px-5 py-3 text-base border-l-4 transition-colors",
                       isActive
-                        ? "border-dn-gold text-dn-gold bg-white/5"
-                        : "border-transparent text-dn-gold/70 hover:text-dn-gold hover:bg-white/5",
+                        ? "border-dn-steel text-dn-steel bg-dn-steel-lt/10"
+                        : "border-transparent text-dn-muted hover:text-dn-dark hover:bg-dn-steel-lt/5",
                     )
                   }
                 >
                   {item.label}
                 </NavLink>
               ))}
-              <div className="mt-2 border-t border-dn-gold/10 px-5 py-3 flex items-center justify-between">
+              <div className="mt-2 border-t border-dn-steel-lt/50 px-5 py-3 flex items-center justify-between">
                 {userLabel && (
-                  <span className="text-xs text-dn-gold/50 truncate pr-3">{userLabel}</span>
+                  <span className="text-xs text-dn-muted truncate pr-3">{userLabel}</span>
                 )}
                 <button
                   type="button"
                   onClick={signOut}
-                  className="text-sm text-dn-gold/80 hover:text-dn-gold underline shrink-0"
+                  className="text-sm text-dn-steel hover:text-dn-dark underline shrink-0"
                 >
                   Sign out
                 </button>
@@ -183,27 +183,20 @@ export function AppShell() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-dn-gold/20 py-4 text-center text-xs text-dn-muted">
-        <span className="inline-flex items-center gap-2">
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="#C9A84C" aria-hidden>
-            <polygon points="4,0 8,4 4,8 0,4" />
-          </svg>
-          DN Consultancy · Aligned with the KCAA Flight Duty Time Scheme &amp; ICAO Annex 6
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="#C9A84C" aria-hidden>
-            <polygon points="4,0 8,4 4,8 0,4" />
-          </svg>
-        </span>
-        <p className="mt-1 font-display italic text-dn-muted/80">
-          Shaping Africa&apos;s Future, Together.
-        </p>
-        <div className="mt-1">
-          <NavLink to="/privacy" className="underline hover:text-dn-dark">
-            Privacy Policy
-          </NavLink>
-          <span className="mx-2">·</span>
-          <NavLink to="/terms" className="underline hover:text-dn-dark">
-            Terms of Use
-          </NavLink>
+      <footer className="border-t border-dn-steel-lt/50 bg-white py-6 text-center text-xs text-dn-muted">
+        <div className="mx-auto max-w-7xl px-4">
+          <p className="mb-3">
+            DN Consultancy · Aligned with the KCAA Flight Duty Time Scheme &amp; ICAO Annex 6
+          </p>
+          <div className="flex justify-center gap-4">
+            <NavLink to="/privacy" className="hover:text-dn-steel underline">
+              Privacy Policy
+            </NavLink>
+            <span>·</span>
+            <NavLink to="/terms" className="hover:text-dn-steel underline">
+              Terms of Use
+            </NavLink>
+          </div>
         </div>
       </footer>
     </div>
