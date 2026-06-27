@@ -7,6 +7,19 @@
   "deploy": {
     "startCommand": "bash ./backend/start.sh",
     "restartPolicyMaxRetries": 5,
-    "restartPolicyWindowSeconds": 600
+    "restartPolicyWindowSeconds": 600,
+    "healthchecks": {
+      "readiness": {
+        "initialDelaySeconds": 30,
+        "intervalSeconds": 10,
+        "timeoutSeconds": 5,
+        "successThreshold": 1,
+        "failureThreshold": 3,
+        "httpGet": {
+          "path": "/healthz",
+          "port": 8000
+        }
+      }
+    }
   }
 }
