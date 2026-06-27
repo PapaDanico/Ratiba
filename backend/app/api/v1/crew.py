@@ -90,7 +90,7 @@ def list_crew(
 ) -> list[CrewOut]:
     query = _scoped(select(Crew), user).order_by(Crew.last_name, Crew.first_name)
     if not include_inactive:
-        query = query.where(Crew.active is True)
+        query = query.where(Crew.active.is_(True))
     rows = session.scalars(query).all()
     if category is not None:
         rows = [r for r in rows if r.crew_category == category]

@@ -31,7 +31,7 @@ def list_fleet(
 ) -> list[AircraftOut]:
     query = select(Aircraft).where(Aircraft.operator_id == user.operator_id)
     if not include_inactive:
-        query = query.where(Aircraft.active is True)
+        query = query.where(Aircraft.active.is_(True))
     rows = session.scalars(query.order_by(Aircraft.registration)).all()
     return [_to_out(a) for a in rows]
 
