@@ -175,9 +175,9 @@ def publish(
                 "horizon_to": payload.horizon_to.isoformat(),
             },
         )
-    except Exception as exc:
+    except Exception:
         # Log the error but don't fail the response — publish succeeded.
-        logging.exception(f"Failed to enqueue roster notification: {exc}")
+        logging.exception("Failed to enqueue roster notification")
     return result
 
 
