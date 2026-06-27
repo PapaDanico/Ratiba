@@ -84,12 +84,14 @@ def currency_dashboard(
 @router.get("", response_model=list[CrewOut])
 def list_crew(
     category: CrewCategory | None = Query(default=None),
+    include_inactive: bool = Query(False, description="Include retired/inactive crew"),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ) -> list[CrewOut]:
-    rows = session.scalars(
-        _scoped(select(Crew), user).order_by(Crew.last_name, Crew.first_name)
-    ).all()
+    query = _scoped(select(Crew), user).order_by(Crew.last_name, Crew.first_name)
+    if not include_inactive:
+        query = query.where(Crew.active is True)
+    rows = session.scalars(query).all()
     if category is not None:
         rows = [r for r in rows if r.crew_category == category]
     return [CrewOut.model_validate(r) for r in rows]
@@ -165,6 +167,31 @@ def update_crew(
     session.commit()
     session.refresh(crew)
     return CrewOut.model_validate(crew)
+
+
+@router.delete("/{crew_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_writer)])
+def retire_crew(
+    crew_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> None:
+    crew = session.scalar(_scoped(select(Crew).where(Crew.id == crew_id), user))
+    if crew is None:
+        raise HTTPException(status_code=404, detail="crew not found")
+    before = {"active": crew.active}
+    crew.active = False
+    session.flush()
+    audit_log.record(
+        session,
+        operator_id=user.operator_id,
+        actor_user_id=user.id,
+        action="RETIRE_CREW",
+        entity_type="crew",
+        entity_id=crew.id,
+        before_state=before,
+        after_state={"active": False},
+    )
+    session.commit()
 
 
 @router.get("/{crew_id}/currency", response_model=list[CurrencyOut])
