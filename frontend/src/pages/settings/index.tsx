@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
-import { api, ApiError, tokenStore } from "@/lib/api";
+import { api, ApiError, authFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { TeamPanel } from "./TeamPanel";

@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
 import { Modal } from "@/components/ui/Modal";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
 
 type Sector = {

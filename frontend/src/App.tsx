@@ -3,6 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/lib/toast";
+import { HomePage } from "@/pages/home";
 import { LoginPage } from "@/pages/login";
 import { DashboardPage } from "@/pages/dashboard";
 import { CrewPage } from "@/pages/crew";
@@ -32,11 +33,13 @@ export function App() {
       <ToastProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
+            <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/crew/me" element={<CrewMePage />} />
             <Route
+              path="/app"
               element={
                 <ProtectedRoute>
                   <AppShell />
