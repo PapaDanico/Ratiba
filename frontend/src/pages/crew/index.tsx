@@ -492,7 +492,6 @@ export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retiring, setRetiring] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const { sort, toggle, sorted } = useSort<CrewSortKey>(null);
   const filtered = showInactive ? rows : rows.filter((c) => c.active);
@@ -524,7 +523,6 @@ export function CrewPage() {
     if (!window.confirm(`Retire crew member ${name}? This will mark them as inactive.`)) {
       return;
     }
-    setRetiring(crewId);
     try {
       await api(`/api/v1/crew/${crewId}`, { method: "DELETE" });
       setError(null);
@@ -532,8 +530,6 @@ export function CrewPage() {
       setRows(list);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Retire failed");
-    } finally {
-      setRetiring(null);
     }
   }
 
