@@ -27,7 +27,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password, () => setWaking(true));
-      navigate("/", { replace: true });
+      navigate("/app", { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError("Email or password not recognised.");
@@ -56,7 +56,7 @@ export function LoginPage() {
       });
       // The chosen credentials are now live — sign straight in.
       await login(email, password);
-      navigate("/", { replace: true });
+      navigate("/app", { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setError("An account with that email already exists. Try signing in instead.");
@@ -169,6 +169,7 @@ export function LoginPage() {
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@airline.com"
                       required
                       data-testid="login-email"
                     />
@@ -195,6 +196,9 @@ export function LoginPage() {
                   >
                     {waking ? "Waking the server…" : submitting ? "Signing in…" : "Sign in"}
                   </Button>
+                  <p className="text-xs text-dn-muted text-center">
+                    Don't have an account? <button type="button" onClick={() => { setMode("create"); setError(null); }} className="text-dn-steel hover:underline">Create one</button>
+                  </p>
                 </form>
               ) : (
                 <form onSubmit={onCreate} className="space-y-4" data-testid="create-form">
