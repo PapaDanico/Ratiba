@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
 
 type AircraftType = {
