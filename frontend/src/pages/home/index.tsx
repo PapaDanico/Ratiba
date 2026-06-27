@@ -8,9 +8,7 @@ export function HomePage() {
   // Loading state
   if (status === "unknown" || status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center text-dn-muted">
-        Loading…
-      </div>
+      <div className="flex min-h-screen items-center justify-center text-dn-muted">Loading…</div>
     );
   }
 

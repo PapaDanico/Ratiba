@@ -20,9 +20,7 @@ export function LandingPage() {
                 </Button>
               </Link>
               <Link to="/login">
-                <Button size="sm">
-                  Get started
-                </Button>
+                <Button size="sm">Get started</Button>
               </Link>
             </div>
           </div>
@@ -43,7 +41,8 @@ export function LandingPage() {
                 </span>
               </h1>
               <p className="text-xl text-dn-muted leading-relaxed max-w-md">
-                Intelligent flight crew scheduling that respects regulations, optimizes costs, and keeps your team happy.
+                Intelligent flight crew scheduling that respects regulations, optimizes costs, and
+                keeps your team happy.
               </p>
             </div>
 
@@ -115,7 +114,10 @@ export function LandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, idx) => (
-              <div key={idx} className="group p-8 rounded-xl border border-dn-steel-lt hover:border-dn-steel hover:shadow-lg transition-all">
+              <div
+                key={idx}
+                className="group p-8 rounded-xl border border-dn-steel-lt hover:border-dn-steel hover:shadow-lg transition-all"
+              >
                 <div className="text-3xl mb-4">{feature.icon}</div>
                 <h3 className="text-lg font-semibold text-dn-dark mb-2">{feature.title}</h3>
                 <p className="text-dn-muted text-sm leading-relaxed">{feature.description}</p>
@@ -130,9 +132,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              <h2 className="text-4xl font-bold text-dn-dark">
-                Why teams choose Ratiba
-              </h2>
+              <h2 className="text-4xl font-bold text-dn-dark">Why teams choose Ratiba</h2>
               {benefits.map((benefit, idx) => (
                 <div key={idx} className="flex gap-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
@@ -168,9 +168,7 @@ export function LandingPage() {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-dn-steel to-dn-steel-lt">
         <div className="max-w-4xl mx-auto text-center space-y-8">
-          <h2 className="text-4xl font-bold text-white">
-            Ready to transform your scheduling?
-          </h2>
+          <h2 className="text-4xl font-bold text-white">Ready to transform your scheduling?</h2>
           <p className="text-lg text-white/80">
             Join hundreds of operators already using Ratiba to schedule smarter
           </p>
@@ -189,42 +187,96 @@ export function LandingPage() {
             <div>
               <h3 className="font-semibold text-dn-dark mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
-                <li><a href="#" className="hover:text-dn-steel">Features</a></li>
-                <li><a href="#" className="hover:text-dn-steel">Pricing</a></li>
-                <li><a href="#" className="hover:text-dn-steel">Security</a></li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    Security
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold text-dn-dark mb-4">Company</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
-                <li><a href="#" className="hover:text-dn-steel">About</a></li>
-                <li><a href="#" className="hover:text-dn-steel">Blog</a></li>
-                <li><a href="#" className="hover:text-dn-steel">Careers</a></li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    Blog
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    Careers
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold text-dn-dark mb-4">Resources</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
-                <li><Link to="/privacy" className="hover:text-dn-steel">Privacy</Link></li>
-                <li><Link to="/terms" className="hover:text-dn-steel">Terms</Link></li>
-                <li><a href="#" className="hover:text-dn-steel">Contact</a></li>
+                <li>
+                  <Link to="/privacy" className="hover:text-dn-steel">
+                    Privacy
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/terms" className="hover:text-dn-steel">
+                    Terms
+                  </Link>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    Contact
+                  </a>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold text-dn-dark mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
-                <li><a href="#" className="hover:text-dn-steel">KCAA Compliance</a></li>
-                <li><a href="#" className="hover:text-dn-steel">FTL Rules</a></li>
-                <li><a href="#" className="hover:text-dn-steel">Support</a></li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    KCAA Compliance
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    FTL Rules
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-dn-steel">
+                    Support
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
           <div className="border-t border-dn-steel-lt pt-8 flex flex-col sm:flex-row justify-between items-center text-sm text-dn-muted">
             <div>© 2026 Ratiba. All rights reserved.</div>
             <div className="flex gap-6 mt-4 sm:mt-0">
-              <a href="#" className="hover:text-dn-steel">Twitter</a>
-              <a href="#" className="hover:text-dn-steel">GitHub</a>
-              <a href="#" className="hover:text-dn-steel">LinkedIn</a>
+              <a href="#" className="hover:text-dn-steel">
+                Twitter
+              </a>
+              <a href="#" className="hover:text-dn-steel">
+                GitHub
+              </a>
+              <a href="#" className="hover:text-dn-steel">
+                LinkedIn
+              </a>
             </div>
           </div>
         </div>
@@ -237,50 +289,51 @@ const features = [
   {
     icon: "📅",
     title: "Smart Scheduling",
-    description: "AI-powered roster optimization respecting all FTL regulations and crew preferences"
+    description:
+      "AI-powered roster optimization respecting all FTL regulations and crew preferences",
   },
   {
     icon: "✈️",
     title: "FTL Compliance",
-    description: "Automatic validation against KCAA rules ensures 100% regulatory adherence"
+    description: "Automatic validation against KCAA rules ensures 100% regulatory adherence",
   },
   {
     icon: "👥",
     title: "Crew Management",
-    description: "Centralized crew database with type ratings, currencies, and certifications"
+    description: "Centralized crew database with type ratings, currencies, and certifications",
   },
   {
     icon: "📊",
     title: "Real-time Analytics",
-    description: "Detailed dashboards showing utilization, costs, and compliance metrics"
+    description: "Detailed dashboards showing utilization, costs, and compliance metrics",
   },
   {
     icon: "🔄",
     title: "Drag-and-drop Editor",
-    description: "Intuitive interface to amend rosters with instant FTL re-validation"
+    description: "Intuitive interface to amend rosters with instant FTL re-validation",
   },
   {
     icon: "📱",
     title: "Crew App",
-    description: "Mobile app for crew to view schedules, request leave, and swap duties"
-  }
+    description: "Mobile app for crew to view schedules, request leave, and swap duties",
+  },
 ];
 
 const benefits = [
   {
     title: "Save 15+ hours per week",
-    description: "Automate scheduling that previously took manual effort"
+    description: "Automate scheduling that previously took manual effort",
   },
   {
     title: "Reduce compliance violations",
-    description: "Real-time FTL checking prevents costly breaches"
+    description: "Real-time FTL checking prevents costly breaches",
   },
   {
     title: "Improve crew satisfaction",
-    description: "Fair, transparent scheduling builds crew morale"
+    description: "Fair, transparent scheduling builds crew morale",
   },
   {
     title: "Cut scheduling costs",
-    description: "Optimized rosters reduce overtime and positioning flights"
-  }
+    description: "Optimized rosters reduce overtime and positioning flights",
+  },
 ];

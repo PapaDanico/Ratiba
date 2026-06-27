@@ -197,7 +197,17 @@ export function LoginPage() {
                     {waking ? "Waking the server…" : submitting ? "Signing in…" : "Sign in"}
                   </Button>
                   <p className="text-xs text-dn-muted text-center">
-                    Don&apos;t have an account? <button type="button" onClick={() => { setMode("create"); setError(null); }} className="text-dn-steel hover:underline">Create one</button>
+                    Don&apos;t have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("create");
+                        setError(null);
+                      }}
+                      className="text-dn-steel hover:underline"
+                    >
+                      Create one
+                    </button>
                   </p>
                 </form>
               ) : (
