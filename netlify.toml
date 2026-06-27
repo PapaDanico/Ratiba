@@ -10,6 +10,12 @@
   publish = "dist"
   functions = "../netlify/functions"
 
+# Disable the no-more-404 plugin: we handle 404s via SPA redirects
+[[plugins]]
+  package = "netlify-plugin-no-more-404"
+  [plugins.inputs]
+    on404 = "warn"  # Warn instead of error
+
 # Environment variables (set these in Netlify UI or via CLI)
 [build.environment]
   # Default to Render backend; override in Netlify dashboard if different
