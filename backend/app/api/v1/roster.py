@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import date
 
@@ -176,7 +177,6 @@ def publish(
         )
     except Exception as exc:
         # Log the error but don't fail the response — publish succeeded.
-        import logging
         logging.exception(f"Failed to enqueue roster notification: {exc}")
     return result
 
