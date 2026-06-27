@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -27,12 +27,12 @@ def _to_out(a: Aircraft) -> AircraftOut:
 def list_fleet(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
+    include_inactive: bool = Query(False, description="Include retired/inactive aircraft"),
 ) -> list[AircraftOut]:
-    rows = session.scalars(
-        select(Aircraft)
-        .where(Aircraft.operator_id == user.operator_id)
-        .order_by(Aircraft.registration)
-    ).all()
+    query = select(Aircraft).where(Aircraft.operator_id == user.operator_id)
+    if not include_inactive:
+        query = query.where(Aircraft.active is True)
+    rows = session.scalars(query.order_by(Aircraft.registration)).all()
     return [_to_out(a) for a in rows]
 
 
@@ -113,3 +113,32 @@ def update_aircraft(
     session.commit()
     session.refresh(aircraft)
     return _to_out(aircraft)
+
+
+@router.delete("/{aircraft_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_writer)])
+def retire_aircraft(
+    aircraft_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> None:
+    aircraft = session.scalar(
+        select(Aircraft)
+        .where(Aircraft.id == aircraft_id)
+        .where(Aircraft.operator_id == user.operator_id)
+    )
+    if aircraft is None:
+        raise HTTPException(status_code=404, detail="aircraft not found")
+    before = {"active": aircraft.active}
+    aircraft.active = False
+    session.flush()
+    audit_log.record(
+        session,
+        operator_id=user.operator_id,
+        actor_user_id=user.id,
+        action="RETIRE_AIRCRAFT",
+        entity_type="aircraft",
+        entity_id=aircraft.id,
+        before_state=before,
+        after_state={"active": False},
+    )
+    session.commit()

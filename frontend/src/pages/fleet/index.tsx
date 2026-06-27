@@ -41,13 +41,15 @@ export function FleetPage() {
   const [reg, setReg] = useState("");
   const [type, setType] = useState("");
   const [adding, setAdding] = useState(false);
+  const [retiring, setRetiring] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   async function reload() {
     setLoading(true);
     try {
       const [t, f] = await Promise.all([
         api<AircraftType[]>("/api/v1/reference/aircraft-types"),
-        api<Aircraft[]>("/api/v1/fleet"),
+        api<Aircraft[]>(`/api/v1/fleet${showInactive ? "?include_inactive=true" : ""}`),
       ]);
       setTypes(t);
       setFleet(f);
@@ -60,10 +62,26 @@ export function FleetPage() {
     }
   }
 
+  async function retire(aircraftId: string, registration: string) {
+    if (!window.confirm(`Retire aircraft ${registration}? This will mark it as inactive.`)) {
+      return;
+    }
+    setRetiring(aircraftId);
+    try {
+      await api(`/api/v1/fleet/${aircraftId}`, { method: "DELETE" });
+      setError(null);
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Retire failed");
+    } finally {
+      setRetiring(null);
+    }
+  }
+
   useEffect(() => {
     void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [showInactive]);
 
   async function add(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -160,35 +178,61 @@ export function FleetPage() {
               No aircraft registered yet.
             </p>
           ) : (
-            <table className="min-w-full text-sm" data-testid="fleet-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
-                <tr>
-                  <th className="py-2 pr-4 font-medium">Registration</th>
-                  <th className="py-2 pr-4 font-medium">Type</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
-                {fleet.map((a) => (
-                  <tr key={a.id} className="hover:bg-dn-fog">
-                    <td className="py-2 pr-4 font-mono">{a.registration}</td>
-                    <td className="py-2 pr-4">
-                      <span className="font-mono">{a.aircraft_type}</span>
-                      {!a.aircraft_type_known && (
-                        <span className="ml-2 text-xs text-dn-amber">(custom)</span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-4">
-                      {a.active ? (
-                        <Badge tone="green">Active</Badge>
-                      ) : (
-                        <Badge tone="neutral">Inactive</Badge>
-                      )}
-                    </td>
+            <div className="space-y-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={showInactive}
+                  onChange={(e) => setShowInactive(e.target.checked)}
+                  className="rounded"
+                />
+                Show inactive aircraft
+              </label>
+              <table className="min-w-full text-sm" data-testid="fleet-table">
+                <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                  <tr>
+                    <th className="py-2 pr-4 font-medium">Registration</th>
+                    <th className="py-2 pr-4 font-medium">Type</th>
+                    <th className="py-2 pr-4 font-medium">Status</th>
+                    <th className="py-2 pr-4 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-dn-steel-lt">
+                  {fleet.map((a) => (
+                    <tr key={a.id} className="hover:bg-dn-fog">
+                      <td className="py-2 pr-4 font-mono">{a.registration}</td>
+                      <td className="py-2 pr-4">
+                        <span className="font-mono">{a.aircraft_type}</span>
+                        {!a.aircraft_type_known && (
+                          <span className="ml-2 text-xs text-dn-amber">(custom)</span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {a.active ? (
+                          <Badge tone="green">Active</Badge>
+                        ) : (
+                          <Badge tone="neutral">Inactive</Badge>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {a.active && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => retire(a.id, a.registration)}
+                            disabled={retiring === a.id}
+                            className="text-red-600 hover:bg-red-50"
+                            data-testid={`retire-${a.id}`}
+                          >
+                            {retiring === a.id ? "Retiring…" : "Retire"}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardBody>
       </Card>
