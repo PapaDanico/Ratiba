@@ -361,6 +361,22 @@ function CalendarFeedButton({ crew }: { crew: Crew }) {
   );
 }
 
+function RetireCrewButton({ crew, onRetire }: { crew: Crew; onRetire: (id: string, name: string) => void }) {
+  return (
+    crew.active && (
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => onRetire(crew.id, `${crew.first_name} ${crew.last_name}`)}
+        className="text-red-600 hover:bg-red-50"
+        data-testid={`retire-${crew.id}`}
+      >
+        Retire
+      </Button>
+    )
+  );
+}
+
 function PairDeviceButton({ crew }: { crew: Crew }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -476,8 +492,11 @@ export function CrewPage() {
   const [rows, setRows] = useState<Crew[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retiring, setRetiring] = useState<string | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
   const { sort, toggle, sorted } = useSort<CrewSortKey>(null);
-  const visibleRows = sorted(rows, {
+  const filtered = showInactive ? rows : rows.filter((c) => c.active);
+  const visibleRows = sorted(filtered, {
     employee_no: (c) => c.employee_no,
     name: (c) => `${c.first_name} ${c.last_name}`.toLowerCase(),
     role: (c) => c.role,
@@ -488,7 +507,7 @@ export function CrewPage() {
     let cancelled = false;
     (async () => {
       try {
-        const list = await api<Crew[]>("/api/v1/crew");
+        const list = await api<Crew[]>(`/api/v1/crew${showInactive ? "?include_inactive=true" : ""}`);
         if (!cancelled) setRows(list);
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "Failed to load crew");
@@ -499,7 +518,24 @@ export function CrewPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showInactive]);
+
+  async function retire(crewId: string, name: string) {
+    if (!window.confirm(`Retire crew member ${name}? This will mark them as inactive.`)) {
+      return;
+    }
+    setRetiring(crewId);
+    try {
+      await api(`/api/v1/crew/${crewId}`, { method: "DELETE" });
+      setError(null);
+      const list = await api<Crew[]>(`/api/v1/crew${showInactive ? "?include_inactive=true" : ""}`);
+      setRows(list);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Retire failed");
+    } finally {
+      setRetiring(null);
+    }
+  }
 
   return (
     <Card>
@@ -518,7 +554,17 @@ export function CrewPage() {
             hint="Import your roster via the Import page, or add crew through the API."
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="rounded"
+              />
+              Show inactive crew
+            </label>
+            <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="crew-table">
               <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
                 <tr>
@@ -583,12 +629,14 @@ export function CrewPage() {
                         <CalendarFeedButton crew={c} />
                         <PairDeviceButton crew={c} />
                         <CrossOpFtlButton crew={c} />
+                        <RetireCrewButton crew={c} onRetire={retire} />
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </CardBody>
