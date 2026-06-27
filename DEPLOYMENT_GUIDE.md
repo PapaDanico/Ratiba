@@ -2,7 +2,9 @@
 
 **Phase:** 6 (Pilot deployment + 30-day stability)  
 **Target:** Production-ready crew rostering platform for East African aviation operators  
-**Deployment Platform:** Render (docker-based, free tier)
+**Deployment Options:**
+- **[RECOMMENDED] Hybrid:** Netlify (frontend) + Render (backend) + Neon (database) — See [`NETLIFY_DEPLOYMENT.md`](NETLIFY_DEPLOYMENT.md)
+- **[LEGACY] Render only:** All services on Render free tier — See below
 
 ---
 
