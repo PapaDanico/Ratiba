@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
+import { ValidationMessage } from "@/components/ui/ValidationMessage";
 import { DnLogo } from "@/components/ui/DnLogo";
 import { useAuth } from "@/lib/auth";
 import { api, ApiError } from "@/lib/api";
@@ -19,11 +20,41 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [waking, setWaking] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  function validateEmail(value: string): string | null {
+    if (!value) return "Email is required";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) return "Please enter a valid email address";
+    return null;
+  }
+
+  function validatePassword(value: string, minLength = 1): string | null {
+    if (!value) return "Password is required";
+    if (value.length < minLength) return `Password must be at least ${minLength} characters`;
+    return null;
+  }
+
+  function validateName(value: string): string | null {
+    if (!value) return "Name is required";
+    if (value.length < 2) return "Name must be at least 2 characters";
+    return null;
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setWaking(false);
+
+    const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password);
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    if (emailErr || passwordErr) return;
+
     setSubmitting(true);
     try {
       await login(email, password, () => setWaking(true));
@@ -43,6 +74,16 @@ export function LoginPage() {
   async function onCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    const nameErr = validateName(fullName);
+    const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password, 8);
+    setNameError(nameErr);
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    if (nameErr || emailErr || passwordErr) return;
+
     setSubmitting(true);
     try {
       await api("/api/v1/auth/demo-workspace", {
@@ -168,11 +209,19 @@ export function LoginPage() {
                       type="email"
                       autoComplete="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setEmailError(null);
+                      }}
+                      onBlur={(e) => {
+                        const error = validateEmail(e.target.value);
+                        if (error) setEmailError(error);
+                      }}
                       placeholder="name@airline.com"
                       required
                       data-testid="login-email"
                     />
+                    <ValidationMessage message={emailError} type="error" />
                   </div>
                   <div>
                     <Label htmlFor="password">Password</Label>
@@ -181,10 +230,18 @@ export function LoginPage() {
                       type="password"
                       autoComplete="current-password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      onBlur={(e) => {
+                        const error = validatePassword(e.target.value);
+                        if (error) setPasswordError(error);
+                      }}
                       required
                       data-testid="login-password"
                     />
+                    <ValidationMessage message={passwordError} type="error" />
                   </div>
                   {error && <ErrorAlert message={error} />}
                   <Button
@@ -217,10 +274,18 @@ export function LoginPage() {
                     <Input
                       id="full_name"
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => {
+                        setFullName(e.target.value);
+                        setNameError(null);
+                      }}
+                      onBlur={(e) => {
+                        const error = validateName(e.target.value);
+                        if (error) setNameError(error);
+                      }}
                       required
                       data-testid="create-name"
                     />
+                    <ValidationMessage message={nameError} type="error" />
                   </div>
                   <div>
                     <Label htmlFor="operator_name">Airline name (optional)</Label>
@@ -239,10 +304,18 @@ export function LoginPage() {
                       type="email"
                       autoComplete="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setEmailError(null);
+                      }}
+                      onBlur={(e) => {
+                        const error = validateEmail(e.target.value);
+                        if (error) setEmailError(error);
+                      }}
                       required
                       data-testid="create-email"
                     />
+                    <ValidationMessage message={emailError} type="error" />
                   </div>
                   <div>
                     <Label htmlFor="create_password">Password (8+ characters)</Label>
@@ -252,10 +325,18 @@ export function LoginPage() {
                       autoComplete="new-password"
                       minLength={8}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      onBlur={(e) => {
+                        const error = validatePassword(e.target.value, 8);
+                        if (error) setPasswordError(error);
+                      }}
                       required
                       data-testid="create-password"
                     />
+                    <ValidationMessage message={passwordError} type="error" />
                   </div>
                   {error && <ErrorAlert message={error} />}
                   <Button
