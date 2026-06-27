@@ -8,7 +8,7 @@
   base = "frontend"
   command = "npm run build"
   publish = "dist"
-  functions = "netlify/functions"
+  functions = "../netlify/functions"
 
 # Environment variables (set these in Netlify UI or via CLI)
 [build.environment]
@@ -24,7 +24,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = { NOT = [{ status = [200, 404] }] }
+  conditions = { status = [404] }
 
 # 2. API routes: forward to backend (matches /api/*)
 [[redirects]]
