@@ -1,4 +1,76 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Netlify Configuration — Frontend SPA + API proxy to backend
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Build settings
 [build]
+  # Only build the frontend; backend stays on Railway
   base = "frontend"
   command = "npm run build"
   publish = "dist"
+  functions = "../netlify/functions"
+
+# Disable the no-more-404 plugin: we handle 404s via SPA redirects
+[[plugins]]
+  package = "netlify-plugin-no-more-404"
+  [plugins.inputs]
+    on404 = "warn"
+
+# Environment variables (set these in Netlify UI or via CLI)
+[build.environment]
+  # Default to Railway backend; override in Netlify dashboard if different
+  VITE_BACKEND_URL = ""
+
+# Redirects and rewrites
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 1. SPA fallback: serve index.html for all non-asset routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = { status = [404] }
+
+# 2. API routes: forward to backend (matches /api/*)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api-proxy/:splat"
+  status = 200
+  force = true
+
+# 3. Health check routes
+[[redirects]]
+  from = "/healthz"
+  to = "/.netlify/functions/api-proxy"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/version"
+  to = "/.netlify/functions/api-proxy"
+  status = 200
+  force = true
+
+# Security headers
+# ─────────────────────────────────────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Allow requests from the same origin and CORS if backend is on different domain
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+# Cache behavior for assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
