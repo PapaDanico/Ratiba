@@ -5,7 +5,7 @@
     "buildpacks": []
   },
   "deploy": {
-    "startCommand": "bash ./backend/start.sh",
+    "startCommand": "bash ./start.sh",
     "restartPolicyMaxRetries": 5,
     "restartPolicyWindowSeconds": 600,
     "healthchecks": {
