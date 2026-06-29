@@ -45,7 +45,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = { status = [404] }
+  conditions.status = [404]
 
 # Security headers
 # ─────────────────────────────────────────────────────────────────────────────
