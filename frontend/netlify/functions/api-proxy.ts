@@ -2,7 +2,8 @@ import { Handler, HandlerEvent } from "@netlify/functions";
 
 // For Netlify Functions (runtime), use BACKEND_URL env var set in Netlify dashboard
 // For local dev, fall back to VITE_BACKEND_URL from build or localhost
-const BACKEND_URL = process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL =
+  process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 /**
  * API Proxy function — forwards requests to the backend API
@@ -37,9 +38,9 @@ const handler: Handler = async (event: HandlerEvent) => {
     const url = `${BACKEND_URL}${path}${queryString}`;
 
     // Prepare request headers (case-insensitive lookup for content-type)
-    const contentType = Object.entries(event.headers).find(
-      ([k]) => k.toLowerCase() === "content-type"
-    )?.[1] || "application/json";
+    const contentType =
+      Object.entries(event.headers).find(([k]) => k.toLowerCase() === "content-type")?.[1] ||
+      "application/json";
 
     const headers: Record<string, string> = {
       "Content-Type": contentType,
@@ -61,7 +62,11 @@ const handler: Handler = async (event: HandlerEvent) => {
     const response = await fetch(url, {
       method: event.httpMethod,
       headers,
-      body: event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64") : event.body) : undefined,
+      body: event.body
+        ? event.isBase64Encoded
+          ? Buffer.from(event.body, "base64")
+          : event.body
+        : undefined,
     });
 
     // Read response body
