@@ -1,66 +1,48 @@
-# ═════════════════════════════════════════════════════════════════════════════
 # Netlify Configuration — Frontend SPA + API proxy to backend
-# ═════════════════════════════════════════════════════════════════════════════
-
-# Build settings
 [build]
-  # Build the frontend; backend runs on Railway
   base = "frontend"
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
 
-# Environment variables (for dev server proxy during builds)
 [build.environment]
-  # For dev server proxy (npm run dev): set to backend URL
-  # For production (Netlify): defaults to /api (handled by Netlify function proxy)
-  # Set in Netlify dashboard if needed: https://ratiba-api-railway.up.railway.app
   VITE_BACKEND_URL = ""
 
-# Redirects and rewrites
-# ─────────────────────────────────────────────────────────────────────────────
-
-# 1. API routes: forward to backend (more specific, processed first)
+# API routes: forward to backend
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api-proxy/:splat"
   status = 200
-  force = true
 
-# 2. Health check routes
+# Health check routes
 [[redirects]]
   from = "/healthz"
   to = "/.netlify/functions/api-proxy"
   status = 200
-  force = true
 
 [[redirects]]
   from = "/version"
   to = "/.netlify/functions/api-proxy"
   status = 200
-  force = true
 
-# 3. SPA fallback: serve index.html for 404s (general rule, processed last)
+# SPA fallback: serve index.html for any unmatched route
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions.status = [404]
 
 # Security headers
-# ─────────────────────────────────────────────────────────────────────────────
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    # Allow requests from the same origin and CORS if backend is on different domain
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# Cache behavior for assets
+# Asset caching
 [[headers]]
   for = "/assets/*"
   [headers.values]
