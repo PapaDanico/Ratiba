@@ -1,17 +1,17 @@
-import { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import { Handler, HandlerEvent } from "@netlify/functions";
 
 // For Netlify Functions (runtime), use BACKEND_URL env var set in Netlify dashboard
 // For local dev, fall back to VITE_BACKEND_URL from build or localhost
-const BACKEND_URL = process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL =
+  process.env.BACKEND_URL ||
+  process.env.VITE_BACKEND_URL ||
+  "http://localhost:8000";
 
 /**
  * API Proxy function — forwards requests to the backend API
  * Handles CORS, authentication headers, and request/response bodies
  */
-const handler: Handler = async (
-  event: HandlerEvent,
-  context: HandlerContext
-) => {
+const handler: Handler = async (event: HandlerEvent) => {
   // Only allow specific HTTP methods
   if (!["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"].includes(event.httpMethod)) {
     return {
