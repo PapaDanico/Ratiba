@@ -20,21 +20,14 @@
 # Redirects and rewrites
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 1. SPA fallback: serve index.html for 404s (non-existent routes, but not API)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = { status = [404], NOT = { path = ["/api/*"] } }
-
-# 2. API routes: forward to backend (matches /api/*)
+# 1. API routes: forward to backend (more specific, processed first)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api-proxy/:splat"
   status = 200
   force = true
 
-# 3. Health check routes
+# 2. Health check routes
 [[redirects]]
   from = "/healthz"
   to = "/.netlify/functions/api-proxy"
@@ -46,6 +39,13 @@
   to = "/.netlify/functions/api-proxy"
   status = 200
   force = true
+
+# 3. SPA fallback: serve index.html for 404s (general rule, processed last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = { status = [404] }
 
 # Security headers
 # ─────────────────────────────────────────────────────────────────────────────
