@@ -10,11 +10,11 @@
     "restartPolicyWindowSeconds": 600,
     "healthchecks": {
       "readiness": {
-        "initialDelaySeconds": 30,
+        "initialDelaySeconds": 60,
         "intervalSeconds": 10,
         "timeoutSeconds": 5,
         "successThreshold": 1,
-        "failureThreshold": 3,
+        "failureThreshold": 5,
         "httpGet": {
           "path": "/healthz",
           "port": 8000
