@@ -20,12 +20,12 @@
 # Redirects and rewrites
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 1. SPA fallback: serve index.html for 404s (non-existent routes)
+# 1. SPA fallback: serve index.html for 404s (non-existent routes, but not API)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = { status = [404] }
+  conditions = { status = [404], NOT = { path = ["/api/*"] } }
 
 # 2. API routes: forward to backend (matches /api/*)
 [[redirects]]

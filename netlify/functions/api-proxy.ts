@@ -34,14 +34,19 @@ const handler: Handler = async (
 
   try {
     // Reconstruct the full path and query string
-    const path = event.path.replace("/.netlify/functions/api-proxy", "");
+    let path = event.path.replace("/.netlify/functions/api-proxy", "");
+    if (!path) path = "/";
     const queryString = event.rawQuery ? `?${event.rawQuery}` : "";
     const url = `${BACKEND_URL}${path}${queryString}`;
 
-    // Prepare request headers
+    // Prepare request headers (case-insensitive lookup for content-type)
+    const contentType = Object.entries(event.headers).find(
+      ([k]) => k.toLowerCase() === "content-type"
+    )?.[1] || "application/json";
+
     const headers: Record<string, string> = {
-      "Content-Type": event.headers["content-type"] || "application/json",
-      "X-Forwarded-For": event.headers["client-ip"] || "unknown",
+      "Content-Type": contentType,
+      "X-Forwarded-For": event.headers["x-forwarded-for"] || "unknown",
       "X-Forwarded-Proto": "https",
     };
 
@@ -59,7 +64,7 @@ const handler: Handler = async (
     const response = await fetch(url, {
       method: event.httpMethod,
       headers,
-      body: event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64").toString() : event.body) : undefined,
+      body: event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64") : event.body) : undefined,
     });
 
     // Read response body
@@ -76,11 +81,29 @@ const handler: Handler = async (
 
     // Extract Set-Cookie headers (important for session tokens)
     const setCookieHeaders = response.headers.get("set-cookie");
-    const responseHeaders: Record<string, string> = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
+    const responseHeaders: Record<string, string> = {};
+
+    // Respect backend's CORS headers if present; only add defaults if missing
+    const backendCorsOrigin = response.headers.get("access-control-allow-origin");
+    if (backendCorsOrigin) {
+      responseHeaders["Access-Control-Allow-Origin"] = backendCorsOrigin;
+    } else {
+      responseHeaders["Access-Control-Allow-Origin"] = "*";
+    }
+
+    const backendCorsMethods = response.headers.get("access-control-allow-methods");
+    if (backendCorsMethods) {
+      responseHeaders["Access-Control-Allow-Methods"] = backendCorsMethods;
+    } else {
+      responseHeaders["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS";
+    }
+
+    const backendCorsHeaders = response.headers.get("access-control-allow-headers");
+    if (backendCorsHeaders) {
+      responseHeaders["Access-Control-Allow-Headers"] = backendCorsHeaders;
+    } else {
+      responseHeaders["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+    }
 
     if (setCookieHeaders) {
       responseHeaders["set-cookie"] = setCookieHeaders;
