@@ -1,0 +1,42 @@
+# Fly.io Configuration for Ratiba Backend
+# Deploy FastAPI backend to Fly.io
+
+app = "ratiba-backend"
+primary_region = "ams"  # Amsterdam (EU)
+
+[build]
+  dockerfile = "./Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8000
+  ports = [{ port = 80, handlers = ["http"] }, { port = 443, handlers = ["tls", "http"] }]
+
+[checks]
+  [checks.http_readiness]
+    type = "http"
+    port = 8000
+    path = "/healthz"
+    interval = 10000
+    timeout = 5000
+    grace_period = 60000
+    method = "GET"
+
+[[mounts]]
+  source = "audit_packs"
+  destination = "/app/audit_packs"
+  initial_size = "10gb"
+
+[env]
+  PORT = "8000"
+  LOG_LEVEL = "INFO"
+
+# Database and secrets are set via 'fly secrets set' command
+# See deployment guide for environment variable setup
