@@ -92,10 +92,22 @@ def db_engine():  # type: ignore[no-untyped-def]
     backend_dir = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend_dir / "alembic.ini"))
     cfg.set_main_option("script_location", str(backend_dir / "alembic"))
-    cfg.set_main_option("sqlalchemy.url", url)
+    # env.py overrides sqlalchemy.url from app settings, so the test URL must
+    # go through config.attributes — set_main_option alone gets clobbered and
+    # the migrations would silently run against the dev database instead.
+    cfg.attributes["sqlalchemy_url"] = url
     command.upgrade(cfg, "head")
 
+    # API routes get the test session via dependency override, but background
+    # tasks open sessions through app.core.database.SessionLocal directly —
+    # rebind it so they hit the test database too.
+    import app.core.database as app_db
+
+    app_db.SessionLocal.configure(bind=engine)
+
     yield engine
+
+    app_db.SessionLocal.configure(bind=app_db.engine)
 
     with engine.begin() as c:
         c.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))

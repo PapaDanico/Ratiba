@@ -700,6 +700,22 @@ def _seed_demo(session: Session) -> None:
         "Audit packs are generated on demand from the Audit packs page "
         "(Jetways ships with one pre-generated)."
     )
+    print()
+    print("=" * 70)
+    print("DEMO CREDENTIALS")
+    print("=" * 70)
+    for demo in DEMO_OPERATORS:
+        aoc = demo.aoc_number.lower()
+        print(f"\n{demo.name} ({demo.aoc_number}):")
+        print(f"  Officer:  officer@{aoc}.example.aero / {DEFAULT_USER_PASSWORD}")
+        print(f"  Chief:    chief@{aoc}.example.aero / {DEFAULT_USER_PASSWORD}")
+        print(f"  Admin:    admin@{aoc}.example.aero / {DEFAULT_USER_PASSWORD}")
+    print()
+    print("Jetways Airlines (JWX):")
+    print(f"  Officer:  officer@jwx.example.aero / {DEFAULT_USER_PASSWORD}")
+    print(f"  Chief:    chief@jwx.example.aero / {DEFAULT_USER_PASSWORD}")
+    print(f"  Admin:    admin@jwx.example.aero / {DEFAULT_USER_PASSWORD}")
+    print("=" * 70)
 
 
 def main(argv: list[str] | None = None) -> int:
