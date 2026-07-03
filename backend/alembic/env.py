@@ -22,7 +22,11 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Callers (e.g. tests/conftest.py) can inject a URL via config.attributes to
+# migrate a different database than the one app settings point at.
+config.set_main_option(
+    "sqlalchemy.url", config.attributes.get("sqlalchemy_url") or settings.database_url
+)
 
 target_metadata = Base.metadata
 

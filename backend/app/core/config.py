@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +25,18 @@ class Settings(BaseSettings):
         default="postgresql+psycopg://ratiba:dev_password@db:5432/ratiba_test",
         alias="TEST_DATABASE_URL",
     )
+
+    @field_validator("database_url", "test_database_url")
+    @classmethod
+    def _force_psycopg3_driver(cls, v: str) -> str:
+        # Managed Postgres (Render, Heroku, Neon…) hands out postgres:// or
+        # postgresql:// URLs; SQLAlchemy maps those to psycopg2, which isn't
+        # installed — only psycopg (v3) is.
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+psycopg://", 1)
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+psycopg://", 1)
+        return v
 
     # Redis
     redis_url: str = Field(default="redis://redis:6379/0", alias="REDIS_URL")
