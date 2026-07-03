@@ -6,6 +6,9 @@
 [build]
   # Only build the frontend; backend stays on Render
   base = "frontend"
+  # With base=frontend Netlify's default ignore skips builds unless files under
+  # frontend/ change — edits to netlify/functions/ or this file never deployed.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- ../frontend ../netlify ../netlify.toml"
   command = "npm run build"
   publish = "dist"
   functions = "../netlify/functions"
