@@ -33,7 +33,9 @@ exports.handler = async (event, context) => {
 
   try {
     // Reconstruct the full path and query string
-    const path = event.path.replace("/.netlify/functions/api-proxy", "");
+    // The /healthz and /version redirects carry no splat, leaving an empty
+    // path that would hit the backend root and 404.
+    const path = event.path.replace("/.netlify/functions/api-proxy", "") || "/healthz";
     const queryString = event.rawQuery ? `?${event.rawQuery}` : "";
     const url = `${BACKEND_URL}${path}${queryString}`;
 
@@ -52,6 +54,12 @@ exports.handler = async (event, context) => {
     // Forward cookies if present
     if (event.headers.cookie) {
       headers.cookie = event.headers.cookie;
+    }
+
+    // Forward the double-submit CSRF header — without it every mutating
+    // request (POST/PUT/PATCH/DELETE) is rejected 403 by the backend.
+    if (event.headers["x-csrf-token"]) {
+      headers["x-csrf-token"] = event.headers["x-csrf-token"];
     }
 
     // Make the request to the backend
