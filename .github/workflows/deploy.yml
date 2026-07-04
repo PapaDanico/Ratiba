@@ -77,13 +77,17 @@ jobs:
           functions-dir: 'netlify/functions'
           production-deploy: ${{ github.ref == 'refs/heads/main' }}
           deploy-message: 'Deploy from GitHub Actions: ${{ github.sha }}'
-          netlify-token: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          site-id: ${{ secrets.NETLIFY_SITE_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           enable-pull-request-comment: true
           enable-commit-comment: true
           overwrites-pull-request-comment: true
         env:
+          # actions-netlify reads credentials from env vars, not inputs.
+          # Passed as netlify-token/site-id inputs these were silently ignored:
+          # the step logged "Netlify credentials not provided, not deployable"
+          # and exited 0, so every Deploy run was a green no-op.
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           VITE_BACKEND_URL: 'https://ratiba-api.onrender.com'
 
   # ── Backend: Manual dispatch for Render deployments ────────────────────────
