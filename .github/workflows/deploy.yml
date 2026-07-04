@@ -56,10 +56,26 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      # API deploys don't read the repo-root netlify.toml, so the SPA fallback
+      # and /api proxy rewrites must ship as a _redirects file inside dist.
+      - name: Write _redirects for API deploy
+        run: |
+          cat > frontend/dist/_redirects <<'EOF'
+          /api/*    /.netlify/functions/api-proxy/:splat  200!
+          /healthz  /.netlify/functions/api-proxy         200!
+          /version  /.netlify/functions/api-proxy         200!
+          /*        /index.html                           200
+          EOF
+
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v2.1.0
         with:
           publish-dir: 'frontend/dist'
+          # Without functions-dir the api-proxy function is dropped from the
+          # deploy, and without production-deploy this only creates a draft
+          # that never reaches ratibacrewmanagement.netlify.app.
+          functions-dir: 'netlify/functions'
+          production-deploy: ${{ github.ref == 'refs/heads/main' }}
           deploy-message: 'Deploy from GitHub Actions: ${{ github.sha }}'
           netlify-token: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           site-id: ${{ secrets.NETLIFY_SITE_ID }}
