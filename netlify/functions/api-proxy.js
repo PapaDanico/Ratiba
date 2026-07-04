@@ -3,7 +3,12 @@
  * Handles CORS, authentication headers, and request/response bodies
  */
 
-const BACKEND_URL = process.env.VITE_BACKEND_URL || "http://localhost:8000";
+// netlify.toml [build.environment] vars are BUILD-time only — they are not
+// injected into the deployed function runtime. Without a UI-configured env
+// var this used to fall back to localhost inside the Lambda, so every /api
+// request 502'd instantly and login sat on "Waking the server…" forever.
+const BACKEND_URL =
+  process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "https://ratiba-api.onrender.com";
 
 exports.handler = async (event, context) => {
   // Only allow specific HTTP methods
@@ -68,21 +73,25 @@ exports.handler = async (event, context) => {
       responseBody = Buffer.from(buffer).toString("base64");
     }
 
-    // Extract Set-Cookie headers (important for session tokens)
-    const setCookieHeaders = response.headers.get("set-cookie");
+    // Extract Set-Cookie headers (important for session tokens). Login sets
+    // several cookies (access, refresh, CSRF); headers.get() would join them
+    // with commas into one broken header, so use getSetCookie() and return
+    // them via multiValueHeaders to keep each cookie intact.
+    const setCookies = response.headers.getSetCookie
+      ? response.headers.getSetCookie()
+      : response.headers.get("set-cookie")
+        ? [response.headers.get("set-cookie")]
+        : [];
     const responseHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     };
 
-    if (setCookieHeaders) {
-      responseHeaders["set-cookie"] = setCookieHeaders;
-    }
-
     return {
       statusCode: response.status,
       headers: responseHeaders,
+      multiValueHeaders: setCookies.length ? { "set-cookie": setCookies } : undefined,
       body: responseBody || "",
       isBase64Encoded: !contentType.includes("text") && !contentType.includes("json"),
     };
