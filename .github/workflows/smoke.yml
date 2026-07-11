@@ -1,8 +1,8 @@
 name: Platform smoke test
 
-# Curls the deployed platform from a runner with open egress (the dev
-# sandbox can't reach supabase.co/netlify.app). Bump .github/smoke-request.json
-# to re-run.
+# Exercises the deployed Supabase edge-function API from a runner with open
+# egress (the dev sandbox can't reach supabase.co/netlify.app). Bump
+# .github/smoke-request.json to re-run.
 
 on:
   push:
@@ -11,30 +11,155 @@ on:
       - ".github/workflows/smoke.yml"
   workflow_dispatch:
 
+env:
+  API: https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Edge function direct
+      - name: Health + auth
         run: |
-          set -x
-          curl -sS -w '\nHTTP %{http_code}\n' https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/healthz
-          curl -sS -w '\nHTTP %{http_code}\n' https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/version
-          curl -sS -w '\nHTTP %{http_code}\n' https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/readyz
-      - name: Edge function login
+          set -e
+          fail() { echo "FAIL: $1"; exit 1; }
+          eq() { [ "$1" = "$2" ] || fail "$3 (got $1, want $2)"; }
+
+          eq "$(curl -s -o /dev/null -w '%{http_code}' $API/healthz)" 200 healthz
+          curl -s $API/version | grep -q supabase-2 || fail "version phase"
+          eq "$(curl -s -o /dev/null -w '%{http_code}' $API/readyz)" 200 readyz
+
+          # login -> cookie jar + CSRF token
+          curl -s -c /tmp/jar -o /tmp/login.json -w '%{http_code}' \
+            -X POST $API/api/v1/auth/login -H 'content-type: application/json' \
+            --data '{"email":"officer@example.aero","password":"hunter2pass"}' | grep -q 200 || fail login
+          CSRF=$(grep rt_csrf /tmp/jar | awk '{print $NF}')
+          echo "CSRF=$CSRF" >> $GITHUB_ENV
+          eq "$(curl -s -b /tmp/jar -o /dev/null -w '%{http_code}' $API/api/v1/auth/me)" 200 me
+
+          # CSRF enforcement: mutating call without header must 403
+          eq "$(curl -s -b /tmp/jar -o /dev/null -w '%{http_code}' -X POST $API/api/v1/fleet \
+            -H 'content-type: application/json' --data '{}')" 403 csrf-block
+          echo OK
+
+      - name: Reads
         run: |
-          curl -sS -D - -o /tmp/login.json -w '\nHTTP %{http_code}\n' \
-            -X POST https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/api/v1/auth/login \
-            -H 'content-type: application/json' \
-            --data '{"email":"officer@example.aero","password":"hunter2pass"}'
-          head -c 200 /tmp/login.json; echo
+          set -e
+          fail() { echo "FAIL: $1"; exit 1; }
+          for p in "crew" "crew/currency/dashboard" "fleet" "users" "notices" \
+                   "training/type-ratings" "training/recurrency" "ftl/limits" \
+                   "reference/aircraft-types" "reference/public-holidays" \
+                   "leave" "swap" "settings/operator" "settings/account" \
+                   "sectors?date_from=2026-07-01&date_to=2026-07-31" \
+                   "duties?date_from=2026-07-01&date_to=2026-07-31" \
+                   "roster?date_from=2026-07-01&date_to=2026-07-31"; do
+            code=$(curl -s -b /tmp/jar -o /dev/null -w '%{http_code}' "$API/api/v1/$p")
+            [ "$code" = 200 ] || fail "GET $p -> $code"
+            echo "GET $p 200"
+          done
+
+      - name: Write flow (crew -> rating -> sectors -> roster e2e)
+        run: |
+          set -e
+          fail() { echo "FAIL: $1"; cat /tmp/out 2>/dev/null; exit 1; }
+          H=(-b /tmp/jar -H "content-type: application/json" -H "x-csrf-token: $CSRF")
+          TS=$RANDOM
+
+          # crew create + patch
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/crew --data "{
+            \"employee_no\":\"SMK-$TS\",\"first_name\":\"Smoke\",\"last_name\":\"Test\",\"role\":\"CAPT\",
+            \"date_of_hire\":\"2021-01-01\",\"date_of_birth\":\"1990-01-01\",\"base_station\":\"HKJK\",
+            \"contract_type\":\"FULL_TIME\"}")
+          [ "$code" = 201 ] || fail "crew create -> $code"
+          CREW_ID=$(python3 -c "import json;print(json.load(open('/tmp/out'))['id'])")
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X PATCH $API/api/v1/crew/$CREW_ID \
+            --data '{"phone_number":"+254700000000"}')
+          [ "$code" = 200 ] || fail "crew patch -> $code"
+
+          # second pilot (FO) + type ratings for both
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/crew --data "{
+            \"employee_no\":\"SMKF-$TS\",\"first_name\":\"Smoke\",\"last_name\":\"Fo\",\"role\":\"FO\",
+            \"date_of_hire\":\"2022-01-01\",\"date_of_birth\":\"1992-01-01\",\"base_station\":\"HKJK\",
+            \"contract_type\":\"FULL_TIME\"}")
+          [ "$code" = 201 ] || fail "fo create -> $code"
+          FO_ID=$(python3 -c "import json;print(json.load(open('/tmp/out'))['id'])")
+          for CID in $CREW_ID $FO_ID; do
+            code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' \
+              -X POST $API/api/v1/training/crew/$CID/type-ratings \
+              --data '{"aircraft_type":"C208","valid_from":"2026-01-01","valid_until":"2027-12-31"}')
+            [ "$code" = 201 ] || fail "type rating -> $code"
+          done
+
+          # currency record
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/crew/$CREW_ID/currency \
+            --data '{"currency_type":"OPC","last_completed_date":"2026-06-01","expires_date":"2027-06-01"}')
+          [ "$code" = 201 ] || fail "currency -> $code"
+
+          # fleet add
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/fleet \
+            --data "{\"registration\":\"5Y-SM$(( TS % 100 ))\",\"aircraft_type\":\"C208\"}")
+          [ "$code" = 201 ] || [ "$code" = 409 ] || fail "fleet add -> $code"
+
+          # recurring sectors next week (unique flight no)
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/sectors/recurring --data "{
+            \"flight_no\":\"SMK$TS\",\"origin\":\"HKJK\",\"destination\":\"HKML\",
+            \"std_time\":\"06:00\",\"sta_time\":\"07:30\",\"aircraft_reg\":\"5Y-SMK\",\"aircraft_type\":\"C208\",
+            \"date_from\":\"2026-07-20\",\"date_to\":\"2026-07-22\",\"days_of_week\":[]}")
+          [ "$code" = 201 ] || fail "recurring sectors -> $code"
+
+          # auto-generate over that window
+          code=$(curl -s "${H[@]}" -o /tmp/gen.json -w '%{http_code}' -X POST $API/api/v1/roster/auto-generate \
+            --data '{"horizon_from":"2026-07-20","horizon_to":"2026-07-22"}')
+          [ "$code" = 200 ] || { cp /tmp/gen.json /tmp/out; fail "auto-generate -> $code"; }
+          python3 - <<'EOF'
+          import json
+          r = json.load(open('/tmp/gen.json'))
+          print("auto-generate:", r["result"]["status"], "assignments:", len(r["result"]["assignments"]),
+                "unassigned:", r["result"]["unassigned_duty_days"])
+          assert r["result"]["assignments"], "no assignments produced"
+          # publish payload
+          json.dump({
+            "horizon_from": "2026-07-20", "horizon_to": "2026-07-22",
+            "sectors": [s for s in r["sectors"] if s["sector_id"].startswith("SMK")],
+            "assignments": r["result"]["assignments"],
+          }, open('/tmp/publish.json', 'w'))
+          EOF
+
+          # publish
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/roster/publish \
+            --data @/tmp/publish.json)
+          [ "$code" = 200 ] || fail "publish -> $code"
+          cat /tmp/out
+
+          # published roster now visible
+          curl -s -b /tmp/jar "$API/api/v1/roster?date_from=2026-07-20&date_to=2026-07-22" -o /tmp/out
+          python3 -c "import json;r=json.load(open('/tmp/out'));assert r, 'empty roster';print('roster rows:', len(r), r[0]['duty_day_key'], r[0]['legality_state'])"
+
+          # duty (standby) + leave round-trip
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/duties \
+            --data "{\"crew_id\":\"$CREW_ID\",\"date\":\"2026-07-25\",\"duty_type\":\"STANDBY_SHORT\",\"start_time\":\"06:00\",\"end_time\":\"12:00\"}")
+          [ "$code" = 201 ] || fail "duty -> $code"
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/leave \
+            --data "{\"crew_id\":\"$CREW_ID\",\"type\":\"ANNUAL\",\"date_from\":\"2026-08-01\",\"date_to\":\"2026-08-05\"}")
+          [ "$code" = 201 ] || fail "leave create -> $code"
+          LEAVE_ID=$(python3 -c "import json;print(json.load(open('/tmp/out'))['id'])")
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X PATCH $API/api/v1/leave/$LEAVE_ID \
+            --data '{"status":"APPROVED"}')
+          [ "$code" = 200 ] || fail "leave approve -> $code"
+
+          # notice create
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/notices \
+            --data '{"category":"OPERATIONAL","title":"Smoke test notice","body":"All good."}')
+          [ "$code" = 201 ] || fail "notice -> $code"
+
+          # cleanup: deactivate smoke crew so the demo stays tidy
+          curl -s "${H[@]}" -o /dev/null -X PATCH $API/api/v1/crew/$CREW_ID --data '{"active":false}'
+          curl -s "${H[@]}" -o /dev/null -X PATCH $API/api/v1/crew/$FO_ID --data '{"active":false}'
+          echo "WRITE FLOW OK"
+
       - name: Via Netlify proxy
         run: |
-          set -x
-          for host in ratibacrewmanagement.netlify.app deploy-preview-47--ratibacrewmanagement.netlify.app; do
-            curl -sS -w '\nHTTP %{http_code}\n' "https://$host/version"
-            curl -sS -o /dev/null -D - -w 'HTTP %{http_code}\n' \
-              -X POST "https://$host/api/v1/auth/login" \
-              -H 'content-type: application/json' \
-              --data '{"email":"officer@example.aero","password":"hunter2pass"}'
-          done
+          curl -s -w '\nHTTP %{http_code}\n' https://ratibacrewmanagement.netlify.app/version
+          curl -s -o /dev/null -D - -w 'HTTP %{http_code}\n' \
+            -X POST https://ratibacrewmanagement.netlify.app/api/v1/auth/login \
+            -H 'content-type: application/json' \
+            --data '{"email":"officer@example.aero","password":"hunter2pass"}'
