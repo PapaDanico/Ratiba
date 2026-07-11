@@ -1,8 +1,9 @@
 import type { Config } from "tailwindcss";
 
-// DN brand tokens — Savanna Sky edition.
-// Palette draws from Kenyan landscape: Rift Valley deep blue, Maasai shuka earth tones,
-// Ngong Hills green, volcanic dark, warm parchment sand.
+// DN brand tokens — aligned with the DN Consultancy reference site
+// (dnconsultancydiagnostictoolkit.netlify.app :root palette, exact hex).
+// Legacy token names (sand/savanna/lava) are kept and remapped so existing
+// components restyle without churn.
 const config: Config = {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
@@ -10,39 +11,47 @@ const config: Config = {
       colors: {
         dn: {
           // Surfaces
-          fog: "#F7EFE0", // warm parchment/sandy earth
-          sand: "#EDE1C8", // deeper sand — card header tint
+          fog: "#F4F4F2", // --dn-fog
+          sand: "#ECECE9", // card header tint — a step deeper than fog
 
           // Text
-          dark: "#1E0F05", // deep volcanic brown
-          muted: "#7D6245", // warm taupe
+          dark: "#1C1C1C", // --dn-dark
+          muted: "#6B7280", // --dn-muted
 
-          // Primary: Rift Valley deep blue (replaces cool steel)
-          steel: "#1B4F72",
-          "steel-lt": "#D0E8F5",
+          // Primary accent — DN steel blue
+          steel: "#4A7FA5", // --dn-steel / --accent
+          "steel-lt": "#D6E4F0", // --dn-steel-lt
+          "steel-deep": "#3A6584", // --accent-deep
 
-          // Gold — Maasai beadwork (unchanged, it was already right)
-          gold: "#C9A84C",
-          "gold-lt": "#FEF3CC",
+          // Gold
+          gold: "#C9A84C", // --dn-gold
+          "gold-lt": "#FFF8E6", // --dn-gold-lt
 
-          // Kenyan earth accent — Maasai shuka / savanna sunrise
-          savanna: "#C47B2E",
-          "savanna-lt": "#FDEBD5",
+          // Warm accent (legacy savanna) — mapped to brand gold
+          savanna: "#C9A84C",
+          "savanna-lt": "#FFF8E6",
 
           // Status
-          green: "#1A6B40", // Ngong Hills forest green
-          red: "#A83822", // Kenyan red earth
-          amber: "#C47B2E", // warm ochre (reuse savanna)
+          green: "#1E8449", // --dn-green
+          red: "#C0392B", // --dn-red
+          amber: "#D4AC0D", // --dn-amber
 
-          // Dark nav surface — volcanic rock
-          lava: "#1A0D05",
+          // Dark nav surface (legacy lava) — brand dark
+          lava: "#1C1C1C",
         },
       },
       fontFamily: {
-        display: ['"Cormorant Garamond"', "Georgia", "serif"],
-        // Ubuntu: humanist typeface created with East African design input (Dalton Maag)
-        body: ['"Ubuntu"', '"DM Sans"', "system-ui", "sans-serif"],
+        display: ['"Cormorant Garamond"', "Georgia", '"Times New Roman"', "serif"],
+        body: ['"DM Sans"', "system-ui", "-apple-system", '"Segoe UI"', "Roboto", "Arial", "sans-serif"],
         mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
+      },
+      borderRadius: {
+        dn: "12px", // --radius
+        "dn-sm": "8px", // --radius-sm
+      },
+      boxShadow: {
+        dn: "0 6px 24px rgba(28,28,28,.08)", // --shadow
+        "dn-lg": "0 18px 48px rgba(28,28,28,.14)", // --shadow-lg
       },
     },
   },
