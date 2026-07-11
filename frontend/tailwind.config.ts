@@ -42,7 +42,15 @@ const config: Config = {
       },
       fontFamily: {
         display: ['"Cormorant Garamond"', "Georgia", '"Times New Roman"', "serif"],
-        body: ['"DM Sans"', "system-ui", "-apple-system", '"Segoe UI"', "Roboto", "Arial", "sans-serif"],
+        body: [
+          '"DM Sans"',
+          "system-ui",
+          "-apple-system",
+          '"Segoe UI"',
+          "Roboto",
+          "Arial",
+          "sans-serif",
+        ],
         mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
       },
       borderRadius: {
