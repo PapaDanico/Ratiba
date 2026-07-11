@@ -8,7 +8,11 @@
 // var this used to fall back to localhost inside the Lambda, so every /api
 // request 502'd instantly and login sat on "Waking the server…" forever.
 const BACKEND_URL =
-  process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "https://ratiba-api.onrender.com";
+  process.env.BACKEND_URL ||
+  process.env.VITE_BACKEND_URL ||
+  // Render backend is decommissioned — the API now lives in a Supabase edge
+  // function that speaks the same /api/v1 contract.
+  "https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api";
 
 exports.handler = async (event, context) => {
   // Only allow specific HTTP methods
