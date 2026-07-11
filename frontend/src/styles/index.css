@@ -22,8 +22,7 @@
 
 @layer utilities {
   /*
-   * Maasai-inspired geometric chevron stripe.
-   * Three-colour repeating diagonal weave: gold, shuka-earth, rift-blue.
+   * DN brand stripe — gold / steel / charcoal repeating band.
    * Use as a thin decorative separator on card headers, page dividers, etc.
    */
   .tribal-stripe {
@@ -31,17 +30,11 @@
     background: repeating-linear-gradient(
       90deg,
       #c9a84c 0px,
-      #c9a84c 12px,
-      #a83822 12px,
-      #a83822 24px,
-      #1b4f72 24px,
-      #1b4f72 36px,
-      #c9a84c 36px,
-      #c9a84c 48px,
-      #c47b2e 48px,
-      #c47b2e 60px,
-      #1b4f72 60px,
-      #1b4f72 72px
+      #c9a84c 16px,
+      #4a7fa5 16px,
+      #4a7fa5 32px,
+      #1c1c1c 32px,
+      #1c1c1c 48px
     );
     flex-shrink: 0;
   }
@@ -68,16 +61,9 @@
       );
   }
 
-  /* Savanna-sunrise gradient — login page backdrop */
+  /* DN dark-steel gradient — login page backdrop (matches reference hero panels) */
   .savanna-dawn {
-    background: linear-gradient(
-      160deg,
-      #1a0d05 0%,
-      #4a1e0a 25%,
-      #8b3a1a 55%,
-      #c47b2e 80%,
-      #c9a84c 100%
-    );
+    background: linear-gradient(160deg, #1c1c1c 0%, #2c3e50 55%, #3a6584 85%, #4a7fa5 100%);
   }
 }
 
@@ -93,7 +79,7 @@
   }
   table.rtable tbody tr:hover,
   table.responsive-table tbody tr:hover {
-    background-color: #f7efe0; /* DN_FOG */
+    background-color: #f4f4f2; /* DN_FOG */
   }
   /*
    * Sticky header for long tables: the column labels stay visible while the
@@ -104,7 +90,7 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    background-color: #f7efe0; /* DN_FOG — matches page bg so rows slide under cleanly */
+    background-color: #f4f4f2; /* DN_FOG — matches page bg so rows slide under cleanly */
   }
 
   /*

@@ -3,33 +3,35 @@
 Single source of truth for colour, type, and motion across Ratiba. Wired into
 `frontend/tailwind.config.ts` and into the WeasyPrint stylesheet for audit packs.
 
-## Palette — Savanna Sky
+## Palette — DN reference
 
-Inspired by East African landscape and Maasai visual culture: volcanic earth,
-Rift Valley deep blue, Ngong Hills green, Maasai beadwork gold, warm parchment sand.
+Exact hex values from the DN Consultancy reference site
+(dnconsultancydiagnostictoolkit.netlify.app `:root`). Legacy token names
+(`DN_SAND`, `DN_SAVANNA`, `DN_LAVA`) are kept and remapped for compatibility.
 
-| Token         | Hex       | Purpose / Inspiration                    |
-|---------------|-----------|------------------------------------------|
-| `DN_DARK`     | `#1E0F05` | Primary text — deep volcanic brown       |
-| `DN_STEEL`    | `#1B4F72` | Primary brand — Rift Valley deep blue    |
-| `DN_STEEL_LT` | `#D0E8F5` | Tint backgrounds                         |
-| `DN_GOLD`     | `#C9A84C` | Accents, dividers — Maasai beadwork gold |
-| `DN_GOLD_LT`  | `#FEF3CC` | Callout panels                           |
-| `DN_FOG`      | `#F7EFE0` | Page background — warm parchment sand    |
-| `DN_SAND`     | `#EDE1C8` | Card header tint — deeper sand           |
-| `DN_MUTED`    | `#7D6245` | Body text, captions — warm taupe         |
-| `DN_GREEN`    | `#1A6B40` | Compliant / positive — Ngong Hills green |
-| `DN_RED`      | `#A83822` | Alerts / critical — Kenyan red earth     |
-| `DN_AMBER`    | `#C47B2E` | Watch items — savanna ochre              |
-| `DN_SAVANNA`  | `#C47B2E` | Kenyan earth accent / active states      |
-| `DN_LAVA`     | `#1A0D05` | Nav header surface — volcanic rock dark  |
+| Token         | Hex       | Purpose                                   |
+|---------------|-----------|-------------------------------------------|
+| `DN_DARK`     | `#1C1C1C` | Primary text; dark hero/nav surfaces      |
+| `DN_STEEL`    | `#4A7FA5` | Primary brand accent — DN steel blue      |
+| `DN_STEEL_LT` | `#D6E4F0` | Tint backgrounds                          |
+| `DN_STEEL_DEEP` | `#3A6584` | Deep accent (links, hovers)             |
+| `DN_GOLD`     | `#C9A84C` | Accents, dividers — DN gold               |
+| `DN_GOLD_LT`  | `#FFF8E6` | Callout panels                            |
+| `DN_FOG`      | `#F4F4F2` | Page background — light fog               |
+| `DN_SAND`     | `#ECECE9` | Card header tint — a step deeper than fog |
+| `DN_MUTED`    | `#6B7280` | Body text, captions                       |
+| `DN_GREEN`    | `#1E8449` | Compliant / positive                      |
+| `DN_RED`      | `#C0392B` | Alerts / critical                         |
+| `DN_AMBER`    | `#D4AC0D` | Watch items                               |
+| `DN_SAVANNA`  | `#C9A84C` | Legacy warm accent → mapped to gold       |
+| `DN_LAVA`     | `#1C1C1C` | Legacy nav surface → mapped to dark       |
 
 ## Typography
 
 | Role     | Family              | Source       | Notes                              |
 |----------|---------------------|--------------|------------------------------------|
 | Display  | Cormorant Garamond  | Google Fonts | Elegant serif for headings         |
-| Body     | Ubuntu              | Google Fonts | Humanist; East African design heritage (Dalton Maag) |
+| Body     | DM Sans             | Google Fonts | Matches the DN reference site body face |
 | Code/data| JetBrains Mono      | Google Fonts | Monospace for IDs, times, figures  |
 
 ## Tribal decorative system

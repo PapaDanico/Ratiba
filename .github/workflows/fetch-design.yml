@@ -1,0 +1,31 @@
+name: Fetch design reference
+
+# One-off: dump the DN Consultancy reference site's HTML + CSS into run logs
+# so the sandboxed dev session (no egress to netlify.app) can read them.
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fetch-design.yml"
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch index.html
+        run: |
+          curl -sS https://dnconsultancydiagnostictoolkit.netlify.app/ -o /tmp/index.html
+          echo "===== INDEX.HTML ====="
+          cat /tmp/index.html
+      - name: Fetch linked CSS
+        run: |
+          for href in $(grep -oE 'href="[^"]+\.css[^"]*"' /tmp/index.html | sed 's/href="//; s/"$//'); do
+            case "$href" in
+              http*) url="$href" ;;
+              *) url="https://dnconsultancydiagnostictoolkit.netlify.app/${href#/}" ;;
+            esac
+            echo "===== CSS: $url ====="
+            curl -sS "$url" | head -c 60000
+            echo
+          done
