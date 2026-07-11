@@ -1,16 +1,16 @@
 name: Deploy
 
-# Trigger on:
-# 1. Push to main (automatic frontend deploy to Netlify)
-# 2. Manual dispatch (for backend/infrastructure deploys)
+# Manual dispatch only (backend/infrastructure deploys).
+#
+# The frontend deploys via Netlify's Git integration: the site
+# (ratibacrewmanagement) is linked to this repo, so pushes to main build and
+# publish production directly on Netlify (netlify.toml controls the build).
+# The previous actions-netlify job here was removed — it required a
+# NETLIFY_AUTH_TOKEN secret that Netlify rejects (Unauthorized), which made
+# every push-to-main run fail after the site was git-linked and the job
+# became redundant.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-      - 'netlify/**'
-      - '.github/workflows/deploy.yml'
   workflow_dispatch:
     inputs:
       environment:
@@ -23,73 +23,6 @@ on:
           - production
 
 jobs:
-  # ── Frontend: Automatic deploy to Netlify on push to main ──────────────────
-  deploy-frontend:
-    name: Deploy Frontend to Netlify
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Lint
-        working-directory: frontend
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Type check
-        working-directory: frontend
-        run: npm run typecheck
-        continue-on-error: true
-
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-
-      # API deploys don't read the repo-root netlify.toml, so the SPA fallback
-      # and /api proxy rewrites must ship as a _redirects file inside dist.
-      - name: Write _redirects for API deploy
-        run: |
-          cat > frontend/dist/_redirects <<'EOF'
-          /api/*    /.netlify/functions/api-proxy/:splat  200!
-          /healthz  /.netlify/functions/api-proxy         200!
-          /version  /.netlify/functions/api-proxy         200!
-          /*        /index.html                           200
-          EOF
-
-      - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v2.1.0
-        with:
-          publish-dir: 'frontend/dist'
-          # Without functions-dir the api-proxy function is dropped from the
-          # deploy, and without production-deploy this only creates a draft
-          # that never reaches ratibacrewmanagement.netlify.app.
-          functions-dir: 'netlify/functions'
-          production-deploy: ${{ github.ref == 'refs/heads/main' }}
-          deploy-message: 'Deploy from GitHub Actions: ${{ github.sha }}'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          enable-pull-request-comment: true
-          enable-commit-comment: true
-          overwrites-pull-request-comment: true
-        env:
-          # actions-netlify reads credentials from env vars, not inputs.
-          # Passed as netlify-token/site-id inputs these were silently ignored:
-          # the step logged "Netlify credentials not provided, not deployable"
-          # and exited 0, so every Deploy run was a green no-op.
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          VITE_BACKEND_URL: 'https://ratiba-api.onrender.com'
-
   # ── Backend: Manual dispatch for Render deployments ────────────────────────
   deploy-backend:
     name: Deploy Backend to Render

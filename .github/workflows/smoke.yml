@@ -1,0 +1,40 @@
+name: Platform smoke test
+
+# Curls the deployed platform from a runner with open egress (the dev
+# sandbox can't reach supabase.co/netlify.app). Bump .github/smoke-request.json
+# to re-run.
+
+on:
+  push:
+    paths:
+      - ".github/smoke-request.json"
+      - ".github/workflows/smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Edge function direct
+        run: |
+          set -x
+          curl -sS -w '\nHTTP %{http_code}\n' https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/healthz
+          curl -sS -w '\nHTTP %{http_code}\n' https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/version
+          curl -sS -w '\nHTTP %{http_code}\n' https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/readyz
+      - name: Edge function login
+        run: |
+          curl -sS -D - -o /tmp/login.json -w '\nHTTP %{http_code}\n' \
+            -X POST https://ntqtkgunwdvqmmgvrxjv.supabase.co/functions/v1/api/api/v1/auth/login \
+            -H 'content-type: application/json' \
+            --data '{"email":"officer@example.aero","password":"hunter2pass"}'
+          head -c 200 /tmp/login.json; echo
+      - name: Via Netlify proxy
+        run: |
+          set -x
+          for host in ratibacrewmanagement.netlify.app deploy-preview-47--ratibacrewmanagement.netlify.app; do
+            curl -sS -w '\nHTTP %{http_code}\n' "https://$host/version"
+            curl -sS -o /dev/null -D - -w 'HTTP %{http_code}\n' \
+              -X POST "https://$host/api/v1/auth/login" \
+              -H 'content-type: application/json' \
+              --data '{"email":"officer@example.aero","password":"hunter2pass"}'
+          done
