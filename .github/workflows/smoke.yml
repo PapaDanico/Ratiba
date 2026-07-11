@@ -31,8 +31,10 @@ jobs:
       - name: Via Netlify proxy
         run: |
           set -x
-          curl -sS -w '\nHTTP %{http_code}\n' https://ratibacrewmanagement.netlify.app/version
-          curl -sS -o /dev/null -D - -w 'HTTP %{http_code}\n' \
-            -X POST https://ratibacrewmanagement.netlify.app/api/v1/auth/login \
-            -H 'content-type: application/json' \
-            --data '{"email":"officer@example.aero","password":"hunter2pass"}'
+          for host in ratibacrewmanagement.netlify.app deploy-preview-47--ratibacrewmanagement.netlify.app; do
+            curl -sS -w '\nHTTP %{http_code}\n' "https://$host/version"
+            curl -sS -o /dev/null -D - -w 'HTTP %{http_code}\n' \
+              -X POST "https://$host/api/v1/auth/login" \
+              -H 'content-type: application/json' \
+              --data '{"email":"officer@example.aero","password":"hunter2pass"}'
+          done
