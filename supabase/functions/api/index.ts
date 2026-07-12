@@ -918,10 +918,14 @@ async function duties(user: DbUser, req: Request, url: URL): Promise<Response> {
     const crewIds = [...new Set((rows ?? []).map((r) => r.crew_id as string))];
     const crewById: Record<string, Record<string, unknown>> = {};
     if (crewIds.length) {
-      const { data: crews } = await db.from("crew").select("id, employee_no, first_name, last_name").in("id", crewIds);
+      const { data: crews } = await db.from("crew").select("id, employee_no, first_name, last_name, active").in("id", crewIds);
       for (const c of crews ?? []) crewById[c.id] = c;
     }
-    return json((rows ?? []).map((f) => dutyOut(f, crewById[f.crew_id as string])));
+    // Duties of deactivated crew are noise (e.g. retired test accounts).
+    return json(
+      (rows ?? []).filter((f) => crewById[f.crew_id as string]?.active)
+        .map((f) => dutyOut(f, crewById[f.crew_id as string])),
+    );
   }
   requireWriter(user);
   const b = await readJson(req);
@@ -953,11 +957,16 @@ async function duties(user: DbUser, req: Request, url: URL): Promise<Response> {
     let end = new Date(`${day}T${endTime}Z`);
     if (end <= start) end = new Date(end.getTime() + 86400000);
     const dutyH = Math.round(((end.getTime() - start.getTime()) / 3600000) * 100) / 100;
+    const agg = aggregateVerdicts(checkFdp({
+      report_time: start, off_duty_time: end, sectors_count: 0, flight_hours: 0, duty_hours: 0,
+      standby_type: dutyType === "STANDBY_SHORT" ? "SHORT_CALL" : "LONG_CALL",
+      standby_hours_before_call: dutyH,
+    }, await resolveOperatorLimits(user.operator_id)));
     row = {
       operator_id: user.operator_id, created_by_user_id: user.id, crew_id: crewId, date: day,
       report_time: start.toISOString(), off_duty_time: end.toISOString(), sectors_count: 0,
-      flight_hours: 0, duty_hours: dutyH, type: "STANDBY", legality_state: "LEGAL",
-      ftl_rules_applied: ["SIMPLIFIED_TS_PORT"],
+      flight_hours: 0, duty_hours: dutyH, type: "STANDBY", legality_state: agg.legality_state,
+      ftl_rules_applied: [agg.rule_id],
     };
   }
   const created = await one(db.from("flight_duty_periods").insert(row).select().single());
@@ -971,6 +980,78 @@ async function dutyDelete(user: DbUser, id: string): Promise<Response> {
   );
   if (!existing) return json({ detail: "duty not found" }, 404);
   await db.from("flight_duty_periods").delete().eq("id", id);
+  return new Response(null, { status: 204 });
+}
+
+// ── crew documents ──────────────────────────────────────────────────────────
+
+// deno-lint-ignore no-explicit-any
+function docOut(d: any, crew: any) {
+  let days: number | null = null;
+  let state = "NA";
+  if (d.expiry_date) {
+    days = Math.ceil((new Date(d.expiry_date + "T00:00:00Z").getTime() - Date.now()) / 86_400_000);
+    state = days < 0 ? "RED" : days <= AMBER_THRESHOLD_DAYS ? "AMBER" : "GREEN";
+  }
+  return {
+    id: d.id, crew_id: d.crew_id,
+    employee_no: crew?.employee_no ?? "—",
+    crew_name: crew ? `${crew.first_name} ${crew.last_name}` : "—",
+    doc_type: d.doc_type, document_number: d.document_number,
+    issuing_authority: d.issuing_authority, issue_date: d.issue_date,
+    expiry_date: d.expiry_date, file_ref: d.file_ref, notes: d.notes,
+    days_remaining: days, state,
+  };
+}
+
+async function documentsList(user: DbUser): Promise<Response> {
+  const [{ data: docs }, { data: crews }] = await Promise.all([
+    db.from("crew_documents").select("*").eq("operator_id", user.operator_id)
+      .order("expiry_date", { ascending: true, nullsFirst: false }),
+    db.from("crew").select("id, employee_no, first_name, last_name").eq("operator_id", user.operator_id),
+  ]);
+  const byId: Record<string, unknown> = {};
+  for (const c of crews ?? []) byId[c.id] = c;
+  return json((docs ?? []).map((d) => docOut(d, byId[d.crew_id as string])));
+}
+
+async function documentCreate(user: DbUser, req: Request, crewId: string): Promise<Response> {
+  requireWriter(user);
+  const b = await readJson(req);
+  const crew = await one<Record<string, unknown> | null>(
+    db.from("crew").select("id, employee_no, first_name, last_name").eq("id", crewId)
+      .eq("operator_id", user.operator_id).maybeSingle(),
+  );
+  if (!crew) return json({ detail: "crew not found" }, 404);
+  const row = {
+    id: crypto.randomUUID(),
+    operator_id: user.operator_id, created_by_user_id: user.id, crew_id: crewId,
+    doc_type: String(need(b.doc_type, "doc_type")),
+    document_number: b.document_number ?? null,
+    issuing_authority: b.issuing_authority ?? null,
+    issue_date: b.issue_date ?? null,
+    expiry_date: b.expiry_date ?? null,
+    file_ref: b.file_ref ?? null,
+    notes: b.notes ?? null,
+  };
+  const created = await one(db.from("crew_documents").insert(row).select().single());
+  await auditLog(user.operator_id, user.id, "ADD_CREW_DOCUMENT", "crew_document", row.id, null, {
+    crew_id: crewId, doc_type: row.doc_type,
+  });
+  return json(docOut(created, crew), 201);
+}
+
+async function documentDelete(user: DbUser, id: string): Promise<Response> {
+  requireWriter(user);
+  const existing = await one<Record<string, unknown> | null>(
+    db.from("crew_documents").select("id, doc_type, crew_id").eq("id", id)
+      .eq("operator_id", user.operator_id).maybeSingle(),
+  );
+  if (!existing) return json({ detail: "document not found" }, 404);
+  await db.from("crew_documents").delete().eq("id", id);
+  await auditLog(user.operator_id, user.id, "DELETE_CREW_DOCUMENT", "crew_document", id, {
+    doc_type: existing.doc_type,
+  }, null);
   return new Response(null, { status: 204 });
 }
 
@@ -2240,6 +2321,13 @@ Deno.serve(async (req: Request) => {
 
     // duties
     if (path === "/api/v1/duties" && (m === "GET" || m === "POST")) return await duties(user, req, url);
+    if (path === "/api/v1/documents" && m === "GET") return await documentsList(user);
+    if (seg[2] === "documents" && seg[3] === "crew" && isUuid(seg[4]) && m === "POST") {
+      return await documentCreate(user, req, seg[4]);
+    }
+    if (seg[2] === "documents" && isUuid(seg[3]) && seg.length === 4 && m === "DELETE") {
+      return await documentDelete(user, seg[3]);
+    }
     if (seg[2] === "duties" && isUuid(seg[3]) && m === "DELETE") {
       requireWriter(user);
       return await dutyDelete(user, seg[3]);
