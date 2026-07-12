@@ -117,7 +117,10 @@ def delete_aircraft(
         action="DELETE_AIRCRAFT",
         entity_type="aircraft",
         entity_id=aircraft.id,
-        before_state={"registration": aircraft.registration, "aircraft_type": aircraft.aircraft_type},
+        before_state={
+            "registration": aircraft.registration,
+            "aircraft_type": aircraft.aircraft_type,
+        },
         after_state=None,
     )
     session.delete(aircraft)
