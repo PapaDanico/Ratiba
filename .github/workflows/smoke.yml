@@ -25,7 +25,7 @@ jobs:
           eq() { [ "$1" = "$2" ] || fail "$3 (got $1, want $2)"; }
 
           eq "$(curl -s -o /dev/null -w '%{http_code}' $API/healthz)" 200 healthz
-          curl -s $API/version | grep -q supabase-2.1 || fail "version phase"
+          curl -s $API/version | grep -q supabase-3.2 || fail "version phase"
           eq "$(curl -s -o /dev/null -w '%{http_code}' $API/readyz)" 200 readyz
 
           # login -> cookie jar + CSRF token

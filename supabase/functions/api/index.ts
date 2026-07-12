@@ -9,14 +9,23 @@
 // Still 501: imports, audit-pack/roster PDFs, constraints (LLM parsing),
 // IROP, fatigue/payroll reports, postings, pilot pairing / crew-me views.
 //
-// FDP legality here is a simplified port of the Python ftl_engine: the
-// day-peak basic-crew limit with sector reductions (CAA-AC-OPS033 §4.6.3
-// ceiling respected). The full band/rest/cumulative engine follows later;
-// rows written by this port carry rules_applied=["SIMPLIFIED_TS_PORT"].
+// FDP legality: full KCAR-P8 engine in ./ftl.ts (15 rules — bands, rest,
+// cumulative windows, standby, split duty, tz recovery, discretion, weekly
+// rest) with operator constraint-set overrides; rows carry the aggregated
+// verdict and the worst rule's id first in ftl_rules_applied.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import * as jose from "npm:jose@5";
 import bcrypt from "npm:bcryptjs@2";
+import {
+  aggregateVerdicts,
+  applyOverrides,
+  checkFdp,
+  type FdpHistoryEntry,
+  type FdpType,
+  LIMITS as FTL_BASELINE,
+  type Limits,
+} from "./ftl.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -250,17 +259,7 @@ const AIRCRAFT_TYPES: [string, string, string, string, number][] = [
 ];
 const KNOWN_TYPES = new Set(AIRCRAFT_TYPES.map((t) => t[0]));
 
-// Mirrors app/services/ftl_engine.LIMITS (generic baseline).
-const FTL_LIMITS = {
-  fdp_max_basic_by_band: { WOCL: 11.0, EARLY: 12.0, DAY_PEAK: 13.0, AFTERNOON: 12.0 },
-  fdp_scheduled_ceiling_basic_h: 14.0,
-  fdp_sector_reduction_per_extra: 0.5,
-  fdp_sector_floor: 9.0,
-  fdp_aug_3_pilot: { 1: 3.0, 2: 2.0, 3: 1.0 },
-  fdp_aug_4_pilot: { 1: 4.0, 2: 3.0, 3: 2.0 },
-  fdp_aug_absolute_cap: 18.0,
-  rest_home_floor_h: 12.0,
-};
+// Full baseline lives in ./ftl.ts (FTL_BASELINE).
 const REGULATION_REF = "KCAA CAA-AC-OPS033 (generic baseline)";
 
 // Fixed-date Kenyan public holidays (variable Islamic dates omitted).
@@ -392,14 +391,95 @@ function computeFdp(daySectors: SectorInput[]) {
       daySectors.reduce((acc, s) => acc + (new Date(s.sta).getTime() - new Date(s.std).getTime()) / 3600000, 0) * 100,
     ) / 100;
   const dutyH = Math.round(((off.getTime() - report.getTime()) / 3600000) * 100) / 100;
-  const sectors = daySectors.length;
-  const reduction = Math.max(0, sectors - 2) * FTL_LIMITS.fdp_sector_reduction_per_extra;
-  const limit = Math.max(FTL_LIMITS.fdp_sector_floor, FTL_LIMITS.fdp_max_basic_by_band.DAY_PEAK - reduction);
-  let legality = "LEGAL";
-  if (dutyH > FTL_LIMITS.fdp_scheduled_ceiling_basic_h) legality = "ILLEGAL";
-  else if (dutyH > limit) legality = "REQUIRES_FRMS_DEROGATION";
-  else if (dutyH > limit - 1) legality = "AT_LIMIT";
-  return { report, off, sectors, flightH, dutyH, legality };
+  return { report, off, sectors: daySectors.length, flightH, dutyH };
+}
+
+/** Latest ACCEPTED constraint set's overrides merged over the baseline. */
+async function resolveOperatorLimits(operatorId: string): Promise<Limits> {
+  const { data: cset } = await db.from("constraint_sets").select("id")
+    .eq("operator_id", operatorId).eq("status", "ACCEPTED")
+    .order("accepted_at", { ascending: false }).limit(1).maybeSingle();
+  if (!cset) return FTL_BASELINE;
+  const { data: rules } = await db.from("constraint_rules")
+    .select("rule_key, final_value").eq("constraint_set_id", cset.id)
+    .not("final_value", "is", null);
+  if (!rules?.length) return FTL_BASELINE;
+  return applyOverrides(Object.fromEntries(rules.map((r) => [r.rule_key, r.final_value])));
+}
+
+type CrewDayFdp = ReturnType<typeof computeFdp> & { crewId: string; date: string };
+
+/**
+ * Run the full engine over a batch of crew-day FDPs. Loads each crew's
+ * trailing-365-day duty history once, folds earlier batch entries into
+ * later days' history, and returns per-key verdicts.
+ */
+async function evaluateFdpBatch(
+  operatorId: string,
+  batch: CrewDayFdp[],
+): Promise<Record<string, { legality: string; rules: string[] }>> {
+  const limits = await resolveOperatorLimits(operatorId);
+  const crewIds = [...new Set(batch.map((b) => b.crewId))];
+  const minReport = Math.min(...batch.map((b) => b.report.getTime()));
+  const cutoff = new Date(minReport - 365 * 86_400_000).toISOString().slice(0, 10);
+  const { data: rows } = await db.from("flight_duty_periods")
+    .select("crew_id, date, report_time, off_duty_time, duty_hours, flight_hours, sectors_count, type")
+    .in("crew_id", crewIds).gte("date", cutoff);
+
+  const historyByCrew: Record<string, FdpHistoryEntry[]> = {};
+  for (const r of rows ?? []) {
+    if (!r.report_time || !r.off_duty_time) continue;
+    (historyByCrew[r.crew_id as string] ??= []).push({
+      date_local: r.date as string,
+      report_time: new Date(r.report_time as string),
+      off_duty_time: new Date(r.off_duty_time as string),
+      duty_hours: Number(r.duty_hours ?? 0),
+      flight_hours: Number(r.flight_hours ?? 0),
+      sectors_count: Number(r.sectors_count ?? 0),
+      fdp_type: (r.type ?? "FDP") as FdpType,
+      at_home_base: true,
+    });
+  }
+
+  const out: Record<string, { legality: string; rules: string[] }> = {};
+  // Chronological order so same-batch earlier days count as history for later ones.
+  for (const b of [...batch].sort((x, y) => x.report.getTime() - y.report.getTime())) {
+    const history = (historyByCrew[b.crewId] ?? [])
+      .filter((h) => h.report_time.getTime() < b.report.getTime());
+    const prior = history.reduce<FdpHistoryEntry | null>(
+      (best, h) =>
+        h.off_duty_time.getTime() <= b.report.getTime() &&
+          (!best || h.off_duty_time.getTime() > best.off_duty_time.getTime())
+          ? h
+          : best,
+      null,
+    );
+    const agg = aggregateVerdicts(checkFdp({
+      report_time: b.report,
+      off_duty_time: b.off,
+      sectors_count: b.sectors,
+      flight_hours: b.flightH,
+      duty_hours: b.dutyH,
+      prior_fdp: prior,
+      history,
+    }, limits));
+    // Worst rule first, then the full evaluated-rule trace (deduped).
+    out[`${b.crewId}|${b.date}`] = {
+      legality: agg.legality_state,
+      rules: [agg.rule_id, ...new Set(agg.rules_applied.filter((r) => r !== agg.rule_id))],
+    };
+    (historyByCrew[b.crewId] ??= []).push({
+      date_local: b.date,
+      report_time: b.report,
+      off_duty_time: b.off,
+      duty_hours: b.dutyH,
+      flight_hours: b.flightH,
+      sectors_count: b.sectors,
+      fdp_type: "FDP",
+      at_home_base: true,
+    });
+  }
+  return out;
 }
 
 const LEGALITY_ORDER = ["LEGAL", "AT_LIMIT", "REQUIRES_FRMS_DEROGATION", "ILLEGAL"];
@@ -1443,15 +1523,19 @@ async function rosterPublish(user: DbUser, req: Request): Promise<Response> {
     if (error) return json({ detail: error.message }, 422);
   }
 
-  const fdpInserts = [];
-  for (const key of Object.keys(crewDaySectors)) {
+  const batch: CrewDayFdp[] = Object.keys(crewDaySectors).map((key) => {
     const [crewId, day] = key.split("|");
-    const f = computeFdp(crewDaySectors[key]);
+    return { ...computeFdp(crewDaySectors[key]), crewId, date: day };
+  });
+  const verdicts = await evaluateFdpBatch(user.operator_id, batch);
+  const fdpInserts = [];
+  for (const f of batch) {
+    const v = verdicts[`${f.crewId}|${f.date}`];
     fdpInserts.push({
-      operator_id: user.operator_id, created_by_user_id: user.id, crew_id: crewId, date: day,
+      operator_id: user.operator_id, created_by_user_id: user.id, crew_id: f.crewId, date: f.date,
       report_time: f.report.toISOString(), off_duty_time: f.off.toISOString(),
       sectors_count: f.sectors, flight_hours: f.flightH, duty_hours: f.dutyH,
-      type: "FDP", legality_state: f.legality, ftl_rules_applied: ["SIMPLIFIED_TS_PORT"],
+      type: "FDP", legality_state: v.legality, ftl_rules_applied: v.rules,
     });
     fdpCount++;
   }
@@ -1513,12 +1597,16 @@ async function rosterAmend(user: DbUser, req: Request): Promise<Response> {
   if (error) return json({ detail: error.message }, 422);
 
   const dayInputs = sectorsRows.map((s) => sectorToInput(s));
-  const f = computeFdp(dayInputs);
-  const fdpInserts = [capt.id, fo.id].map((crewId) => ({
-    operator_id: user.operator_id, created_by_user_id: user.id, crew_id: crewId, date: day,
+  const base = computeFdp(dayInputs);
+  const amendBatch: CrewDayFdp[] = [capt.id, fo.id].map((crewId) => ({ ...base, crewId, date: day }));
+  const amendVerdicts = await evaluateFdpBatch(user.operator_id, amendBatch);
+  const worst = worstLegality(Object.values(amendVerdicts).map((v) => v.legality)) ?? "LEGAL";
+  const fdpInserts = amendBatch.map((f) => ({
+    operator_id: user.operator_id, created_by_user_id: user.id, crew_id: f.crewId, date: f.date,
     report_time: f.report.toISOString(), off_duty_time: f.off.toISOString(),
     sectors_count: f.sectors, flight_hours: f.flightH, duty_hours: f.dutyH,
-    type: "FDP", legality_state: f.legality, ftl_rules_applied: ["SIMPLIFIED_TS_PORT"],
+    type: "FDP", legality_state: amendVerdicts[`${f.crewId}|${f.date}`].legality,
+    ftl_rules_applied: amendVerdicts[`${f.crewId}|${f.date}`].rules,
   }));
   const { error: fdpErr } = await db.from("flight_duty_periods").insert(fdpInserts);
   if (fdpErr) return json({ detail: fdpErr.message }, 422);
@@ -1527,7 +1615,7 @@ async function rosterAmend(user: DbUser, req: Request): Promise<Response> {
     duty_day_key: dutyDayKey, new_captain: capt.employee_no, new_fo: fo.employee_no, reason,
   });
   return json({
-    duty_day_key: dutyDayKey, captain_id: capt.id, fo_id: fo.id, legality_state: f.legality,
+    duty_day_key: dutyDayKey, captain_id: capt.id, fo_id: fo.id, legality_state: worst,
   });
 }
 
@@ -1873,9 +1961,9 @@ async function iropAssess(user: DbUser, req: Request): Promise<Response> {
   if (!fdp) return json({ detail: `no FDP found for that crew on ${day}` }, 422);
 
   const sectors = Number(fdp.sectors_count ?? 1);
-  const limitBase = Math.max(FTL_LIMITS.fdp_sector_floor, FTL_LIMITS.fdp_max_basic_by_band.DAY_PEAK - Math.max(0, sectors - 2) * FTL_LIMITS.fdp_sector_reduction_per_extra);
+  const limitBase = Math.max(FTL_BASELINE.fdp_sector_floor, FTL_BASELINE.fdp_max_basic_by_band.DAY_PEAK - Math.max(0, sectors - 2) * FTL_BASELINE.fdp_sector_reduction_per_extra);
   const judge = (dutyH: number, extLimit: number): string =>
-    dutyH > FTL_LIMITS.fdp_scheduled_ceiling_basic_h + discretion ? "ILLEGAL"
+    dutyH > FTL_BASELINE.fdp_scheduled_ceiling_basic_h + discretion ? "ILLEGAL"
     : dutyH > extLimit ? "REQUIRES_FRMS_DEROGATION"
     : dutyH > extLimit - 1 ? "AT_LIMIT" : "LEGAL";
 
@@ -1886,17 +1974,17 @@ async function iropAssess(user: DbUser, req: Request): Promise<Response> {
   const disruptedLegality = judge(newDuty, limitBase + discretion);
   const breached: string[] = [];
   if (newDuty > limitBase + discretion) breached.push(`FDP ${newDuty}h exceeds ${limitBase + discretion}h limit (simplified day-peak band)`);
-  if (newDuty > FTL_LIMITS.fdp_scheduled_ceiling_basic_h + discretion) breached.push("exceeds the 14h scheduled FDP ceiling");
+  if (newDuty > FTL_BASELINE.fdp_scheduled_ceiling_basic_h + discretion) breached.push("exceeds the 14h scheduled FDP ceiling");
 
   // cascade: rest before the next FDP shrinks by the extension
   const { data: nextFdp } = await db.from("flight_duty_periods").select("*")
     .eq("crew_id", crewId).eq("type", "FDP").gt("date", day).order("date").limit(1).maybeSingle();
-  let cascade = { next_date: null as string | null, new_rest_h: null as number | null, rest_floor_h: FTL_LIMITS.rest_home_floor_h };
+  let cascade = { next_date: null as string | null, new_rest_h: null as number | null, rest_floor_h: FTL_BASELINE.rest_home_floor_h };
   if (nextFdp) {
     const newOff = new Date(fdp.off_duty_time as string).getTime() + (extraFlight + extraGround) * 3600000;
     const rest = Math.round(((new Date(nextFdp.report_time as string).getTime() - newOff) / 3600000) * 100) / 100;
-    cascade = { next_date: nextFdp.date as string, new_rest_h: rest, rest_floor_h: FTL_LIMITS.rest_home_floor_h };
-    if (rest < FTL_LIMITS.rest_home_floor_h) breached.push(`rest before ${nextFdp.date} drops to ${rest}h (< ${FTL_LIMITS.rest_home_floor_h}h floor)`);
+    cascade = { next_date: nextFdp.date as string, new_rest_h: rest, rest_floor_h: FTL_BASELINE.rest_home_floor_h };
+    if (rest < FTL_BASELINE.rest_home_floor_h) breached.push(`rest before ${nextFdp.date} drops to ${rest}h (< ${FTL_BASELINE.rest_home_floor_h}h floor)`);
   }
   return json({
     crew_employee_no: crew.employee_no, date: day, away_from_base: false,
@@ -1962,7 +2050,7 @@ Deno.serve(async (req: Request) => {
 
   if (path === "/healthz") return json({ status: "ok" });
   if (path === "/version") {
-    return json({ name: "Ratiba", version: "supabase-port-0.3.0", phase: "supabase-2.1" });
+    return json({ name: "Ratiba", version: "supabase-port-0.4.0", phase: "supabase-3.2" });
   }
   if (path === "/readyz") {
     const { error } = await db.from("alembic_version").select("version_num").limit(1);
@@ -2063,7 +2151,7 @@ Deno.serve(async (req: Request) => {
 
     // ftl & reference
     if (path === "/api/v1/ftl/limits" && m === "GET") {
-      return json({ source: "baseline", regulation_ref: REGULATION_REF, limits: FTL_LIMITS });
+      return json({ source: "baseline", regulation_ref: REGULATION_REF, limits: FTL_BASELINE });
     }
     if (path === "/api/v1/reference/aircraft-types" && m === "GET") {
       return json(
