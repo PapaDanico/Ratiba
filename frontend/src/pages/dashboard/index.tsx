@@ -338,7 +338,7 @@ export function DashboardPage() {
       />
       <DemoGuide />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Link to="/leave" className="block">
+        <Link to="/app/leave" className="block">
           <Card interactive>
             <CardHeader>
               <CardTitle>Pending leave</CardTitle>
@@ -351,7 +351,7 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/swaps" className="block">
+        <Link to="/app/swaps" className="block">
           <Card interactive>
             <CardHeader>
               <CardTitle>Pending swaps</CardTitle>
@@ -364,7 +364,7 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/currency" className="block">
+        <Link to="/app/currency" className="block">
           <Card interactive>
             <CardHeader>
               <CardTitle>Currency status</CardTitle>
@@ -385,7 +385,7 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/fatigue" className="block">
+        <Link to="/app/fatigue" className="block">
           <Card interactive>
             <CardHeader>
               <CardTitle>Fatigue watch</CardTitle>
@@ -400,7 +400,7 @@ export function DashboardPage() {
             </CardBody>
           </Card>
         </Link>
-        <Link to="/notices" className="block">
+        <Link to="/app/notices" className="block">
           <Card interactive>
             <CardHeader>
               <CardTitle>Notices</CardTitle>
@@ -421,7 +421,7 @@ export function DashboardPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle>Needs attention — next 30 days</CardTitle>
-            <Link to="/training" className="text-xs text-dn-steel-deep underline">
+            <Link to="/app/training" className="text-xs text-dn-steel-deep underline">
               View all
             </Link>
           </div>

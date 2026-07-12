@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -68,6 +68,30 @@ export function App() {
                 <Route path="audit" element={<AuditPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
+              {/* Bookmark/typed-URL aliases: /roster → /app/roster etc. */}
+              {[
+                "routings",
+                "roster",
+                "crew",
+                "postings",
+                "import",
+                "training",
+                "documents",
+                "currency",
+                "leave",
+                "swaps",
+                "notices",
+                "fleet",
+                "constraints",
+                "fatigue",
+                "irop",
+                "audit",
+                "settings",
+              ].map((p) => (
+                <Route key={p} path={`/${p}`} element={<Navigate to={`/app/${p}`} replace />} />
+              ))}
+              <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+              <Route path="/me" element={<Navigate to="/crew/me" replace />} />
               <Route path="*" element={<ErrorPage />} />
             </Routes>
           </BrowserRouter>
