@@ -5,25 +5,56 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { DnLogo } from "@/components/ui/DnLogo";
 
-const NAV: Array<{ to: string; label: string; end?: boolean }> = [
-  { to: "/", label: "Overview", end: true },
-  { to: "/routings", label: "Routings" },
-  { to: "/roster", label: "Roster" },
-  { to: "/crew", label: "Crew" },
-  { to: "/postings", label: "Postings" },
-  { to: "/import", label: "Import" },
-  { to: "/fleet", label: "Fleet" },
-  { to: "/training", label: "Training" },
-  { to: "/documents", label: "Documents" },
-  { to: "/currency", label: "Currency" },
-  { to: "/leave", label: "Leave" },
-  { to: "/swaps", label: "Swaps" },
-  { to: "/notices", label: "Notices" },
-  { to: "/constraints", label: "FTL setup" },
-  { to: "/fatigue", label: "Fatigue" },
-  { to: "/irop", label: "IROP" },
-  { to: "/audit", label: "Audit packs" },
-  { to: "/settings", label: "Settings" },
+type NavItem = { to: string; label: string; end?: boolean };
+type NavGroup = { label: string; items: NavItem[] };
+
+// Grouped so the main menu scans as sections rather than a flat 18-item list
+// — especially important in the mobile/PWA drawer, the primary way crew
+// actually use this app day to day.
+const NAV_GROUPS: NavGroup[] = [
+  { label: "Overview", items: [{ to: "/app", label: "Dashboard", end: true }] },
+  {
+    label: "Operations",
+    items: [
+      { to: "/app/routings", label: "Routings" },
+      { to: "/app/roster", label: "Roster" },
+      { to: "/app/postings", label: "Postings" },
+      { to: "/app/irop", label: "IROP" },
+    ],
+  },
+  {
+    label: "Crew",
+    items: [
+      { to: "/app/crew", label: "Crew" },
+      { to: "/app/training", label: "Training" },
+      { to: "/app/documents", label: "Documents" },
+      { to: "/app/currency", label: "Currency" },
+      { to: "/app/leave", label: "Leave" },
+      { to: "/app/swaps", label: "Swaps" },
+    ],
+  },
+  {
+    label: "Fleet & data",
+    items: [
+      { to: "/app/fleet", label: "Fleet" },
+      { to: "/app/import", label: "Import" },
+    ],
+  },
+  {
+    label: "Compliance",
+    items: [
+      { to: "/app/constraints", label: "FTL setup" },
+      { to: "/app/fatigue", label: "Fatigue" },
+      { to: "/app/audit", label: "Audit packs" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { to: "/app/notices", label: "Notices" },
+      { to: "/app/settings", label: "Settings" },
+    ],
+  },
 ];
 
 export function AppShell() {
@@ -111,50 +142,66 @@ export function AppShell() {
           </button>
         </div>
 
-        {/* Desktop navigation tabs */}
-        <nav className="hidden lg:flex mx-auto max-w-7xl px-6 flex-wrap gap-x-1 border-t border-dn-steel-lt/50">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end ?? false}
-              className={({ isActive }) =>
-                cn(
-                  "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
-                  isActive
-                    ? "border-dn-steel text-dn-steel-deep"
-                    : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-steel-lt",
-                )
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Mobile slide-down menu */}
-        {menuOpen && (
-          <nav
-            className="lg:hidden bg-white border-t border-dn-steel-lt/50"
-            data-testid="mobile-nav"
-          >
-            <div className="max-h-[70vh] overflow-y-auto py-2">
-              {NAV.map((item) => (
+        {/* Desktop navigation tabs, grouped with dividers between sections */}
+        <nav
+          aria-label="Main"
+          className="hidden lg:flex mx-auto max-w-7xl px-6 flex-wrap items-center gap-x-1 border-t border-dn-steel-lt/50"
+        >
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label} className="flex items-center">
+              {gi > 0 && <span className="mx-1.5 h-5 w-px bg-dn-steel-lt/60" aria-hidden />}
+              {group.items.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   end={item.end ?? false}
                   className={({ isActive }) =>
                     cn(
-                      "block px-5 py-3 text-base border-l-4 transition-colors",
+                      "px-3 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                       isActive
-                        ? "border-dn-steel text-dn-steel-deep bg-dn-steel-lt/10"
-                        : "border-transparent text-dn-muted hover:text-dn-dark hover:bg-dn-steel-lt/5",
+                        ? "border-dn-steel text-dn-steel-deep"
+                        : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-steel-lt",
                     )
                   }
                 >
                   {item.label}
                 </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        {/* Mobile slide-down menu, grouped into labelled sections */}
+        {menuOpen && (
+          <nav
+            aria-label="Main"
+            className="lg:hidden bg-white border-t border-dn-steel-lt/50"
+            data-testid="mobile-nav"
+          >
+            <div className="max-h-[70vh] overflow-y-auto py-2">
+              {NAV_GROUPS.map((group) => (
+                <div key={group.label} className="py-1">
+                  <p className="px-5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-dn-muted">
+                    {group.label}
+                  </p>
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end ?? false}
+                      className={({ isActive }) =>
+                        cn(
+                          "block px-5 py-3 text-base border-l-4 transition-colors",
+                          isActive
+                            ? "border-dn-steel text-dn-steel-deep bg-dn-steel-lt/10"
+                            : "border-transparent text-dn-muted hover:text-dn-dark hover:bg-dn-steel-lt/5",
+                        )
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
               ))}
               <div className="mt-2 border-t border-dn-steel-lt/50 px-5 py-3 flex items-center justify-between">
                 {userLabel && (

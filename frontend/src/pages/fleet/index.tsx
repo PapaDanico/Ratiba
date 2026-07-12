@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
+import { Modal } from "@/components/ui/Modal";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
@@ -41,6 +42,10 @@ export function FleetPage() {
   const [reg, setReg] = useState("");
   const [type, setType] = useState("");
   const [adding, setAdding] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<Aircraft | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState<string | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -84,6 +89,37 @@ export function FleetPage() {
       setError(err instanceof ApiError ? err.message : "Add failed");
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function toggleActive(a: Aircraft) {
+    setBusyId(a.id);
+    setError(null);
+    try {
+      await api(`/api/v1/fleet/${a.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ active: !a.active }),
+      });
+      await reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Update failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteModal) return;
+    setDeleting(true);
+    setDeleteErr(null);
+    try {
+      await api(`/api/v1/fleet/${deleteModal.id}`, { method: "DELETE" });
+      setDeleteModal(null);
+      await reload();
+    } catch (err) {
+      setDeleteErr(err instanceof ApiError ? err.message : "Delete failed");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -166,6 +202,7 @@ export function FleetPage() {
                   <th className="py-2 pr-4 font-medium">Registration</th>
                   <th className="py-2 pr-4 font-medium">Type</th>
                   <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
@@ -185,6 +222,30 @@ export function FleetPage() {
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => void toggleActive(a)}
+                          disabled={busyId === a.id}
+                          className="text-dn-steel-deep underline text-xs disabled:opacity-50"
+                          data-testid={`fleet-toggle-${a.id}`}
+                        >
+                          {busyId === a.id ? "…" : a.active ? "deactivate" : "activate"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteErr(null);
+                            setDeleteModal(a);
+                          }}
+                          className="text-dn-red underline text-xs"
+                          data-testid={`fleet-delete-${a.id}`}
+                        >
+                          delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -192,6 +253,30 @@ export function FleetPage() {
           )}
         </CardBody>
       </Card>
+
+      {deleteModal && (
+        <Modal
+          title="Delete aircraft"
+          onClose={() => setDeleteModal(null)}
+          disableEscape={deleting}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-dn-dark">
+              Delete {deleteModal.registration} from the fleet? This cannot be undone. Aircraft with
+              recorded flight sectors can&apos;t be deleted — deactivate them instead.
+            </p>
+            {deleteErr && <ErrorAlert message={deleteErr} />}
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setDeleteModal(null)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={confirmDelete} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

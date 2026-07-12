@@ -5,12 +5,12 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_writer
-from app.models import Aircraft, User
+from app.models import Aircraft, Sector, User
 from app.schemas.aircraft import AircraftIn, AircraftOut, AircraftPatch
 from app.services import aircraft_types, audit_log
 
@@ -77,6 +77,54 @@ def add_aircraft(
     session.commit()
     session.refresh(aircraft)
     return _to_out(aircraft)
+
+
+@router.delete(
+    "/{aircraft_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_writer)],
+)
+def delete_aircraft(
+    aircraft_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> None:
+    aircraft = session.scalar(
+        select(Aircraft)
+        .where(Aircraft.id == aircraft_id)
+        .where(Aircraft.operator_id == user.operator_id)
+    )
+    if aircraft is None:
+        raise HTTPException(status_code=404, detail="aircraft not found")
+    sector_count = session.scalar(
+        select(func.count())
+        .select_from(Sector)
+        .where(Sector.operator_id == user.operator_id)
+        .where(Sector.aircraft_reg == aircraft.registration)
+    )
+    if sector_count:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{aircraft.registration} has {sector_count} flight sector(s) on "
+                "record — deactivate it instead of deleting"
+            ),
+        )
+    audit_log.record(
+        session,
+        operator_id=user.operator_id,
+        actor_user_id=user.id,
+        action="DELETE_AIRCRAFT",
+        entity_type="aircraft",
+        entity_id=aircraft.id,
+        before_state={
+            "registration": aircraft.registration,
+            "aircraft_type": aircraft.aircraft_type,
+        },
+        after_state=None,
+    )
+    session.delete(aircraft)
+    session.commit()
 
 
 @router.patch("/{aircraft_id}", response_model=AircraftOut, dependencies=[Depends(require_writer)])
