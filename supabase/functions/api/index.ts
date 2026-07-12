@@ -293,6 +293,7 @@ const AIRCRAFT_TYPES: [string, string, string, string, number][] = [
   ["F70", "Fokker", "70", "regional_jet", 79],
   ["F28", "Fokker", "F28 Fellowship", "regional_jet", 65],
   ["B733", "Boeing", "737-300", "narrowbody", 140],
+  ["B734", "Boeing", "737-400", "narrowbody", 150],
   ["B738", "Boeing", "737-800", "narrowbody", 162],
   ["B737", "Boeing", "737-700", "narrowbody", 130],
   ["B732", "Boeing", "737-200", "narrowbody", 120],
