@@ -147,6 +147,11 @@ jobs:
           curl -s -b /tmp/jar "$API/api/v1/roster?date_from=2026-11-20&date_to=2026-11-22" -o /tmp/out
           python3 -c "import json;r=json.load(open('/tmp/out'));assert r, 'empty roster';print('roster rows:', len(r), r[0]['duty_day_key'], r[0]['legality_state'])"
 
+          # crew monthly roster PDF
+          curl -s -b /tmp/jar -o /tmp/roster.pdf "$API/api/v1/roster/crew/$CREW_ID/monthly-pdf?year=2026&month=11"
+          head -c4 /tmp/roster.pdf | grep -q '%PDF' || fail "roster pdf not a PDF"
+          echo "roster pdf OK ($(stat -c%s /tmp/roster.pdf) bytes)"
+
           # duty (standby) + leave round-trip
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/duties \
             --data "{\"crew_id\":\"$CREW_ID\",\"date\":\"2026-11-25\",\"duty_type\":\"STANDBY_SHORT\",\"start_time\":\"06:00\",\"end_time\":\"12:00\"}")
