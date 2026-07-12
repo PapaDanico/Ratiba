@@ -35,7 +35,10 @@ const INK = rgb(0.11, 0.11, 0.11);
 const STEEL = rgb(0.23, 0.4, 0.52);
 const RED = rgb(0.75, 0.22, 0.17);
 
-export async function buildAuditPackPdf(meta: AuditPackMeta, rows: AuditFdpRow[]): Promise<Uint8Array> {
+export async function buildAuditPackPdf(
+  meta: AuditPackMeta,
+  rows: AuditFdpRow[],
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const created = new Date(meta.created_at);
   doc.setTitle(`Ratiba audit pack ${meta.period_from} to ${meta.period_to}`);
@@ -45,7 +48,9 @@ export async function buildAuditPackPdf(meta: AuditPackMeta, rows: AuditFdpRow[]
 
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const W = 595.28, H = 841.89, M = 50; // A4 portrait
+  const W = 595.28,
+    H = 841.89,
+    M = 50; // A4 portrait
 
   // ── cover / methodology page ──
   let page = doc.addPage([W, H]);
@@ -63,13 +68,29 @@ export async function buildAuditPackPdf(meta: AuditPackMeta, rows: AuditFdpRow[]
   text(`Generated: ${created.toISOString()}   Pack ID: ${meta.id}`, 9, font);
   text(`Generator: Ratiba ${meta.generator_version}`, 9, font);
   y -= 10;
-  text(`Crew covered: ${meta.crew_count}    FDPs evaluated: ${meta.fdp_count}    Anomalies: ${meta.anomaly_count}`, 11, bold);
+  text(
+    `Crew covered: ${meta.crew_count}    FDPs evaluated: ${meta.fdp_count}    Anomalies: ${meta.anomaly_count}`,
+    11,
+    bold,
+  );
   y -= 14;
   text("Methodology", 13, bold, STEEL);
-  text("Every flight duty period in the reporting window was evaluated against the", 9, font);
-  text("KCAA Flight Duty Time Scheme (CAA-AC-OPS033; ICAO Annex 6 Part I, 4.10)", 9, font);
+  text(
+    "Every flight duty period in the reporting window was evaluated against the",
+    9,
+    font,
+  );
+  text(
+    "KCAA Flight Duty Time Scheme (CAA-AC-OPS033; ICAO Annex 6 Part I, 4.10)",
+    9,
+    font,
+  );
   text("using the rule set below. Verdicts: LEGAL, AT_LIMIT,", 9, font);
-  text("REQUIRES_FRMS_DEROGATION (acceptable only under an approved FRMS), ILLEGAL.", 9, font);
+  text(
+    "REQUIRES_FRMS_DEROGATION (acceptable only under an approved FRMS), ILLEGAL.",
+    9,
+    font,
+  );
   y -= 6;
   for (const r of meta.rule_ids) text(`•  ${r}`, 9, font);
 
@@ -86,49 +107,80 @@ export async function buildAuditPackPdf(meta: AuditPackMeta, rows: AuditFdpRow[]
   ];
   const hhmm = (iso: string | null) => (iso ? iso.slice(11, 16) + "Z" : "—");
   const short: Record<string, string> = {
-    LEGAL: "OK", AT_LIMIT: "AT-LIM", REQUIRES_FRMS_DEROGATION: "FRMS", ILLEGAL: "ILLEGAL",
+    LEGAL: "OK",
+    AT_LIMIT: "AT-LIM",
+    REQUIRES_FRMS_DEROGATION: "FRMS",
+    ILLEGAL: "ILLEGAL",
   };
   let rowY = 0;
   const newTablePage = () => {
     page = doc.addPage([W, H]);
     rowY = H - 60;
     page.drawText(`FDP register  —  ${meta.period_from} to ${meta.period_to}`, {
-      x: M, y: rowY, size: 11, font: bold, color: STEEL,
+      x: M,
+      y: rowY,
+      size: 11,
+      font: bold,
+      color: STEEL,
     });
     rowY -= 20;
-    for (const c of cols) page.drawText(c.h, { x: c.x, y: rowY, size: 8, font: bold, color: INK });
+    for (const c of cols)
+      page.drawText(c.h, { x: c.x, y: rowY, size: 8, font: bold, color: INK });
     rowY -= 4;
-    page.drawLine({ start: { x: M, y: rowY }, end: { x: W - M, y: rowY }, thickness: 0.7, color: STEEL });
+    page.drawLine({
+      start: { x: M, y: rowY },
+      end: { x: W - M, y: rowY },
+      thickness: 0.7,
+      color: STEEL,
+    });
     rowY -= 12;
   };
   newTablePage();
   const clip = (s: string, w: number, size: number) => {
-    while (s.length > 1 && font.widthOfTextAtSize(s, size) > w - 4) s = s.slice(0, -1);
+    while (s.length > 1 && font.widthOfTextAtSize(s, size) > w - 4)
+      s = s.slice(0, -1);
     return s;
   };
   for (const r of rows) {
     if (rowY < 60) newTablePage();
     const bad = r.legality_state !== "LEGAL";
     const cells = [
-      r.date, r.crew_label, hhmm(r.report_time), hhmm(r.off_duty_time),
-      r.duty_hours.toFixed(2), String(r.sectors_count),
-      short[r.legality_state] ?? r.legality_state, bad ? r.worst_rule : "",
+      r.date,
+      r.crew_label,
+      hhmm(r.report_time),
+      hhmm(r.off_duty_time),
+      r.duty_hours.toFixed(2),
+      String(r.sectors_count),
+      short[r.legality_state] ?? r.legality_state,
+      bad ? r.worst_rule : "",
     ];
     cells.forEach((cell, i) => {
       page.drawText(clip(cell, cols[i].w, 8), {
-        x: cols[i].x, y: rowY, size: 8, font: bad && i >= 6 ? bold : font, color: bad && i >= 6 ? RED : INK,
+        x: cols[i].x,
+        y: rowY,
+        size: 8,
+        font: bad && i >= 6 ? bold : font,
+        color: bad && i >= 6 ? RED : INK,
       });
     });
     rowY -= 12;
   }
-  if (!rows.length) page.drawText("No FDPs recorded in this period.", { x: M, y: rowY, size: 10, font });
+  if (!rows.length)
+    page.drawText("No FDPs recorded in this period.", {
+      x: M,
+      y: rowY,
+      size: 10,
+      font,
+    });
 
   return await doc.save({ useObjectStreams: false });
 }
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
-  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(d)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // ── crew monthly roster PDF ─────────────────────────────────────────────────
@@ -137,7 +189,13 @@ export interface CrewRosterDay {
   date: string;
   type: string; // FDP | STANDBY | OFF | LEAVE
   legality_state: string | null;
-  sectors: { flight_no: string; origin: string; destination: string; std: string; sta: string }[];
+  sectors: {
+    flight_no: string;
+    origin: string;
+    destination: string;
+    std: string;
+    sta: string;
+  }[];
 }
 
 export interface CrewRosterMeta {
@@ -151,21 +209,38 @@ export interface CrewRosterMeta {
 }
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
-export async function buildCrewRosterPdf(meta: CrewRosterMeta, days: CrewRosterDay[]): Promise<Uint8Array> {
+export async function buildCrewRosterPdf(
+  meta: CrewRosterMeta,
+  days: CrewRosterDay[],
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const created = new Date(meta.generated_at);
-  doc.setTitle(`${meta.crew_name} roster ${meta.year}-${String(meta.month).padStart(2, "0")}`);
+  doc.setTitle(
+    `${meta.crew_name} roster ${meta.year}-${String(meta.month).padStart(2, "0")}`,
+  );
   doc.setProducer("Ratiba");
   doc.setCreationDate(created);
   doc.setModificationDate(created);
 
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const W = 595.28, H = 841.89, M = 50;
+  const W = 595.28,
+    H = 841.89,
+    M = 50;
   let page = doc.addPage([W, H]);
   let y = H - 70;
 
@@ -188,14 +263,21 @@ export async function buildCrewRosterPdf(meta: CrewRosterMeta, days: CrewRosterD
   const newPage = () => {
     page = doc.addPage([W, H]);
     y = H - 60;
-    for (const c of cols) page.drawText(c.h, { x: c.x, y, size: 9, font: bold, color: INK });
+    for (const c of cols)
+      page.drawText(c.h, { x: c.x, y, size: 9, font: bold, color: INK });
     y -= 4;
-    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.7, color: STEEL });
+    page.drawLine({
+      start: { x: M, y },
+      end: { x: W - M, y },
+      thickness: 0.7,
+      color: STEEL,
+    });
     y -= 12;
   };
   newPage();
   const clip = (s: string, w: number, size = 8) => {
-    while (s.length > 1 && font.widthOfTextAtSize(s, size) > w - 4) s = s.slice(0, -1);
+    while (s.length > 1 && font.widthOfTextAtSize(s, size) > w - 4)
+      s = s.slice(0, -1);
     return s;
   };
   const hhmm = (iso: string) => iso.slice(11, 16) + "Z";
@@ -203,17 +285,32 @@ export async function buildCrewRosterPdf(meta: CrewRosterMeta, days: CrewRosterD
     if (y < 60) newPage();
     const bad = d.legality_state && d.legality_state !== "LEGAL";
     const detail = d.sectors.length
-      ? d.sectors.map((s) => `${s.flight_no} ${s.origin}-${s.destination} ${hhmm(s.std)}/${hhmm(s.sta)}`).join("; ")
+      ? d.sectors
+          .map(
+            (s) =>
+              `${s.flight_no} ${s.origin}-${s.destination} ${hhmm(s.std)}/${hhmm(s.sta)}`,
+          )
+          .join("; ")
       : "";
     const cells = [d.date, d.type, detail, d.legality_state ?? ""];
     cells.forEach((cell, i) => {
       page.drawText(clip(cell, cols[i].w, 8), {
-        x: cols[i].x, y, size: 8, font: bad && i === 3 ? bold : font, color: bad && i === 3 ? RED : INK,
+        x: cols[i].x,
+        y,
+        size: 8,
+        font: bad && i === 3 ? bold : font,
+        color: bad && i === 3 ? RED : INK,
       });
     });
     y -= 12;
   }
-  if (!days.length) page.drawText("No duties recorded this month.", { x: M, y, size: 10, font });
+  if (!days.length)
+    page.drawText("No duties recorded this month.", {
+      x: M,
+      y,
+      size: 10,
+      font,
+    });
 
   return await doc.save({ useObjectStreams: false });
 }
