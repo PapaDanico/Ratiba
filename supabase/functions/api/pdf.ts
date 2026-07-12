@@ -130,3 +130,90 @@ export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", bytes as BufferSource);
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+// ── crew monthly roster PDF ─────────────────────────────────────────────────
+
+export interface CrewRosterDay {
+  date: string;
+  type: string; // FDP | STANDBY | OFF | LEAVE
+  legality_state: string | null;
+  sectors: { flight_no: string; origin: string; destination: string; std: string; sta: string }[];
+}
+
+export interface CrewRosterMeta {
+  operator_name: string;
+  crew_name: string;
+  employee_no: string;
+  role: string;
+  year: number;
+  month: number; // 1-12
+  generated_at: string;
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+export async function buildCrewRosterPdf(meta: CrewRosterMeta, days: CrewRosterDay[]): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const created = new Date(meta.generated_at);
+  doc.setTitle(`${meta.crew_name} roster ${meta.year}-${String(meta.month).padStart(2, "0")}`);
+  doc.setProducer("Ratiba");
+  doc.setCreationDate(created);
+  doc.setModificationDate(created);
+
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const W = 595.28, H = 841.89, M = 50;
+  let page = doc.addPage([W, H]);
+  let y = H - 70;
+
+  const line = (s: string, size: number, f: PDFFont, color = INK) => {
+    page.drawText(s, { x: M, y, size, font: f, color });
+    y -= size + 7;
+  };
+  line(`${MONTH_NAMES[meta.month - 1]} ${meta.year} roster`, 18, bold, STEEL);
+  line(`${meta.crew_name}  (${meta.employee_no}, ${meta.role})`, 12, bold);
+  line(meta.operator_name, 10, font);
+  line(`Generated: ${created.toISOString()}`, 8, font);
+  y -= 6;
+
+  const cols = [
+    { h: "Date", x: M, w: 55 },
+    { h: "Type", x: M + 55, w: 70 },
+    { h: "Details", x: M + 125, w: 300 },
+    { h: "Verdict", x: M + 425, w: 60 },
+  ];
+  const newPage = () => {
+    page = doc.addPage([W, H]);
+    y = H - 60;
+    for (const c of cols) page.drawText(c.h, { x: c.x, y, size: 9, font: bold, color: INK });
+    y -= 4;
+    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.7, color: STEEL });
+    y -= 12;
+  };
+  newPage();
+  const clip = (s: string, w: number, size = 8) => {
+    while (s.length > 1 && font.widthOfTextAtSize(s, size) > w - 4) s = s.slice(0, -1);
+    return s;
+  };
+  const hhmm = (iso: string) => iso.slice(11, 16) + "Z";
+  for (const d of days) {
+    if (y < 60) newPage();
+    const bad = d.legality_state && d.legality_state !== "LEGAL";
+    const detail = d.sectors.length
+      ? d.sectors.map((s) => `${s.flight_no} ${s.origin}-${s.destination} ${hhmm(s.std)}/${hhmm(s.sta)}`).join("; ")
+      : "";
+    const cells = [d.date, d.type, detail, d.legality_state ?? ""];
+    cells.forEach((cell, i) => {
+      page.drawText(clip(cell, cols[i].w, 8), {
+        x: cols[i].x, y, size: 8, font: bad && i === 3 ? bold : font, color: bad && i === 3 ? RED : INK,
+      });
+    });
+    y -= 12;
+  }
+  if (!days.length) page.drawText("No duties recorded this month.", { x: M, y, size: 10, font });
+
+  return await doc.save({ useObjectStreams: false });
+}

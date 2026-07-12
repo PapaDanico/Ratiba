@@ -27,7 +27,13 @@ import {
   LIMITS as FTL_BASELINE,
   type Limits,
 } from "./ftl.ts";
-import { type AuditFdpRow, buildAuditPackPdf, sha256Hex } from "./pdf.ts";
+import {
+  type AuditFdpRow,
+  buildAuditPackPdf,
+  buildCrewRosterPdf,
+  type CrewRosterDay,
+  sha256Hex,
+} from "./pdf.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1702,6 +1708,62 @@ async function rosterAmend(user: DbUser, req: Request): Promise<Response> {
   });
 }
 
+async function crewMonthlyRosterPdf(user: DbUser, crewId: string, url: URL): Promise<Response> {
+  const year = Number(need(url.searchParams.get("year"), "year"));
+  const month = Number(need(url.searchParams.get("month"), "month"));
+  if (!Number.isInteger(month) || month < 1 || month > 12) return json({ detail: "month must be 1-12" }, 422);
+  const crew = await one<Record<string, unknown> | null>(
+    db.from("crew").select("id, employee_no, first_name, last_name, role").eq("id", crewId)
+      .eq("operator_id", user.operator_id).maybeSingle(),
+  );
+  if (!crew) return json({ detail: "crew not found" }, 404);
+  const { data: op } = await db.from("operators").select("name").eq("id", user.operator_id).maybeSingle();
+
+  const from = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  const [{ data: fdps }, { data: sas }] = await Promise.all([
+    db.from("flight_duty_periods").select("date, type, legality_state")
+      .eq("operator_id", user.operator_id).eq("crew_id", crewId).gte("date", from).lte("date", to).order("date"),
+    db.from("sector_assignments").select("sector_id, sectors!inner(date, flight_no, origin, destination, std, sta)")
+      .eq("operator_id", user.operator_id).eq("crew_id", crewId)
+      .gte("sectors.date", from).lte("sectors.date", to),
+  ]);
+
+  const sectorsByDate: Record<string, CrewRosterDay["sectors"]> = {};
+  // deno-lint-ignore no-explicit-any
+  for (const row of (sas ?? []) as any[]) {
+    const s = row.sectors;
+    (sectorsByDate[s.date] ??= []).push({
+      flight_no: s.flight_no, origin: s.origin, destination: s.destination, std: s.std, sta: s.sta,
+    });
+  }
+  const days: CrewRosterDay[] = (fdps ?? []).map((f) => ({
+    date: f.date as string,
+    type: f.type as string,
+    legality_state: (f.legality_state as string | null) ?? null,
+    sectors: (sectorsByDate[f.date as string] ?? []).sort((a, b) => a.std.localeCompare(b.std)),
+  }));
+
+  const bytes = await buildCrewRosterPdf({
+    operator_name: (op?.name as string | undefined) ?? "Operator",
+    crew_name: `${crew.first_name} ${crew.last_name}`,
+    employee_no: crew.employee_no as string,
+    role: crew.role as string,
+    year, month,
+    generated_at: new Date().toISOString(),
+  }, days);
+
+  return new Response(bytes as BodyInit, {
+    headers: {
+      "content-type": "application/pdf",
+      "content-disposition":
+        `attachment; filename="roster_${crew.employee_no}_${year}-${String(month).padStart(2, "0")}.pdf"`,
+    },
+  });
+}
+
 // ── reports ─────────────────────────────────────────────────────────────────
 
 function isNightReport(iso: string): boolean {
@@ -2327,6 +2389,9 @@ Deno.serve(async (req: Request) => {
     }
     if (seg[2] === "documents" && isUuid(seg[3]) && seg.length === 4 && m === "DELETE") {
       return await documentDelete(user, seg[3]);
+    }
+    if (seg[2] === "roster" && seg[3] === "crew" && isUuid(seg[4]) && seg[5] === "monthly-pdf" && m === "GET") {
+      return await crewMonthlyRosterPdf(user, seg[4], url);
     }
     if (seg[2] === "duties" && isUuid(seg[3]) && m === "DELETE") {
       requireWriter(user);
