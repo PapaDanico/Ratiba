@@ -116,12 +116,12 @@ jobs:
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/sectors/recurring --data "{
             \"flight_no\":\"SMK$TS\",\"origin\":\"HKJK\",\"destination\":\"HKML\",
             \"std_time\":\"06:00\",\"sta_time\":\"07:30\",\"aircraft_reg\":\"5Y-SMK\",\"aircraft_type\":\"C208\",
-            \"date_from\":\"2020-01-20\",\"date_to\":\"2020-01-22\",\"days_of_week\":[]}")
+            \"date_from\":\"2026-11-20\",\"date_to\":\"2026-11-22\",\"days_of_week\":[]}")
           [ "$code" = 201 ] || fail "recurring sectors -> $code"
 
           # auto-generate over that window
           code=$(curl -s "${H[@]}" -o /tmp/gen.json -w '%{http_code}' -X POST $API/api/v1/roster/auto-generate \
-            --data '{"horizon_from":"2020-01-20","horizon_to":"2020-01-22"}')
+            --data '{"horizon_from":"2026-11-20","horizon_to":"2026-11-22"}')
           [ "$code" = 200 ] || { cp /tmp/gen.json /tmp/out; fail "auto-generate -> $code"; }
           python3 - <<'EOF'
           import json
@@ -131,7 +131,7 @@ jobs:
           assert r["result"]["assignments"], "no assignments produced"
           # publish payload
           json.dump({
-            "horizon_from": "2020-01-20", "horizon_to": "2020-01-22",
+            "horizon_from": "2026-11-20", "horizon_to": "2026-11-22",
             "sectors": [s for s in r["sectors"] if s["sector_id"].startswith("SMK")],
             "assignments": r["result"]["assignments"],
           }, open('/tmp/publish.json', 'w'))
@@ -144,12 +144,12 @@ jobs:
           cat /tmp/out
 
           # published roster now visible
-          curl -s -b /tmp/jar "$API/api/v1/roster?date_from=2020-01-20&date_to=2020-01-22" -o /tmp/out
+          curl -s -b /tmp/jar "$API/api/v1/roster?date_from=2026-11-20&date_to=2026-11-22" -o /tmp/out
           python3 -c "import json;r=json.load(open('/tmp/out'));assert r, 'empty roster';print('roster rows:', len(r), r[0]['duty_day_key'], r[0]['legality_state'])"
 
           # duty (standby) + leave round-trip
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/duties \
-            --data "{\"crew_id\":\"$CREW_ID\",\"date\":\"2020-01-25\",\"duty_type\":\"STANDBY_SHORT\",\"start_time\":\"06:00\",\"end_time\":\"12:00\"}")
+            --data "{\"crew_id\":\"$CREW_ID\",\"date\":\"2026-11-25\",\"duty_type\":\"STANDBY_SHORT\",\"start_time\":\"06:00\",\"end_time\":\"12:00\"}")
           [ "$code" = 201 ] || fail "duty -> $code"
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/leave \
             --data "{\"crew_id\":\"$CREW_ID\",\"type\":\"ANNUAL\",\"date_from\":\"2026-08-01\",\"date_to\":\"2026-08-05\"}")
@@ -176,11 +176,11 @@ jobs:
           H=(-b /tmp/jar -H "content-type: application/json" -H "x-csrf-token: $CSRF")
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/postings --data '{
             "location_icao":"HTDA","country":"Tanzania","type":"ACMI_WET_LEASE",
-            "start_date":"2020-02-01","end_date":"2020-02-21","lessee_name":"Smoke Air"}')
+            "start_date":"2026-11-01","end_date":"2026-11-21","lessee_name":"Smoke Air"}')
           [ "$code" = 201 ] || fail "posting create -> $code"
           python3 -c "import json;p=json.load(open('/tmp/out'));print('posting', p['duration_days'], p['rotation_due'])"
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/irop/alternatives \
-            --data '{"date":"2020-01-20","role":"CAPT","aircraft_type":"C208"}')
+            --data '{"date":"2026-11-20","role":"CAPT","aircraft_type":"C208"}')
           [ "$code" = 200 ] || fail "irop alternatives -> $code"
           printf 'employee_no,first_name,last_name,role,date_of_hire,date_of_birth,base_station,contract_type\nCSV-01,Import,Test,FO,2023-01-01,1994-04-04,HKJK,CONTRACT\n' > /tmp/crew.csv
           code=$(curl -s -b /tmp/jar -H "x-csrf-token: $CSRF" -o /tmp/out -w '%{http_code}' \
