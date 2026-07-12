@@ -95,7 +95,9 @@ export function LeavePage() {
                 data-testid="leave-row"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-xs text-dn-steel">{r.crew_id.slice(0, 8)}…</div>
+                  <div className="font-mono text-xs text-dn-steel-deep">
+                    {r.crew_id.slice(0, 8)}…
+                  </div>
                   <div className="text-dn-dark">
                     <Badge tone="steel">{r.type}</Badge>{" "}
                     <span className="font-mono">{r.date_from}</span> →{" "}

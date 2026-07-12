@@ -31,7 +31,7 @@ describe("DN brand tokens", () => {
     expect(colors?.gold).toBe("#C9A84C");
     expect(colors?.["gold-lt"]).toBe("#FFF8E6");
     expect(colors?.fog).toBe("#F4F4F2");
-    expect(colors?.muted).toBe("#6B7280");
+    expect(colors?.muted).toBe("#5B6472");
     expect(colors?.green).toBe("#1E8449");
     expect(colors?.red).toBe("#C0392B");
     expect(colors?.amber).toBe("#D4AC0D");

@@ -98,12 +98,10 @@
    * so the data reads calm and controls surface when reached for. Desktop only:
    * on touch (no hover) they stay full-opacity via the absence of this rule.
    */
+  /* Row actions render at full contrast: any resting dim pushes 12px link
+     text below the WCAG AA 4.5:1 ratio, so the "recede until hover" pattern
+     was retired in the Phase 3 accessibility pass. */
   tr .row-actions {
-    opacity: 0.6;
-    transition: opacity 0.15s ease;
-  }
-  tr:hover .row-actions,
-  tr:focus-within .row-actions {
     opacity: 1;
   }
 }

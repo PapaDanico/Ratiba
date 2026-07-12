@@ -64,7 +64,9 @@ export function CurrencyPage() {
               <tbody className="divide-y divide-dn-steel-lt">
                 {rows.map((r, idx) => (
                   <tr key={`${r.crew_id}-${r.currency_type}-${idx}`} className="hover:bg-dn-fog">
-                    <td className="py-2 pr-4 font-mono text-dn-steel">{r.crew_id.slice(0, 8)}…</td>
+                    <td className="py-2 pr-4 font-mono text-dn-steel-deep">
+                      {r.crew_id.slice(0, 8)}…
+                    </td>
                     <td className="py-2 pr-4">{r.currency_type}</td>
                     <td className="py-2 pr-4 font-mono">{r.expires_date}</td>
                     <td className="py-2 pr-4 font-mono">{r.days_remaining}</td>

@@ -71,7 +71,7 @@ function DemoGuide() {
           <button
             type="button"
             onClick={toggle}
-            className="text-xs text-dn-steel underline shrink-0"
+            className="text-xs text-dn-steel-deep underline shrink-0"
             data-testid="toggle-guide"
           >
             {collapsed ? "Show guide" : "Hide"}
@@ -88,7 +88,7 @@ function DemoGuide() {
                 <div className="min-w-0">
                   <p className="text-sm">
                     <span className="font-medium text-dn-dark">{step.title}</span>{" "}
-                    <span className="font-mono text-[11px] uppercase tracking-wide text-dn-steel">
+                    <span className="font-mono text-[11px] uppercase tracking-wide text-dn-steel-deep">
                       {step.tab}
                     </span>
                   </p>
@@ -421,7 +421,7 @@ export function DashboardPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle>Needs attention — next 30 days</CardTitle>
-            <Link to="/training" className="text-xs text-dn-steel underline">
+            <Link to="/training" className="text-xs text-dn-steel-deep underline">
               View all
             </Link>
           </div>

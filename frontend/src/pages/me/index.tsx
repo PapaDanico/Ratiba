@@ -102,7 +102,7 @@ function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void
       <main className="min-h-screen flex items-center justify-center bg-dn-fog px-4">
         <Card className="w-full max-w-sm">
           <CardBody className="space-y-2 text-center">
-            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel">
+            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel-deep">
               Ratiba · Crew
             </p>
             <h1 className="font-display text-2xl text-dn-dark">Pairing your device…</h1>
@@ -119,7 +119,9 @@ function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void
     <main className="min-h-screen flex items-center justify-center bg-dn-fog px-4">
       <Card className="w-full max-w-sm">
         <CardBody className="space-y-4">
-          <p className="font-mono text-xs uppercase tracking-widest text-dn-steel">Ratiba · Crew</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-dn-steel-deep">
+            Ratiba · Crew
+          </p>
           <h1 className="font-display text-3xl text-dn-dark">Pair your device</h1>
           <p className="text-sm text-dn-muted">
             Ask your crewing officer for a one-time pairing code, then enter it below.
@@ -188,7 +190,7 @@ function DutyToday() {
   const d = state.data.duty_day!;
   return (
     <div className="space-y-2">
-      <p className="font-mono text-sm text-dn-steel">{d.date_local}</p>
+      <p className="font-mono text-sm text-dn-steel-deep">{d.date_local}</p>
       <p className="font-display text-2xl text-dn-dark">
         {d.aircraft_reg} <Badge tone="steel">{d.aircraft_type}</Badge>
       </p>
@@ -289,7 +291,7 @@ function Roster() {
         {state.data.duty_days.map((d, i) => (
           <li key={i} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-sm text-dn-steel">{d.date_local}</span>
+              <span className="font-mono text-sm text-dn-steel-deep">{d.date_local}</span>
               <Badge tone="steel">{d.aircraft_type}</Badge>
             </div>
             <p className="mt-1 text-dn-dark">
@@ -408,7 +410,7 @@ function Notices() {
           )}
           {n.requires_ack &&
             (n.acknowledged ? (
-              <p className="mt-2 text-xs text-dn-green">✓ Acknowledged</p>
+              <p className="mt-2 text-xs text-dn-green-deep">✓ Acknowledged</p>
             ) : (
               <Button
                 size="sm"
@@ -438,7 +440,7 @@ export function CrewMePage() {
       <header className="bg-white border-b border-dn-steel-lt">
         <div className="mx-auto max-w-md px-4 py-3 flex items-center justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel">Ratiba</p>
+            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel-deep">Ratiba</p>
             <p className="font-display text-lg text-dn-dark">
               {profile.employee_no} <Badge tone="steel">{profile.role}</Badge>
             </p>

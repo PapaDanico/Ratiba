@@ -230,7 +230,7 @@ export function NoticesPage() {
                   </div>
                   <p className="mt-1 text-sm text-dn-muted whitespace-pre-line">{n.body}</p>
                   {n.requires_ack && (
-                    <p className="mt-1 text-xs text-dn-steel">
+                    <p className="mt-1 text-xs text-dn-steel-deep">
                       Acknowledged by {n.ack_count} / {n.crew_total} crew
                     </p>
                   )}

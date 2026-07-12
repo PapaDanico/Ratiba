@@ -52,7 +52,7 @@ export function LandingPage() {
                   Start for free
                 </Button>
               </Link>
-              <button className="px-8 py-3 rounded-lg border-2 border-dn-steel text-dn-steel font-medium hover:bg-dn-steel hover:text-white transition-colors">
+              <button className="px-8 py-3 rounded-lg border-2 border-dn-steel text-dn-steel-deep font-medium hover:bg-dn-steel-deep hover:text-white transition-colors">
                 Watch demo
               </button>
             </div>
@@ -135,7 +135,7 @@ export function LandingPage() {
               <h2 className="text-4xl font-bold text-dn-dark">Why teams choose Ratiba</h2>
               {benefits.map((benefit, idx) => (
                 <div key={idx} className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
                     ✓
                   </div>
                   <div>
@@ -148,15 +148,15 @@ export function LandingPage() {
             <div className="bg-gradient-to-br from-dn-steel-lt via-white to-dn-steel-lt rounded-2xl p-12 shadow-lg">
               <div className="space-y-4">
                 <div className="bg-white rounded-lg p-4 border-l-4 border-dn-steel">
-                  <div className="text-sm font-mono text-dn-steel">FTL Compliance Rate</div>
+                  <div className="text-sm font-mono text-dn-steel-deep">FTL Compliance Rate</div>
                   <div className="text-2xl font-bold text-dn-dark">98.7%</div>
                 </div>
                 <div className="bg-white rounded-lg p-4 border-l-4 border-dn-steel">
-                  <div className="text-sm font-mono text-dn-steel">Avg. Scheduling Time</div>
+                  <div className="text-sm font-mono text-dn-steel-deep">Avg. Scheduling Time</div>
                   <div className="text-2xl font-bold text-dn-dark">2 minutes</div>
                 </div>
                 <div className="bg-white rounded-lg p-4 border-l-4 border-dn-steel">
-                  <div className="text-sm font-mono text-dn-steel">Crew Satisfaction</div>
+                  <div className="text-sm font-mono text-dn-steel-deep">Crew Satisfaction</div>
                   <div className="text-2xl font-bold text-dn-dark">9.2/10</div>
                 </div>
               </div>
@@ -173,7 +173,7 @@ export function LandingPage() {
             Join hundreds of operators already using Ratiba to schedule smarter
           </p>
           <Link to="/login">
-            <Button size="lg" className="bg-white text-dn-steel hover:bg-gray-100">
+            <Button size="lg" className="bg-white text-dn-steel-deep hover:bg-gray-100">
               Get started now
             </Button>
           </Link>
@@ -188,17 +188,17 @@ export function LandingPage() {
               <h3 className="font-semibold text-dn-dark mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     Features
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     Pricing
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     Security
                   </a>
                 </li>
@@ -208,17 +208,17 @@ export function LandingPage() {
               <h3 className="font-semibold text-dn-dark mb-4">Company</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     About
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     Blog
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     Careers
                   </a>
                 </li>
@@ -228,17 +228,17 @@ export function LandingPage() {
               <h3 className="font-semibold text-dn-dark mb-4">Resources</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
                 <li>
-                  <Link to="/privacy" className="hover:text-dn-steel">
+                  <Link to="/privacy" className="hover:text-dn-steel-deep">
                     Privacy
                   </Link>
                 </li>
                 <li>
-                  <Link to="/terms" className="hover:text-dn-steel">
+                  <Link to="/terms" className="hover:text-dn-steel-deep">
                     Terms
                   </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     Contact
                   </a>
                 </li>
@@ -248,17 +248,17 @@ export function LandingPage() {
               <h3 className="font-semibold text-dn-dark mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     KCAA Compliance
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     FTL Rules
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-dn-steel">
+                  <a href="#" className="hover:text-dn-steel-deep">
                     Support
                   </a>
                 </li>
@@ -268,13 +268,13 @@ export function LandingPage() {
           <div className="border-t border-dn-steel-lt pt-8 flex flex-col sm:flex-row justify-between items-center text-sm text-dn-muted">
             <div>© 2026 Ratiba. All rights reserved.</div>
             <div className="flex gap-6 mt-4 sm:mt-0">
-              <a href="#" className="hover:text-dn-steel">
+              <a href="#" className="hover:text-dn-steel-deep">
                 Twitter
               </a>
-              <a href="#" className="hover:text-dn-steel">
+              <a href="#" className="hover:text-dn-steel-deep">
                 GitHub
               </a>
-              <a href="#" className="hover:text-dn-steel">
+              <a href="#" className="hover:text-dn-steel-deep">
                 LinkedIn
               </a>
             </div>

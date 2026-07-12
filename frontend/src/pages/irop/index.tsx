@@ -388,7 +388,7 @@ export function IropPage() {
 
           {reliefErr && <ErrorAlert message={reliefErr} />}
           {amended && (
-            <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green mb-4">
+            <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green-deep mb-4">
               {amended}
             </div>
           )}
@@ -444,7 +444,7 @@ export function IropPage() {
                             <button
                               type="button"
                               onClick={() => setAmendFor(a)}
-                              className="text-dn-steel underline text-xs hover:text-dn-dark"
+                              className="text-dn-steel-deep underline text-xs hover:text-dn-dark"
                               data-testid={`apply-relief-${a.employee_no}`}
                             >
                               Apply relief

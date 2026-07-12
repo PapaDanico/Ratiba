@@ -94,7 +94,7 @@ export function SwapsPage() {
                 data-testid="swap-row"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-xs text-dn-steel">
+                  <div className="font-mono text-xs text-dn-steel-deep">
                     {r.crew_id_initiator.slice(0, 8)}… ↔ {r.crew_id_counterparty.slice(0, 8)}…
                   </div>
                   <div className="text-dn-dark">

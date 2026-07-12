@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-dn-steel-lt via-white to-dn-steel-lt px-4">
           <div className="text-center space-y-6 max-w-md">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold text-dn-steel">Oops!</h1>
+              <h1 className="text-4xl font-bold text-dn-steel-deep">Oops!</h1>
               <h2 className="text-2xl font-bold text-dn-dark">Something went wrong</h2>
               <p className="text-dn-muted">
                 {this.state.error?.message || "An unexpected error occurred."}
@@ -39,13 +39,13 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex gap-4 justify-center">
               <button
                 onClick={() => (window.location.href = "/")}
-                className="px-6 py-3 rounded-lg bg-dn-steel text-white font-medium hover:opacity-90 transition-opacity"
+                className="px-6 py-3 rounded-lg bg-dn-steel-deep text-white font-medium hover:opacity-90 transition-opacity"
               >
                 Go Home
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="px-6 py-3 rounded-lg border-2 border-dn-steel text-dn-steel font-medium hover:bg-dn-steel hover:text-white transition-colors"
+                className="px-6 py-3 rounded-lg border-2 border-dn-steel text-dn-steel-deep font-medium hover:bg-dn-steel-deep hover:text-white transition-colors"
               >
                 Reload Page
               </button>

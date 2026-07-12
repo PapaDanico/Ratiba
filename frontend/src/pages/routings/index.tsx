@@ -372,8 +372,8 @@ function AddRecurringForm({
               className={[
                 "px-2 py-1 rounded text-xs border",
                 days.includes(d.idx)
-                  ? "bg-dn-steel text-white border-dn-steel"
-                  : "bg-white text-dn-steel border-dn-steel-lt",
+                  ? "bg-dn-steel-deep text-white border-dn-steel"
+                  : "bg-white text-dn-steel-deep border-dn-steel-lt",
               ].join(" ")}
               data-testid={`weekday-${d.idx}`}
             >
@@ -384,14 +384,14 @@ function AddRecurringForm({
           <button
             type="button"
             onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])}
-            className="text-xs underline text-dn-steel"
+            className="text-xs underline text-dn-steel-deep"
           >
             Daily
           </button>
           <button
             type="button"
             onClick={() => setDays([0, 1, 2, 3, 4])}
-            className="text-xs underline text-dn-steel"
+            className="text-xs underline text-dn-steel-deep"
           >
             Weekdays
           </button>
@@ -485,8 +485,8 @@ export function RoutingsPage() {
                 onClick={() => setMode("single")}
                 className={
                   mode === "single"
-                    ? "px-3 py-1 bg-dn-steel text-white"
-                    : "px-3 py-1 bg-white text-dn-steel"
+                    ? "px-3 py-1 bg-dn-steel-deep text-white"
+                    : "px-3 py-1 bg-white text-dn-steel-deep"
                 }
                 data-testid="mode-single"
               >
@@ -497,8 +497,8 @@ export function RoutingsPage() {
                 onClick={() => setMode("recurring")}
                 className={
                   mode === "recurring"
-                    ? "px-3 py-1 bg-dn-steel text-white"
-                    : "px-3 py-1 bg-white text-dn-steel"
+                    ? "px-3 py-1 bg-dn-steel-deep text-white"
+                    : "px-3 py-1 bg-white text-dn-steel-deep"
                 }
                 data-testid="mode-recurring"
               >
@@ -515,7 +515,7 @@ export function RoutingsPage() {
               " Recurring mode creates one routing per operating day across the date range."}
           </p>
           {notice && (
-            <p className="mb-3 text-sm text-dn-steel" data-testid="routing-notice">
+            <p className="mb-3 text-sm text-dn-steel-deep" data-testid="routing-notice">
               {notice}
             </p>
           )}
@@ -548,6 +548,7 @@ export function RoutingsPage() {
             <div className="flex items-center gap-2 text-sm text-dn-muted">
               <input
                 type="date"
+                aria-label="Schedule range from"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
@@ -555,6 +556,7 @@ export function RoutingsPage() {
               <span>→</span>
               <input
                 type="date"
+                aria-label="Schedule range to"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
@@ -590,7 +592,7 @@ export function RoutingsPage() {
                 <tbody className="divide-y divide-dn-steel-lt">
                   {rows.map((s) => (
                     <tr key={s.id} className="hover:bg-dn-fog">
-                      <td data-label="Flight" className="py-2 pr-4 font-mono text-dn-steel">
+                      <td data-label="Flight" className="py-2 pr-4 font-mono text-dn-steel-deep">
                         {s.flight_no}
                       </td>
                       <td data-label="Date" className="py-2 pr-4 font-mono">
