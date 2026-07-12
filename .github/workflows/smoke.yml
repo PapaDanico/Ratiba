@@ -178,6 +178,22 @@ jobs:
           [ "$code" = 200 ] || fail "onboarding dry-run -> $code"
           python3 -c "import json;r=json.load(open('/tmp/out'));assert r['inserted']==1 and not r['errors'], r;print('onboarding dry-run OK', r)"
 
+      - name: Audit pack (generate -> verify -> download)
+        run: |
+          set -e
+          fail() { echo "FAIL: $1"; cat /tmp/out 2>/dev/null; exit 1; }
+          H=(-b /tmp/jar -H "content-type: application/json" -H "x-csrf-token: $CSRF")
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/audit/generate \
+            --data '{"period_from":"2026-07-01","period_to":"2026-07-31"}')
+          [ "$code" = 201 ] || fail "audit generate -> $code"
+          PACK=$(python3 -c "import json;p=json.load(open('/tmp/out'));print(p['id']);assert p['sha256_hex'] and p['byte_size']>500, p")
+          code=$(curl -s -b /tmp/jar -o /tmp/out -w '%{http_code}' $API/api/v1/audit/packs/$PACK/verify)
+          [ "$code" = 200 ] || fail "audit verify -> $code"
+          python3 -c "import json;v=json.load(open('/tmp/out'));assert v['verified'], v;print('verify OK', v['expected_sha256'][:16])"
+          curl -s -b /tmp/jar -o /tmp/pack.pdf $API/api/v1/audit/packs/$PACK/download
+          head -c4 /tmp/pack.pdf | grep -q '%PDF' || fail "download not a PDF"
+          echo "audit pack OK ($(stat -c%s /tmp/pack.pdf) bytes)"
+
       - name: Via Netlify proxy
         run: |
           curl -s -w '\nHTTP %{http_code}\n' https://ratibacrewmanagement.netlify.app/version
