@@ -1531,6 +1531,426 @@ async function rosterAmend(user: DbUser, req: Request): Promise<Response> {
   });
 }
 
+// ── reports ─────────────────────────────────────────────────────────────────
+
+function isNightReport(iso: string): boolean {
+  const h = new Date(iso).getUTCHours();
+  return h >= 20 || h < 4; // approximates WOCL overlap for UTC+3 home bases
+}
+
+async function fatigueReport(user: DbUser, url: URL): Promise<Response> {
+  const from = need(url.searchParams.get("date_from"), "date_from");
+  const to = need(url.searchParams.get("date_to"), "date_to");
+  if (to < from) return json({ detail: "date_to before date_from" }, 422);
+  const [fdps, crews] = await Promise.all([
+    one<Record<string, unknown>[]>(
+      db.from("flight_duty_periods").select("*").eq("operator_id", user.operator_id)
+        .eq("type", "FDP").gte("date", from).lte("date", to),
+    ),
+    one<Record<string, unknown>[]>(
+      db.from("crew").select("id, employee_no, first_name, last_name, role").eq("operator_id", user.operator_id),
+    ),
+  ]);
+  const byId: Record<string, Record<string, unknown>> = {};
+  for (const c of crews ?? []) byId[c.id as string] = c;
+  const byCrew: Record<string, Record<string, unknown>[]> = {};
+  for (const f of fdps ?? []) (byCrew[f.crew_id as string] ??= []).push(f);
+  const rows = [];
+  for (const crewId of Object.keys(byCrew)) {
+    const c = byId[crewId];
+    if (!c) continue;
+    const duties = byCrew[crewId].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    let night = 0, maxRun = 0, run = 0, prev = "";
+    let peak = 0, elevated = 0, high = 0;
+    for (const d of duties) {
+      const isNight = isNightReport(d.report_time as string);
+      if (isNight) night++;
+      const day = d.date as string;
+      run = prev && new Date(day).getTime() - new Date(prev).getTime() === 86400000 ? run + 1 : 1;
+      maxRun = Math.max(maxRun, run);
+      prev = day;
+      // Simplified duty-fatigue score (full FRMS model is a Phase 3 port).
+      const score = Number(d.duty_hours ?? 0) * 4 + (isNight ? 25 : 0) +
+        Math.max(0, Number(d.sectors_count ?? 0) - 2) * 5 + Math.max(0, run - 3) * 8;
+      if (score >= 60) high++;
+      else if (score >= 30) elevated++;
+      peak = Math.max(peak, score);
+    }
+    peak = Math.round(peak * 10) / 10;
+    rows.push({
+      employee_no: c.employee_no, name: `${c.first_name} ${c.last_name}`, role: c.role,
+      fdp_count: duties.length, night_fdp_count: night,
+      night_pct: duties.length ? Math.round((night / duties.length) * 1000) / 10 : 0,
+      max_consecutive_days: maxRun, elevated_count: elevated, high_count: high,
+      peak_score: peak, peak_band: peak >= 60 ? "HIGH" : peak >= 30 ? "ELEVATED" : "LOW",
+    });
+  }
+  rows.sort((a, b) => (b.peak_score as number) - (a.peak_score as number));
+  return json(rows);
+}
+
+async function payrollCsv(user: DbUser, url: URL): Promise<Response> {
+  const from = need(url.searchParams.get("date_from"), "date_from");
+  const to = need(url.searchParams.get("date_to"), "date_to");
+  if (to < from) return json({ detail: "date_to before date_from" }, 422);
+  const [fdps, crews] = await Promise.all([
+    one<Record<string, unknown>[]>(
+      db.from("flight_duty_periods").select("*").eq("operator_id", user.operator_id)
+        .gte("date", from).lte("date", to),
+    ),
+    one<Record<string, unknown>[]>(
+      db.from("crew").select("id, employee_no, first_name, last_name, role").eq("operator_id", user.operator_id),
+    ),
+  ]);
+  const agg: Record<string, { fdp: number; standby: number; duty: number; flight: number }> = {};
+  for (const f of fdps ?? []) {
+    const a = (agg[f.crew_id as string] ??= { fdp: 0, standby: 0, duty: 0, flight: 0 });
+    if (f.type === "FDP") a.fdp++;
+    if (f.type === "STANDBY") a.standby++;
+    a.duty += Number(f.duty_hours ?? 0);
+    a.flight += Number(f.flight_hours ?? 0);
+  }
+  let csv = "employee_no,name,role,fdp_count,standby_count,duty_hours,flight_hours\n";
+  for (const c of crews ?? []) {
+    const a = agg[c.id as string];
+    if (!a) continue;
+    csv += `${c.employee_no},"${c.first_name} ${c.last_name}",${c.role},${a.fdp},${a.standby},${a.duty.toFixed(2)},${a.flight.toFixed(2)}\n`;
+  }
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv",
+      "content-disposition": `attachment; filename="payroll_${from}_${to}.csv"`,
+    },
+  });
+}
+
+// ── postings ────────────────────────────────────────────────────────────────
+
+const ROTATION_ALERT_DAYS = 14;
+
+async function postingOut(p: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { data: assigns } = await db.from("posting_assignments").select("crew_id").eq("posting_id", p.id);
+  const crewIds = (assigns ?? []).map((a) => a.crew_id as string);
+  let crewRows: Record<string, unknown>[] = [];
+  if (crewIds.length) {
+    const { data } = await db.from("crew").select("id, employee_no, first_name, last_name, role").in("id", crewIds);
+    crewRows = data ?? [];
+  }
+  const today = todayUTC().getTime();
+  const start = new Date(p.start_date + "T00:00:00Z").getTime();
+  const end = new Date(p.end_date + "T00:00:00Z").getTime();
+  const daysToEnd = Math.round((end - today) / 86400000);
+  return {
+    id: p.id, location_icao: p.location_icao, country: p.country, base_tz: p.base_tz,
+    type: p.type, lessee_name: p.lessee_name, start_date: p.start_date, end_date: p.end_date,
+    duration_days: Math.round((end - start) / 86400000) + 1, notes: p.notes,
+    crew: crewRows.map((c) => ({
+      id: c.id, employee_no: c.employee_no, first_name: c.first_name, last_name: c.last_name,
+      role: c.role, crew_category: ROLE_CATEGORY[c.role as string] ?? "FLIGHT_DECK",
+    })),
+    engineer_cover: crewRows.some((c) => c.role === "ENGINEER"),
+    days_to_end: daysToEnd,
+    rotation_due: daysToEnd <= ROTATION_ALERT_DAYS,
+  };
+}
+
+async function postings(user: DbUser, req: Request): Promise<Response> {
+  if (req.method === "GET") {
+    const rows = await one<Record<string, unknown>[]>(
+      db.from("postings").select("*").eq("operator_id", user.operator_id).order("start_date", { ascending: false }),
+    );
+    return json(await Promise.all((rows ?? []).map(postingOut)));
+  }
+  requireWriter(user);
+  const b = await readJson(req);
+  const created = await one(
+    db.from("postings").insert({
+      id: crypto.randomUUID(), // table has no DB-side default
+      operator_id: user.operator_id, created_by_user_id: user.id,
+      location_icao: String(need(b.location_icao, "location_icao")).trim().toUpperCase(),
+      country: need(b.country, "country"), type: need(b.type, "type"),
+      start_date: need(b.start_date, "start_date"), end_date: need(b.end_date, "end_date"),
+      base_tz: b.base_tz ?? "Africa/Nairobi", lessee_name: b.lessee_name ?? null, notes: b.notes ?? null,
+    }).select().single(),
+  );
+  await auditLog(user.operator_id, user.id, "CREATE_POSTING", "posting", (created as { id: string }).id, null, b);
+  return json(await postingOut(created as Record<string, unknown>), 201);
+}
+
+async function postingAssign(user: DbUser, req: Request, postingId: string): Promise<Response> {
+  requireWriter(user);
+  const b = await readJson(req);
+  const posting = await one<Record<string, unknown> | null>(
+    db.from("postings").select("*").eq("id", postingId).eq("operator_id", user.operator_id).maybeSingle(),
+  );
+  if (!posting) return json({ detail: "posting not found" }, 404);
+  const crewId = String(need(b.crew_id, "crew_id"));
+  const { error } = await db.from("posting_assignments").insert({
+    id: crypto.randomUUID(), operator_id: user.operator_id, created_by_user_id: user.id,
+    posting_id: postingId, crew_id: crewId,
+  });
+  if (error && !String(error.message).includes("uq_posting_assignment")) {
+    return json({ detail: error.message }, 422);
+  }
+  return json(await postingOut(posting));
+}
+
+// ── constraints ─────────────────────────────────────────────────────────────
+
+function constraintSummary(s: Record<string, unknown>, ruleCount: number) {
+  return {
+    id: s.id, om_a_revision: s.om_a_revision, source_filename: s.source_filename,
+    status: s.status, model: s.model, coverage_pct: s.coverage_pct,
+    rule_count: ruleCount || s.rule_count, accepted_at: s.accepted_at, created_at: s.created_at,
+  };
+}
+
+async function constraintSets(user: DbUser): Promise<Response> {
+  const rows = await one<Record<string, unknown>[]>(
+    db.from("constraint_sets").select("*").eq("operator_id", user.operator_id)
+      .order("created_at", { ascending: false }),
+  );
+  return json((rows ?? []).map((s) => constraintSummary(s, Number(s.rule_count ?? 0))));
+}
+
+async function constraintSetDetail(user: DbUser, setId: string): Promise<Response> {
+  const s = await one<Record<string, unknown> | null>(
+    db.from("constraint_sets").select("*").eq("id", setId).eq("operator_id", user.operator_id).maybeSingle(),
+  );
+  if (!s) return json({ detail: "constraint set not found" }, 404);
+  const rules = await one<Record<string, unknown>[]>(
+    db.from("constraint_rules").select("*").eq("constraint_set_id", setId).order("rule_key"),
+  );
+  return json({ ...constraintSummary(s, (rules ?? []).length), rules: rules ?? [] });
+}
+
+async function constraintAccept(user: DbUser, setId: string): Promise<Response> {
+  requireWriter(user);
+  const s = await one<Record<string, unknown> | null>(
+    db.from("constraint_sets").select("id").eq("id", setId).eq("operator_id", user.operator_id).maybeSingle(),
+  );
+  if (!s) return json({ detail: "constraint set not found" }, 404);
+  await db.from("constraint_sets").update({ status: "ACCEPTED", accepted_at: new Date().toISOString() }).eq("id", setId);
+  await auditLog(user.operator_id, user.id, "ACCEPT_CONSTRAINT_SET", "constraint_set", setId, null, null);
+  return constraintSetDetail(user, setId);
+}
+
+// ── onboarding (CSV imports) ────────────────────────────────────────────────
+
+function parseCsv(text: string): { headers: string[]; rows: string[][] } {
+  // Minimal CSV: no quoted-comma support (matches the documented templates).
+  const lines = text.replace(/\r/g, "").split("\n").filter((l) => l.trim() !== "");
+  const headers = (lines.shift() ?? "").split(",").map((h) => h.trim().toLowerCase());
+  return { headers, rows: lines.map((l) => l.split(",").map((v) => v.trim())) };
+}
+
+async function readUpload(req: Request): Promise<string> {
+  const form = await req.formData().catch(() => null);
+  const file = form?.get("file");
+  if (!file || typeof file === "string") throw new ApiError(422, "multipart 'file' field is required");
+  return await file.text();
+}
+
+type ImportResult = { inserted: number; updated: number; skipped: number; errors: { row: number; message: string }[] };
+
+async function onboardingImport(
+  user: DbUser,
+  req: Request,
+  url: URL,
+  kind: "crew" | "type-ratings" | "currencies" | "historical-fdps",
+): Promise<Response> {
+  requireWriter(user);
+  const commit = url.searchParams.get("commit") !== "false";
+  const { headers, rows } = parseCsv(await readUpload(req));
+  const col = (r: string[], name: string) => {
+    const i = headers.indexOf(name);
+    return i >= 0 ? r[i] ?? "" : "";
+  };
+  const res: ImportResult = { inserted: 0, updated: 0, skipped: 0, errors: [] };
+
+  // crew lookup by employee_no for the child imports
+  const { data: crews } = await db.from("crew").select("id, employee_no").eq("operator_id", user.operator_id);
+  const crewByEmp: Record<string, string> = {};
+  for (const c of crews ?? []) crewByEmp[c.employee_no] = c.id;
+
+  let rowNo = 1;
+  for (const r of rows) {
+    rowNo++;
+    try {
+      if (kind === "crew") {
+        const emp = col(r, "employee_no");
+        if (!emp) throw new Error("employee_no is required");
+        const record = {
+          operator_id: user.operator_id, created_by_user_id: user.id, employee_no: emp,
+          first_name: col(r, "first_name"), last_name: col(r, "last_name"),
+          role: col(r, "role").toUpperCase(), date_of_hire: col(r, "date_of_hire"),
+          date_of_birth: col(r, "date_of_birth"), base_station: col(r, "base_station").toUpperCase(),
+          contract_type: col(r, "contract_type").toUpperCase(), active: true,
+          languages: col(r, "languages") ? col(r, "languages").split(";") : [],
+        };
+        if (!record.first_name || !record.role) throw new Error("first_name and role are required");
+        if (crewByEmp[emp]) {
+          if (commit) {
+            const { error } = await db.from("crew").update(record).eq("id", crewByEmp[emp]);
+            if (error) throw new Error(error.message);
+          }
+          res.updated++;
+        } else {
+          if (commit) {
+            const { data, error } = await db.from("crew").insert(record).select("id").single();
+            if (error) throw new Error(error.message);
+            crewByEmp[emp] = (data as { id: string }).id;
+          }
+          res.inserted++;
+        }
+      } else {
+        const emp = col(r, "employee_no");
+        const crewId = crewByEmp[emp];
+        if (!crewId) throw new Error(`unknown employee_no '${emp}'`);
+        let record: Record<string, unknown>;
+        let table: string;
+        if (kind === "type-ratings") {
+          table = "crew_type_ratings";
+          record = {
+            operator_id: user.operator_id, created_by_user_id: user.id, crew_id: crewId,
+            aircraft_type: col(r, "aircraft_type").toUpperCase(),
+            valid_from: col(r, "valid_from"), valid_until: col(r, "valid_until"),
+            evidence_ref: col(r, "evidence_ref") || null,
+          };
+        } else if (kind === "currencies") {
+          table = "crew_currencies";
+          record = {
+            operator_id: user.operator_id, created_by_user_id: user.id, crew_id: crewId,
+            currency_type: col(r, "currency_type").toUpperCase(),
+            last_completed_date: col(r, "last_completed_date"),
+            expires_date: col(r, "expires_date"), evidence_ref: col(r, "evidence_ref") || null,
+          };
+        } else {
+          table = "flight_duty_periods";
+          const day = col(r, "date");
+          const report = col(r, "report_time") || `${day}T05:00:00Z`;
+          const off = col(r, "off_duty_time") || `${day}T15:00:00Z`;
+          record = {
+            operator_id: user.operator_id, created_by_user_id: user.id, crew_id: crewId, date: day,
+            report_time: report, off_duty_time: off,
+            sectors_count: Number(col(r, "sectors_count") || 0),
+            flight_hours: Number(col(r, "flight_hours") || 0),
+            duty_hours: Number(col(r, "duty_hours") || 0),
+            type: "FDP", legality_state: "LEGAL", ftl_rules_applied: ["IMPORTED"],
+          };
+        }
+        if (commit) {
+          const { error } = await db.from(table).insert(record);
+          if (error) throw new Error(error.message);
+        }
+        res.inserted++;
+      }
+    } catch (e) {
+      res.errors.push({ row: rowNo, message: String((e as Error).message ?? e).slice(0, 200) });
+      res.skipped++;
+    }
+  }
+  return json({ ...res, commit });
+}
+
+// ── IROP (simplified what-if) ───────────────────────────────────────────────
+
+async function iropAssess(user: DbUser, req: Request): Promise<Response> {
+  const b = await readJson(req);
+  const crewId = String(need(b.crew_id, "crew_id"));
+  const day = String(need(b.date, "date"));
+  const extraFlight = Number(b.extra_flight_h ?? 0);
+  const extraGround = Number(b.extra_ground_h ?? 0);
+  const discretion = Number(b.discretion_h ?? 0);
+  const crew = await one<Record<string, unknown> | null>(
+    db.from("crew").select("*").eq("id", crewId).eq("operator_id", user.operator_id).maybeSingle(),
+  );
+  if (!crew) return json({ detail: "crew not found" }, 404);
+  const fdp = await one<Record<string, unknown> | null>(
+    db.from("flight_duty_periods").select("*").eq("crew_id", crewId).eq("date", day).eq("type", "FDP").maybeSingle(),
+  );
+  if (!fdp) return json({ detail: `no FDP found for that crew on ${day}` }, 422);
+
+  const sectors = Number(fdp.sectors_count ?? 1);
+  const limitBase = Math.max(FTL_LIMITS.fdp_sector_floor, FTL_LIMITS.fdp_max_basic_by_band.DAY_PEAK - Math.max(0, sectors - 2) * FTL_LIMITS.fdp_sector_reduction_per_extra);
+  const judge = (dutyH: number, extLimit: number): string =>
+    dutyH > FTL_LIMITS.fdp_scheduled_ceiling_basic_h + discretion ? "ILLEGAL"
+    : dutyH > extLimit ? "REQUIRES_FRMS_DEROGATION"
+    : dutyH > extLimit - 1 ? "AT_LIMIT" : "LEGAL";
+
+  const origDuty = Number(fdp.duty_hours ?? 0);
+  const origFlight = Number(fdp.flight_hours ?? 0);
+  const newDuty = Math.round((origDuty + extraFlight + extraGround) * 100) / 100;
+  const newFlight = Math.round((origFlight + extraFlight) * 100) / 100;
+  const disruptedLegality = judge(newDuty, limitBase + discretion);
+  const breached: string[] = [];
+  if (newDuty > limitBase + discretion) breached.push(`FDP ${newDuty}h exceeds ${limitBase + discretion}h limit (simplified day-peak band)`);
+  if (newDuty > FTL_LIMITS.fdp_scheduled_ceiling_basic_h + discretion) breached.push("exceeds the 14h scheduled FDP ceiling");
+
+  // cascade: rest before the next FDP shrinks by the extension
+  const { data: nextFdp } = await db.from("flight_duty_periods").select("*")
+    .eq("crew_id", crewId).eq("type", "FDP").gt("date", day).order("date").limit(1).maybeSingle();
+  let cascade = { next_date: null as string | null, new_rest_h: null as number | null, rest_floor_h: FTL_LIMITS.rest_home_floor_h };
+  if (nextFdp) {
+    const newOff = new Date(fdp.off_duty_time as string).getTime() + (extraFlight + extraGround) * 3600000;
+    const rest = Math.round(((new Date(nextFdp.report_time as string).getTime() - newOff) / 3600000) * 100) / 100;
+    cascade = { next_date: nextFdp.date as string, new_rest_h: rest, rest_floor_h: FTL_LIMITS.rest_home_floor_h };
+    if (rest < FTL_LIMITS.rest_home_floor_h) breached.push(`rest before ${nextFdp.date} drops to ${rest}h (< ${FTL_LIMITS.rest_home_floor_h}h floor)`);
+  }
+  return json({
+    crew_employee_no: crew.employee_no, date: day, away_from_base: false,
+    original_flight_h: origFlight, original_duty_h: origDuty,
+    original_legality: (fdp.legality_state as string) ?? "LEGAL",
+    disrupted_flight_h: newFlight, disrupted_duty_h: newDuty,
+    disrupted_legality: breached.length ? (disruptedLegality === "LEGAL" ? "AT_LIMIT" : disruptedLegality) : disruptedLegality,
+    rules_breached: breached, cascade,
+    duty_day_key: null, aircraft_reg: null, captain_employee_no: null,
+  });
+}
+
+async function iropAlternatives(user: DbUser, req: Request): Promise<Response> {
+  const b = await readJson(req);
+  const day = String(need(b.date, "date"));
+  const role = String(need(b.role, "role")).toUpperCase();
+  const acType = String(need(b.aircraft_type, "aircraft_type")).toUpperCase();
+  const exclude = b.exclude_crew_id as string | undefined;
+  const [crews, ratings, currencies, fdps] = await Promise.all([
+    one<Record<string, unknown>[]>(
+      db.from("crew").select("*").eq("operator_id", user.operator_id).eq("active", true).eq("role", role),
+    ),
+    one<Record<string, unknown>[]>(db.from("crew_type_ratings").select("*").eq("operator_id", user.operator_id)),
+    one<Record<string, unknown>[]>(
+      db.from("crew_currencies").select("*").eq("operator_id", user.operator_id).eq("currency_type", "LANDINGS_90D"),
+    ),
+    one<Record<string, unknown>[]>(
+      db.from("flight_duty_periods").select("crew_id").eq("operator_id", user.operator_id).eq("date", day),
+    ),
+  ]);
+  const rated = new Set(
+    (ratings ?? []).filter((r) => r.aircraft_type === acType && (r.valid_until as string) >= day && (r.valid_from as string) <= day)
+      .map((r) => r.crew_id as string),
+  );
+  const landings = new Set(
+    (currencies ?? []).filter((c) => (c.expires_date as string) >= day).map((c) => c.crew_id as string),
+  );
+  const busy = new Set((fdps ?? []).map((f) => f.crew_id as string));
+  const out = (crews ?? [])
+    .filter((c) => c.id !== exclude)
+    .map((c) => {
+      const typeRated = rated.has(c.id as string);
+      const current = landings.has(c.id as string);
+      const free = !busy.has(c.id as string);
+      return {
+        crew_id: c.id, employee_no: c.employee_no, name: `${c.first_name} ${c.last_name}`,
+        role: c.role, type_rated: typeRated, landings_current: current, free,
+        available: typeRated && free,
+      };
+    })
+    .sort((a, b) => Number(b.available) - Number(a.available));
+  return json(out);
+}
+
 // ── dispatcher ──────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -1542,7 +1962,7 @@ Deno.serve(async (req: Request) => {
 
   if (path === "/healthz") return json({ status: "ok" });
   if (path === "/version") {
-    return json({ name: "Ratiba", version: "supabase-port-0.2.0", phase: "supabase-2" });
+    return json({ name: "Ratiba", version: "supabase-port-0.3.0", phase: "supabase-2.1" });
   }
   if (path === "/readyz") {
     const { error } = await db.from("alembic_version").select("version_num").limit(1);
@@ -1665,6 +2085,58 @@ Deno.serve(async (req: Request) => {
       }
       return json(out);
     }
+
+    // reports
+    if (path === "/api/v1/reports/fatigue" && m === "GET") return await fatigueReport(user, url);
+    if ((path === "/api/v1/reports/payroll" || path === "/api/v1/reports/payroll.csv") && m === "GET") {
+      return await payrollCsv(user, url);
+    }
+
+    // postings
+    if (path === "/api/v1/postings" || path === "/api/v1/postings/") {
+      if (m === "GET" || m === "POST") return await postings(user, req);
+    }
+    if (seg[2] === "postings" && isUuid(seg[3]) && seg[4] === "assign" && m === "POST") {
+      return await postingAssign(user, req, seg[3]);
+    }
+    if (seg[2] === "postings" && isUuid(seg[3]) && m === "GET") {
+      const p = await one<Record<string, unknown> | null>(
+        db.from("postings").select("*").eq("id", seg[3]).eq("operator_id", user.operator_id).maybeSingle(),
+      );
+      return p ? json(await postingOut(p)) : json({ detail: "posting not found" }, 404);
+    }
+
+    // constraints
+    if ((path === "/api/v1/constraints" || path === "/api/v1/constraints/") && m === "GET") {
+      return await constraintSets(user);
+    }
+    if (seg[2] === "constraints" && isUuid(seg[3]) && seg.length === 4 && m === "GET") {
+      return await constraintSetDetail(user, seg[3]);
+    }
+    if (seg[2] === "constraints" && isUuid(seg[3]) && seg[4] === "accept" && m === "POST") {
+      return await constraintAccept(user, seg[3]);
+    }
+
+    // audit packs (generation/download need PDF support — Phase 3)
+    if (path === "/api/v1/audit/packs" && m === "GET") {
+      const rows = await one<Record<string, unknown>[]>(
+        db.from("audit_packs").select("*").eq("operator_id", user.operator_id)
+          .order("created_at", { ascending: false }),
+      );
+      return json(rows ?? []);
+    }
+
+    // onboarding CSV imports
+    if (seg[2] === "onboarding" && m === "POST") {
+      const kind = seg[3] as "crew" | "type-ratings" | "currencies" | "historical-fdps";
+      if (["crew", "type-ratings", "currencies", "historical-fdps"].includes(kind)) {
+        return await onboardingImport(user, req, url, kind);
+      }
+    }
+
+    // IROP what-if
+    if (path === "/api/v1/irop/assess" && m === "POST") return await iropAssess(user, req);
+    if (path === "/api/v1/irop/alternatives" && m === "POST") return await iropAlternatives(user, req);
 
     // roster
     if (path === "/api/v1/roster" && m === "GET") return await rosterList(user, url);

@@ -25,7 +25,7 @@ jobs:
           eq() { [ "$1" = "$2" ] || fail "$3 (got $1, want $2)"; }
 
           eq "$(curl -s -o /dev/null -w '%{http_code}' $API/healthz)" 200 healthz
-          curl -s $API/version | grep -q supabase-2 || fail "version phase"
+          curl -s $API/version | grep -q supabase-2.1 || fail "version phase"
           eq "$(curl -s -o /dev/null -w '%{http_code}' $API/readyz)" 200 readyz
 
           # login -> cookie jar + CSRF token
@@ -49,6 +49,9 @@ jobs:
                    "training/type-ratings" "training/recurrency" "ftl/limits" \
                    "reference/aircraft-types" "reference/public-holidays" \
                    "leave" "swap" "settings/operator" "settings/account" \
+                   "reports/fatigue?date_from=2026-07-01&date_to=2026-07-31" \
+                   "postings" "constraints" "audit/packs" \
+                   "reports/payroll?date_from=2026-07-01&date_to=2026-07-31" \
                    "sectors?date_from=2026-07-01&date_to=2026-07-31" \
                    "duties?date_from=2026-07-01&date_to=2026-07-31" \
                    "roster?date_from=2026-07-01&date_to=2026-07-31"; do
@@ -155,6 +158,25 @@ jobs:
           curl -s "${H[@]}" -o /dev/null -X PATCH $API/api/v1/crew/$CREW_ID --data '{"active":false}'
           curl -s "${H[@]}" -o /dev/null -X PATCH $API/api/v1/crew/$FO_ID --data '{"active":false}'
           echo "WRITE FLOW OK"
+
+      - name: New page endpoints (postings + irop + onboarding)
+        run: |
+          set -e
+          fail() { echo "FAIL: $1"; cat /tmp/out 2>/dev/null; exit 1; }
+          H=(-b /tmp/jar -H "content-type: application/json" -H "x-csrf-token: $CSRF")
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/postings --data '{
+            "location_icao":"HTDA","country":"Tanzania","type":"ACMI_WET_LEASE",
+            "start_date":"2026-08-01","end_date":"2026-08-21","lessee_name":"Smoke Air"}')
+          [ "$code" = 201 ] || fail "posting create -> $code"
+          python3 -c "import json;p=json.load(open('/tmp/out'));print('posting', p['duration_days'], p['rotation_due'])"
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/irop/alternatives \
+            --data '{"date":"2026-07-20","role":"CAPT","aircraft_type":"C208"}')
+          [ "$code" = 200 ] || fail "irop alternatives -> $code"
+          printf 'employee_no,first_name,last_name,role,date_of_hire,date_of_birth,base_station,contract_type\nCSV-01,Import,Test,FO,2023-01-01,1994-04-04,HKJK,CONTRACT\n' > /tmp/crew.csv
+          code=$(curl -s -b /tmp/jar -H "x-csrf-token: $CSRF" -o /tmp/out -w '%{http_code}' \
+            -X POST "$API/api/v1/onboarding/crew?commit=false" -F file=@/tmp/crew.csv)
+          [ "$code" = 200 ] || fail "onboarding dry-run -> $code"
+          python3 -c "import json;r=json.load(open('/tmp/out'));assert r['inserted']==1 and not r['errors'], r;print('onboarding dry-run OK', r)"
 
       - name: Via Netlify proxy
         run: |
