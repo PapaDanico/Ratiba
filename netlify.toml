@@ -38,14 +38,7 @@
 # Redirects and rewrites
 # ─────────────────────────────────────────────────────────────────────────────
 
-# 1. SPA fallback: serve index.html for all non-asset routes
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = { status = [404] }
-
-# 2. API routes: forward to backend (matches /api/*)
+# 1. API routes: forward to backend (matches /api/*)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api-proxy/:splat"
@@ -64,6 +57,16 @@
   to = "/.netlify/functions/api-proxy"
   status = 200
   force = true
+
+# 3. SPA fallback — MUST be last and unconditional. An unforced 200 rewrite
+# only applies when no published file matches, so assets still serve
+# directly. (A previous version used `conditions = { status = [404] }`,
+# which Netlify does not support — the rule never matched and every deep
+# link / page refresh returned a 404.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 # Security headers
 # ─────────────────────────────────────────────────────────────────────────────
