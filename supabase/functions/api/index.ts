@@ -19,6 +19,7 @@ import * as jose from "npm:jose@5";
 import bcrypt from "npm:bcryptjs@2";
 import {
   aggregateVerdicts,
+  allRuleIds,
   applyOverrides,
   checkFdp,
   type FdpHistoryEntry,
@@ -26,6 +27,7 @@ import {
   LIMITS as FTL_BASELINE,
   type Limits,
 } from "./ftl.ts";
+import { type AuditFdpRow, buildAuditPackPdf, sha256Hex } from "./pdf.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1784,6 +1786,127 @@ async function postingAssign(user: DbUser, req: Request, postingId: string): Pro
   return json(await postingOut(posting));
 }
 
+// ── audit packs ─────────────────────────────────────────────────────────────
+// PDFs are regenerated deterministically from the DB on every download; only
+// the SHA-256 is stored. verify recomputes the hash, so a mismatch means the
+// underlying roster data changed after the pack was generated.
+
+// deno-lint-ignore no-explicit-any
+async function auditPackInputs(user: DbUser, pack: Record<string, any>) {
+  const [{ data: op }, { data: fdps }, { data: crews }] = await Promise.all([
+    db.from("operators").select("name").eq("id", user.operator_id).maybeSingle(),
+    db.from("flight_duty_periods")
+      .select("date, crew_id, report_time, off_duty_time, duty_hours, sectors_count, legality_state, ftl_rules_applied")
+      .eq("operator_id", user.operator_id).eq("type", "FDP")
+      .gte("date", pack.period_from).lte("date", pack.period_to)
+      .order("date").order("crew_id"),
+    db.from("crew").select("id, employee_no, first_name, last_name").eq("operator_id", user.operator_id),
+  ]);
+  const label: Record<string, string> = {};
+  for (const c of crews ?? []) label[c.id] = `${c.last_name}, ${c.first_name} (${c.employee_no})`;
+  const rows: AuditFdpRow[] = (fdps ?? []).map((f) => ({
+    date: f.date as string,
+    crew_label: label[f.crew_id as string] ?? f.crew_id as string,
+    report_time: f.report_time as string | null,
+    off_duty_time: f.off_duty_time as string | null,
+    duty_hours: Number(f.duty_hours ?? 0),
+    sectors_count: Number(f.sectors_count ?? 0),
+    legality_state: (f.legality_state ?? "LEGAL") as string,
+    worst_rule: ((f.ftl_rules_applied ?? [])[0] ?? "") as string,
+  })).sort((a, b) => a.date.localeCompare(b.date) || a.crew_label.localeCompare(b.crew_label));
+  const crewIds = new Set((fdps ?? []).map((f) => f.crew_id as string));
+  return {
+    rows,
+    crewCount: crewIds.size,
+    anomalies: rows.filter((r) => r.legality_state !== "LEGAL").length,
+    operatorName: (op?.name as string | undefined) ?? "Operator",
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function auditPackBytes(user: DbUser, pack: Record<string, any>): Promise<Uint8Array> {
+  const { rows, operatorName } = await auditPackInputs(user, pack);
+  return await buildAuditPackPdf({
+    id: pack.id,
+    operator_name: operatorName,
+    period_from: pack.period_from,
+    period_to: pack.period_to,
+    created_at: pack.created_at,
+    generator_version: pack.generator_version,
+    rule_ids: allRuleIds(),
+    crew_count: pack.crew_count ?? 0,
+    fdp_count: pack.fdp_count ?? 0,
+    anomaly_count: pack.anomaly_count ?? 0,
+  }, rows);
+}
+
+async function auditGenerate(user: DbUser, req: Request): Promise<Response> {
+  requireWriter(user);
+  const b = await readJson(req);
+  const from = String(need(b.period_from, "period_from"));
+  const to = String(need(b.period_to, "period_to"));
+  if (from > to) return json({ detail: "period_from must not be after period_to" }, 422);
+  const pack = {
+    id: crypto.randomUUID(),
+    operator_id: user.operator_id,
+    created_by_user_id: user.id,
+    period_from: from,
+    period_to: to,
+    created_at: new Date().toISOString(),
+    generator_version: "supabase-port-0.4.0",
+    storage_path: "",
+    sha256_hex: "",
+    byte_size: 0,
+    crew_count: 0,
+    fdp_count: 0,
+    anomaly_count: 0,
+  };
+  const { rows, crewCount, anomalies } = await auditPackInputs(user, pack);
+  pack.crew_count = crewCount;
+  pack.fdp_count = rows.length;
+  pack.anomaly_count = anomalies;
+  pack.storage_path = `regenerated://audit/${pack.id}.pdf`;
+  const bytes = await auditPackBytes(user, pack);
+  pack.sha256_hex = await sha256Hex(bytes);
+  pack.byte_size = bytes.length;
+  const { error } = await db.from("audit_packs").insert(pack);
+  if (error) return json({ detail: error.message }, 422);
+  await auditLog(user.operator_id, user.id, "GENERATE_AUDIT_PACK", "audit_pack", pack.id, null, {
+    period_from: from, period_to: to, fdp_count: pack.fdp_count,
+  });
+  return json(pack, 201);
+}
+
+// deno-lint-ignore no-explicit-any
+async function loadPack(user: DbUser, packId: string): Promise<Record<string, any> | null> {
+  const { data } = await db.from("audit_packs").select("*")
+    .eq("id", packId).eq("operator_id", user.operator_id).maybeSingle();
+  return data;
+}
+
+async function auditPackVerify(user: DbUser, packId: string): Promise<Response> {
+  const pack = await loadPack(user, packId);
+  if (!pack) return json({ detail: "audit pack not found" }, 404);
+  const actual = await sha256Hex(await auditPackBytes(user, pack));
+  return json({
+    verified: actual === pack.sha256_hex,
+    expected_sha256: pack.sha256_hex,
+    actual_sha256: actual,
+  });
+}
+
+async function auditPackDownload(user: DbUser, packId: string): Promise<Response> {
+  const pack = await loadPack(user, packId);
+  if (!pack) return json({ detail: "audit pack not found" }, 404);
+  const bytes = await auditPackBytes(user, pack);
+  return new Response(bytes as BodyInit, {
+    headers: {
+      "content-type": "application/pdf",
+      "content-disposition": `attachment; filename="audit-pack-${pack.period_from}_${pack.period_to}.pdf"`,
+    },
+  });
+}
+
 // ── constraints ─────────────────────────────────────────────────────────────
 
 function constraintSummary(s: Record<string, unknown>, ruleCount: number) {
@@ -2205,13 +2328,20 @@ Deno.serve(async (req: Request) => {
       return await constraintAccept(user, seg[3]);
     }
 
-    // audit packs (generation/download need PDF support — Phase 3)
+    // audit packs
     if (path === "/api/v1/audit/packs" && m === "GET") {
       const rows = await one<Record<string, unknown>[]>(
         db.from("audit_packs").select("*").eq("operator_id", user.operator_id)
           .order("created_at", { ascending: false }),
       );
       return json(rows ?? []);
+    }
+    if (path === "/api/v1/audit/generate" && m === "POST") return await auditGenerate(user, req);
+    if (seg[2] === "audit" && seg[3] === "packs" && isUuid(seg[4]) && seg[5] === "verify" && m === "GET") {
+      return await auditPackVerify(user, seg[4]);
+    }
+    if (seg[2] === "audit" && seg[3] === "packs" && isUuid(seg[4]) && seg[5] === "download" && m === "GET") {
+      return await auditPackDownload(user, seg[4]);
     }
 
     // onboarding CSV imports
