@@ -293,6 +293,7 @@ const AIRCRAFT_TYPES: [string, string, string, string, number][] = [
   ["F70", "Fokker", "70", "regional_jet", 79],
   ["F28", "Fokker", "F28 Fellowship", "regional_jet", 65],
   ["B733", "Boeing", "737-300", "narrowbody", 140],
+  ["B734", "Boeing", "737-400", "narrowbody", 150],
   ["B738", "Boeing", "737-800", "narrowbody", 162],
   ["B737", "Boeing", "737-700", "narrowbody", 130],
   ["B732", "Boeing", "737-200", "narrowbody", 120],
@@ -2761,7 +2762,7 @@ async function crewMonthlyRosterPdf(
   const crew = await one<Record<string, unknown> | null>(
     db
       .from("crew")
-      .select("id, employee_no, first_name, last_name, role")
+      .select("id, employee_no, first_name, last_name, role, base_station")
       .eq("id", crewId)
       .eq("operator_id", user.operator_id)
       .maybeSingle(),
@@ -2769,7 +2770,7 @@ async function crewMonthlyRosterPdf(
   if (!crew) return json({ detail: "crew not found" }, 404);
   const { data: op } = await db
     .from("operators")
-    .select("name")
+    .select("name, aoc_number")
     .eq("id", user.operator_id)
     .maybeSingle();
 
@@ -2777,10 +2778,10 @@ async function crewMonthlyRosterPdf(
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  const [{ data: fdps }, { data: sas }] = await Promise.all([
+  const [{ data: fdps }, { data: sas }, { data: leaves }] = await Promise.all([
     db
       .from("flight_duty_periods")
-      .select("date, type, legality_state")
+      .select("date, type, legality_state, duty_hours, flight_hours")
       .eq("operator_id", user.operator_id)
       .eq("crew_id", crewId)
       .gte("date", from)
@@ -2795,6 +2796,14 @@ async function crewMonthlyRosterPdf(
       .eq("crew_id", crewId)
       .gte("sectors.date", from)
       .lte("sectors.date", to),
+    db
+      .from("leave_requests")
+      .select("date_from, date_to")
+      .eq("operator_id", user.operator_id)
+      .eq("crew_id", crewId)
+      .eq("status", "APPROVED")
+      .lte("date_from", to)
+      .gte("date_to", from),
   ]);
 
   const sectorsByDate: Record<string, CrewRosterDay["sectors"]> = {};
@@ -2813,17 +2822,40 @@ async function crewMonthlyRosterPdf(
     date: f.date as string,
     type: f.type as string,
     legality_state: (f.legality_state as string | null) ?? null,
+    duty_hours: Number(f.duty_hours ?? 0),
+    flight_hours: Number(f.flight_hours ?? 0),
     sectors: (sectorsByDate[f.date as string] ?? []).sort((a, b) =>
       a.std.localeCompare(b.std),
     ),
   }));
+  const fdpDates = new Set(days.map((d) => d.date));
+  for (const lv of leaves ?? []) {
+    let cur = new Date((lv.date_from as string) + "T00:00:00Z");
+    const end = new Date((lv.date_to as string) + "T00:00:00Z");
+    while (cur <= end) {
+      const iso = cur.toISOString().slice(0, 10);
+      if (iso >= from && iso <= to && !fdpDates.has(iso)) {
+        days.push({
+          date: iso,
+          type: "LEAVE",
+          legality_state: null,
+          duty_hours: 0,
+          flight_hours: 0,
+          sectors: [],
+        });
+      }
+      cur = new Date(cur.getTime() + 86_400_000);
+    }
+  }
 
   const bytes = await buildCrewRosterPdf(
     {
       operator_name: (op?.name as string | undefined) ?? "Operator",
+      operator_aoc: (op?.aoc_number as string | undefined) ?? null,
       crew_name: `${crew.first_name} ${crew.last_name}`,
       employee_no: crew.employee_no as string,
       role: crew.role as string,
+      base_station: (crew.base_station as string | undefined) ?? null,
       year,
       month,
       generated_at: new Date().toISOString(),
