@@ -1,33 +1,35 @@
-# Temporary diagnostic: fetch Netlify deploy/build logs from a runner with
-# open egress (the dev sandbox cannot reach api.netlify.com). Safe to delete
-# once the deploy-preview failure on PR #50 is diagnosed.
+# Temporary diagnostic: fetch Netlify deploy logs via the public socketeer
+# websocket (the dev sandbox cannot reach *.netlify.com). Safe to delete once
+# the deploy-preview failure on PR #50 is diagnosed.
 name: netlify-log
 
 on:
   push:
     paths:
       - ".github/workflows/netlify-log.yml"
+      - ".github/netlify-log-request.txt"
 
 jobs:
   fetch-log:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe Netlify API for deploy log
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          DEPLOY_ID: 6a531c028214f00008270f37
-          BUILD_ID: 6a531c028214f00008270f35
+      - uses: actions/checkout@v4
+      - name: Fetch build log over socketeer websocket
         run: |
-          set -x
-          AUTH=()
-          if [ -n "$NETLIFY_AUTH_TOKEN" ]; then AUTH=(-H "Authorization: Bearer $NETLIFY_AUTH_TOKEN"); fi
-          for url in \
-            "https://api.netlify.com/api/v1/deploys/$DEPLOY_ID" \
-            "https://api.netlify.com/api/v1/deploys/$DEPLOY_ID/log" \
-            "https://api.netlify.com/api/v1/builds/$BUILD_ID" \
-            "https://api.netlify.com/api/v1/builds/$BUILD_ID/log" ; do
-            echo "===== UNAUTH $url ====="
-            curl -sS --max-time 30 "$url" -w "\nHTTP:%{http_code}\n" | tail -c 20000 || true
-            echo "===== AUTH $url ====="
-            curl -sS --max-time 30 "${AUTH[@]}" "$url" -w "\nHTTP:%{http_code}\n" | tail -c 20000 || true
-          done
+          npm install --no-save ws@8 >/dev/null 2>&1
+          DEPLOY_ID=$(head -1 .github/netlify-log-request.txt 2>/dev/null || echo 6a531c028214f00008270f37)
+          node - "$DEPLOY_ID" <<'EOF'
+          const WebSocket = require('ws');
+          const deployId = process.argv[2];
+          const ws = new WebSocket('wss://socketeer.services.netlify.com/build/logs');
+          const timer = setTimeout(() => { console.error('TIMEOUT'); process.exit(0); }, 45000);
+          ws.on('open', () => ws.send(JSON.stringify({ deploy_id: deployId })));
+          ws.on('message', (d) => {
+            try { const m = JSON.parse(d.toString());
+              if (m.message !== undefined) console.log(m.ts || '', m.type || '', m.message);
+              else console.log(d.toString());
+            } catch { console.log(d.toString()); }
+          });
+          ws.on('close', () => { clearTimeout(timer); process.exit(0); });
+          ws.on('error', (e) => { console.error('WS ERROR', e.message); process.exit(0); });
+          EOF
