@@ -58,7 +58,9 @@ export async function buildAuditPackPdf(meta: AuditPackMeta, rows: AuditFdpRow[]
   text(meta.operator_name, 14, bold);
   y -= 6;
   text(`Period: ${meta.period_from} to ${meta.period_to}`, 11, font);
-  text(`Generated: ${meta.created_at}   Pack ID: ${meta.id}`, 9, font);
+  // Normalised so the string is identical whether created_at comes from the
+  // in-memory pack (…Z) or back from Postgres (…+00:00) — determinism.
+  text(`Generated: ${created.toISOString()}   Pack ID: ${meta.id}`, 9, font);
   text(`Generator: Ratiba ${meta.generator_version}`, 9, font);
   y -= 10;
   text(`Crew covered: ${meta.crew_count}    FDPs evaluated: ${meta.fdp_count}    Anomalies: ${meta.anomaly_count}`, 11, bold);
