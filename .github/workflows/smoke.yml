@@ -112,6 +112,14 @@ jobs:
             --data "{\"registration\":\"5Y-SM$(( TS % 100 ))\",\"aircraft_type\":\"C208\"}")
           [ "$code" = 201 ] || [ "$code" = 409 ] || fail "fleet add -> $code"
 
+          # fleet delete round-trip (unused aircraft, own registration)
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/fleet \
+            --data "{\"registration\":\"SMKDEL$TS\",\"aircraft_type\":\"C208\"}")
+          [ "$code" = 201 ] || fail "fleet delete-target create -> $code"
+          DEL_ID=$(python3 -c "import json;print(json.load(open('/tmp/out'))['id'])")
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X DELETE $API/api/v1/fleet/$DEL_ID)
+          [ "$code" = 204 ] || fail "fleet delete -> $code"
+
           # recurring sectors next week (unique flight no)
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/sectors/recurring --data "{
             \"flight_no\":\"SMK$TS\",\"origin\":\"HKJK\",\"destination\":\"HKML\",
