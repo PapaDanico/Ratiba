@@ -19,7 +19,7 @@ Exact hex values from the DN Consultancy reference site
 | `DN_GOLD_LT`  | `#FFF8E6` | Callout panels                            |
 | `DN_FOG`      | `#F4F4F2` | Page background — light fog               |
 | `DN_SAND`     | `#ECECE9` | Card header tint — a step deeper than fog |
-| `DN_MUTED`    | `#6B7280` | Body text, captions                       |
+| `DN_MUTED`    | `#5B6472` | Body text, captions (darkened for WCAG AA) |
 | `DN_GREEN`    | `#1E8449` | Compliant / positive                      |
 | `DN_RED`      | `#C0392B` | Alerts / critical                         |
 | `DN_AMBER`    | `#D4AC0D` | Watch items                               |

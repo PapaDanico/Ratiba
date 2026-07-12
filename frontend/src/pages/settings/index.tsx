@@ -218,7 +218,7 @@ export function SettingsPage() {
           <form onSubmit={save} className="space-y-4 max-w-xl">
             <div>
               <Label>AOC number</Label>
-              <Input value={op.aoc_number} disabled />
+              <Input value={op.aoc_number} disabled aria-label="AOC number" />
             </div>
             <div>
               <Label htmlFor="name">Name</Label>
@@ -295,7 +295,7 @@ export function SettingsPage() {
 
             {error && <ErrorAlert message={error} />}
             {saved && (
-              <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green">
+              <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green-deep">
                 Saved.
               </div>
             )}

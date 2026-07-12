@@ -187,7 +187,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                                     ? setConfirmDeactivate(m)
                                     : patch(m.id, { is_active: true })
                                 }
-                                className="text-dn-steel underline text-xs hover:text-dn-dark"
+                                className="text-dn-steel-deep underline text-xs hover:text-dn-dark"
                                 data-testid={`toggle-${m.email}`}
                               >
                                 {m.is_active ? "Deactivate" : "Reactivate"}
@@ -264,7 +264,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
             </div>
             {inviteErr && <ErrorAlert message={inviteErr} />}
             {inviteOk && (
-              <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green">
+              <div className="rounded border border-dn-green/30 bg-dn-green/5 px-3 py-2 text-sm text-dn-green-deep">
                 {inviteOk}
               </div>
             )}

@@ -27,7 +27,7 @@ export function ShareButtons({
   const smsHref = `sms:${smsPhone}?&body=${body}`;
   const emailHref = `mailto:${email ?? ""}?subject=${encodeURIComponent(subject)}&body=${body}`;
   const cls =
-    "rounded border border-dn-steel-lt px-1 py-1 text-center text-[11px] text-dn-steel " +
+    "rounded border border-dn-steel-lt px-1 py-1 text-center text-[11px] text-dn-steel-deep " +
     "hover:border-dn-gold hover:text-dn-dark";
 
   return (

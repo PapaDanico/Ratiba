@@ -76,7 +76,7 @@ function CrossOpFtlButton({ crew }: { crew: Crew }) {
       <button
         type="button"
         onClick={load}
-        className="text-dn-steel underline text-xs hover:text-dn-dark"
+        className="text-dn-steel-deep underline text-xs hover:text-dn-dark"
         data-testid={`xop-ftl-${crew.employee_no}`}
       >
         Cross-op FTL
@@ -459,7 +459,7 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
                 testidPrefix={`pair-share-${crew.id}`}
               />
               <p className="text-[10px] text-dn-muted">
-                Or dictate the code <span className="font-mono text-dn-steel">{code}</span>
+                Or dictate the code <span className="font-mono text-dn-steel-deep">{code}</span>
                 {expiresAt ? ` · expires ${new Date(expiresAt).toLocaleString()}` : ""}
               </p>
             </>
@@ -544,7 +544,7 @@ export function CrewPage() {
               <tbody className="divide-y divide-dn-steel-lt">
                 {visibleRows.map((c) => (
                   <tr key={c.id} className="group transition-colors hover:bg-dn-fog">
-                    <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel">
+                    <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel-deep">
                       {c.employee_no}
                     </td>
                     <td data-label="Name" className="py-3 pr-4 text-dn-dark">

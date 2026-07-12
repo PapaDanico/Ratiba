@@ -122,7 +122,7 @@ export function LoginPage() {
           <div className="flex items-center gap-3">
             <DnLogo showText={true} width={200} />
           </div>
-          <p className="mt-4 text-dn-steel text-lg font-light max-w-xs leading-relaxed">
+          <p className="mt-4 text-dn-steel-deep text-lg font-light max-w-xs leading-relaxed">
             Intelligent crew rostering for East African aviation
           </p>
         </div>
@@ -130,7 +130,7 @@ export function LoginPage() {
         {/* Key benefits — bottom */}
         <div className="relative z-10 space-y-6">
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
               ✓
             </div>
             <div>
@@ -139,7 +139,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
               ✓
             </div>
             <div>
@@ -148,7 +148,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel font-bold">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
               ✓
             </div>
             <div>
@@ -187,8 +187,8 @@ export function LoginPage() {
                   }}
                   className={`flex-1 py-2.5 font-medium transition-colors ${
                     mode === "signin"
-                      ? "bg-dn-steel text-white shadow-sm"
-                      : "bg-transparent text-dn-steel hover:text-dn-dark"
+                      ? "bg-dn-steel-deep text-white shadow-sm"
+                      : "bg-transparent text-dn-steel-deep hover:text-dn-dark"
                   }`}
                   data-testid="tab-signin"
                 >
@@ -202,8 +202,8 @@ export function LoginPage() {
                   }}
                   className={`flex-1 py-2.5 font-medium transition-colors ${
                     mode === "create"
-                      ? "bg-dn-steel text-white shadow-sm"
-                      : "bg-transparent text-dn-steel hover:text-dn-dark"
+                      ? "bg-dn-steel-deep text-white shadow-sm"
+                      : "bg-transparent text-dn-steel-deep hover:text-dn-dark"
                   }`}
                   data-testid="tab-create"
                 >
@@ -272,7 +272,7 @@ export function LoginPage() {
                         setMode("create");
                         setError(null);
                       }}
-                      className="text-dn-steel hover:underline"
+                      className="text-dn-steel-deep hover:underline"
                     >
                       Create one
                     </button>

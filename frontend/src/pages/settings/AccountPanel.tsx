@@ -154,7 +154,7 @@ export function AccountPanel() {
               />
             </div>
             {nameErr && <p className="text-sm text-dn-red">{nameErr}</p>}
-            {nameOk && <p className="text-sm text-dn-green">Saved.</p>}
+            {nameOk && <p className="text-sm text-dn-green-deep">Saved.</p>}
             <Button type="submit" disabled={savingName} data-testid="account-name-save">
               {savingName ? "Saving…" : "Save profile"}
             </Button>
@@ -208,7 +208,7 @@ export function AccountPanel() {
               />
             </div>
             {pwErr && <p className="text-sm text-dn-red">{pwErr}</p>}
-            {pwOk && <p className="text-sm text-dn-green">Password changed.</p>}
+            {pwOk && <p className="text-sm text-dn-green-deep">Password changed.</p>}
             <Button type="submit" disabled={savingPw} data-testid="pw-save">
               {savingPw ? "Changing…" : "Change password"}
             </Button>

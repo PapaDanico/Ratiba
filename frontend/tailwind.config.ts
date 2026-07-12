@@ -16,7 +16,7 @@ const config: Config = {
 
           // Text
           dark: "#1C1C1C", // --dn-dark
-          muted: "#6B7280", // --dn-muted
+          muted: "#5B6472", // --dn-muted, darkened for WCAG AA on tinted surfaces
 
           // Primary accent — DN steel blue
           steel: "#4A7FA5", // --dn-steel / --accent
@@ -33,8 +33,10 @@ const config: Config = {
 
           // Status
           green: "#1E8449", // --dn-green
+          "green-deep": "#166437", // readable green text on light tints
           red: "#C0392B", // --dn-red
           amber: "#D4AC0D", // --dn-amber
+          "amber-deep": "#7A5C00", // readable amber text on light tints
 
           // Dark nav surface (legacy lava) — brand dark
           lava: "#1C1C1C",

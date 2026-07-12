@@ -49,7 +49,7 @@ export function AppShell() {
     <div className="min-h-screen flex flex-col bg-white">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-dn-steel focus:px-3 focus:py-2 focus:text-sm focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-dn-steel-deep focus:px-3 focus:py-2 focus:text-sm focus:text-white"
       >
         Skip to content
       </a>
@@ -67,7 +67,7 @@ export function AppShell() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-dn-steel hover:text-dn-dark hover:bg-dn-steel-lt/30"
+              className="text-dn-steel-deep hover:text-dn-dark hover:bg-dn-steel-lt/30"
               onClick={signOut}
             >
               Sign out
@@ -77,7 +77,7 @@ export function AppShell() {
           {/* Mobile: hamburger toggle */}
           <button
             type="button"
-            className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-md text-dn-steel hover:bg-dn-steel-lt/30"
+            className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-md text-dn-steel-deep hover:bg-dn-steel-lt/30"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
@@ -122,7 +122,7 @@ export function AppShell() {
                 cn(
                   "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
                   isActive
-                    ? "border-dn-steel text-dn-steel"
+                    ? "border-dn-steel text-dn-steel-deep"
                     : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-steel-lt",
                 )
               }
@@ -148,7 +148,7 @@ export function AppShell() {
                     cn(
                       "block px-5 py-3 text-base border-l-4 transition-colors",
                       isActive
-                        ? "border-dn-steel text-dn-steel bg-dn-steel-lt/10"
+                        ? "border-dn-steel text-dn-steel-deep bg-dn-steel-lt/10"
                         : "border-transparent text-dn-muted hover:text-dn-dark hover:bg-dn-steel-lt/5",
                     )
                   }
@@ -163,7 +163,7 @@ export function AppShell() {
                 <button
                   type="button"
                   onClick={signOut}
-                  className="text-sm text-dn-steel hover:text-dn-dark underline shrink-0"
+                  className="text-sm text-dn-steel-deep hover:text-dn-dark underline shrink-0"
                 >
                   Sign out
                 </button>
@@ -189,11 +189,11 @@ export function AppShell() {
             DN Consultancy · Aligned with the KCAA Flight Duty Time Scheme &amp; ICAO Annex 6
           </p>
           <div className="flex justify-center gap-4">
-            <NavLink to="/privacy" className="hover:text-dn-steel underline">
+            <NavLink to="/privacy" className="hover:text-dn-steel-deep underline">
               Privacy Policy
             </NavLink>
             <span>·</span>
-            <NavLink to="/terms" className="hover:text-dn-steel underline">
+            <NavLink to="/terms" className="hover:text-dn-steel-deep underline">
               Terms of Use
             </NavLink>
           </div>

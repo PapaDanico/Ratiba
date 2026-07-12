@@ -92,6 +92,7 @@ function RecurrencySection() {
             <Select
               value={withinDays}
               onChange={(e) => setWithinDays(Number(e.target.value))}
+              aria-label="Recurrency window"
               data-testid="recurrency-window"
               className="w-auto"
             >

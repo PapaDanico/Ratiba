@@ -4,10 +4,10 @@ import { cn } from "@/lib/cn";
 type Tone = "green" | "amber" | "red" | "steel" | "gold" | "neutral";
 
 const toneClasses: Record<Tone, string> = {
-  green: "bg-dn-green/10 text-dn-green border-dn-green/30",
-  amber: "bg-dn-savanna-lt text-dn-savanna border-dn-savanna/40",
+  green: "bg-dn-green/10 text-dn-green-deep border-dn-green/30",
+  amber: "bg-dn-savanna-lt text-dn-amber-deep border-dn-gold/60",
   red: "bg-dn-red/10 text-dn-red border-dn-red/30",
-  steel: "bg-dn-steel-lt text-dn-steel border-dn-steel/30",
+  steel: "bg-dn-steel-lt text-dn-steel-deep border-dn-steel/30",
   gold: "bg-dn-gold-lt text-dn-dark border-dn-gold/60",
   neutral: "bg-dn-sand/60 text-dn-muted border-dn-muted/20",
 };

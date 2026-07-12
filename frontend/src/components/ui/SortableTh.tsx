@@ -22,7 +22,7 @@ export function SortableTh<K extends string>({
     >
       {label}
       {active ? (
-        <span className="ml-1 text-dn-steel">{sort!.dir === "asc" ? "▲" : "▼"}</span>
+        <span className="ml-1 text-dn-steel-deep">{sort!.dir === "asc" ? "▲" : "▼"}</span>
       ) : (
         <span className="ml-1 text-dn-muted/40">↕</span>
       )}

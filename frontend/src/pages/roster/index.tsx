@@ -561,6 +561,7 @@ export function RosterPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="date"
+                  aria-label="Roster range from"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
                   className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
@@ -569,6 +570,7 @@ export function RosterPage() {
                 <span>→</span>
                 <input
                   type="date"
+                  aria-label="Roster range to"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
                   className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
@@ -580,6 +582,7 @@ export function RosterPage() {
                 <span className="text-xs text-dn-muted">Holidays:</span>
                 <Select
                   value={holidayCountry}
+                  aria-label="Public-holiday country"
                   onChange={(e) => setHolidayCountry(e.target.value)}
                   className="rounded-md text-xs font-mono"
                   data-testid="holiday-country-select"
@@ -683,7 +686,7 @@ export function RosterPage() {
                           data-testid={`crew-chip-${c.employee_no}`}
                           title={`${c.first_name} ${c.last_name} · ${c.role}`}
                         >
-                          <span className="font-mono text-dn-steel">{c.employee_no}</span>{" "}
+                          <span className="font-mono text-dn-steel-deep">{c.employee_no}</span>{" "}
                           {c.first_name} {c.last_name}
                           <span className="ml-1 text-[10px] text-dn-muted">{c.role}</span>
                         </span>
@@ -706,7 +709,7 @@ export function RosterPage() {
                           : "bg-dn-fog border-dn-steel-lt",
                       ].join(" ")}
                     >
-                      <div className="font-mono text-xs text-dn-steel mb-1">{d}</div>
+                      <div className="font-mono text-xs text-dn-steel-deep mb-1">{d}</div>
                       {holidayName && (
                         <div
                           className="text-xs font-medium text-amber-700 mb-1 truncate"
@@ -768,7 +771,7 @@ export function RosterPage() {
                                       ].join(" ")}
                                       data-testid={`slot-${role}-${a.duty_day_key}`}
                                     >
-                                      <span className="text-[10px] font-semibold text-dn-steel">
+                                      <span className="text-[10px] font-semibold text-dn-steel-deep">
                                         {role}
                                       </span>
                                       <span
@@ -801,7 +804,7 @@ export function RosterPage() {
                                 <button
                                   type="button"
                                   onClick={() => setEditing(a)}
-                                  className="text-dn-steel underline text-xs"
+                                  className="text-dn-steel-deep underline text-xs"
                                   data-testid={`amend-btn-${a.duty_day_key}`}
                                 >
                                   amend

@@ -9,7 +9,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 const TONE_CLASS: Record<Tone, string> = {
   success: "bg-dn-green text-white",
   error: "bg-dn-red text-white",
-  info: "bg-dn-steel text-white",
+  info: "bg-dn-steel-deep text-white",
 };
 
 /** App-wide transient feedback. Toasts auto-dismiss after 4s and are announced

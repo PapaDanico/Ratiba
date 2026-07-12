@@ -4,3 +4,7 @@ node_modules
 playwright-report
 test-results
 package-lock.json
+# html-validate (Netlify UI plugin) rejects self-closing void elements that
+# prettier enforces; index.html is kept hand-formatted to satisfy html-validate
+index.html
+.netlify

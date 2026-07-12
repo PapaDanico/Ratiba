@@ -155,8 +155,8 @@ export function ImportPage() {
                 className={[
                   "px-3 py-1.5 rounded-md text-sm border",
                   k.key === kindKey
-                    ? "bg-dn-steel text-white border-dn-steel"
-                    : "bg-white text-dn-steel border-dn-steel-lt",
+                    ? "bg-dn-steel-deep text-white border-dn-steel"
+                    : "bg-white text-dn-steel-deep border-dn-steel-lt",
                 ].join(" ")}
                 data-testid={`import-kind-${k.key}`}
               >
@@ -186,6 +186,7 @@ export function ImportPage() {
             <input
               ref={fileRef}
               type="file"
+              aria-label="CSV file"
               accept=".csv,text/csv"
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);
