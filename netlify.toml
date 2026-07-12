@@ -19,6 +19,17 @@
   [plugins.inputs]
     on404 = "warn"  # Warn instead of error
 
+# netlify-plugin-fetch-feeds was installed via the Netlify UI with no inputs,
+# which hard-fails every build ("Required inputs: dataDir, feeds"). Config
+# entries override UI inputs, so this no-op config unbreaks builds. Remove
+# this block once the plugin is uninstalled in the Netlify UI
+# (Project configuration → Build → Build plugins).
+[[plugins]]
+  package = "netlify-plugin-fetch-feeds"
+  [plugins.inputs]
+    dataDir = "netlify-feeds"
+    feeds = []
+
 # Environment variables (set these in Netlify UI or via CLI)
 [build.environment]
   # Default to Render backend; override in Netlify dashboard if different

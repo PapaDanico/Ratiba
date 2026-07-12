@@ -61,3 +61,6 @@ backend/audit_packs/
 *.sql
 ratiba_backup_*.sql
 dump.rdb
+
+# Netlify CLI local build artifacts
+.netlify/
