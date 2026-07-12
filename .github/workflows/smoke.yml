@@ -97,6 +97,16 @@ jobs:
             --data '{"currency_type":"OPC","last_completed_date":"2026-06-01","expires_date":"2027-06-01"}')
           [ "$code" = 201 ] || fail "currency -> $code"
 
+          # crew document round-trip
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/documents/crew/$CREW_ID \
+            --data '{"doc_type":"LICENCE","issuing_authority":"KCAA","expiry_date":"2027-01-01"}')
+          [ "$code" = 201 ] || fail "document create -> $code"
+          DOC_ID=$(python3 -c "import json;d=json.load(open('/tmp/out'));assert d['state']=='GREEN', d;print(d['id'])")
+          curl -s -b /tmp/jar $API/api/v1/documents -o /tmp/out
+          python3 -c "import json;assert any(d['id']=='$DOC_ID' for d in json.load(open('/tmp/out')))"
+          code=$(curl -s "${H[@]}" -o /dev/null -w '%{http_code}' -X DELETE $API/api/v1/documents/$DOC_ID)
+          [ "$code" = 204 ] || fail "document delete -> $code"
+
           # fleet add
           code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/fleet \
             --data "{\"registration\":\"5Y-SM$(( TS % 100 ))\",\"aircraft_type\":\"C208\"}")
