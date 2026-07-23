@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/cn";
+import { Button } from "./Button";
 
 type EmptyStateProps = {
   /** Short headline, e.g. "No crew yet". */
@@ -8,6 +10,8 @@ type EmptyStateProps = {
   hint?: ReactNode;
   /** Single-glyph icon (emoji or node). Defaults to a calm dotted circle. */
   icon?: ReactNode;
+  /** Optional next step — a button that takes the user where the data comes from. */
+  action?: { label: string; to: string };
   className?: string;
 };
 
@@ -16,7 +20,7 @@ type EmptyStateProps = {
  * guidance, instead of a bare muted sentence. Keeps the grid feeling finished
  * when there's no data yet.
  */
-export function EmptyState({ title, hint, icon = "🗒️", className }: EmptyStateProps) {
+export function EmptyState({ title, hint, icon = "🗒️", action, className }: EmptyStateProps) {
   return (
     <div
       className={cn("flex flex-col items-center justify-center px-6 py-10 text-center", className)}
@@ -30,6 +34,13 @@ export function EmptyState({ title, hint, icon = "🗒️", className }: EmptySt
       </div>
       <p className="font-display text-lg text-dn-dark">{title}</p>
       {hint && <p className="mt-1 max-w-sm text-sm text-dn-muted">{hint}</p>}
+      {action && (
+        <Link to={action.to} className="mt-4">
+          <Button size="sm" variant="secondary">
+            {action.label}
+          </Button>
+        </Link>
+      )}
     </div>
   );
 }

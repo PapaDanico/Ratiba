@@ -518,7 +518,8 @@ export function CrewPage() {
           <EmptyState
             icon="👥"
             title="No crew yet"
-            hint="Import your roster via the Import page, or add crew through the API."
+            hint="Import your roster from a CSV, or add crew one by one on the Import page."
+            action={{ label: "Import crew", to: "/app/import" }}
           />
         ) : (
           <div className="overflow-x-auto">

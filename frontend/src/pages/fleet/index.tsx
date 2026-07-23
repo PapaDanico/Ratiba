@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 
 type AircraftType = {
   icao: string;
@@ -35,6 +36,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 export function FleetPage() {
+  const toast = useToast();
   const [types, setTypes] = useState<AircraftType[]>([]);
   const [fleet, setFleet] = useState<Aircraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,12 +112,33 @@ export function FleetPage() {
 
   async function confirmDelete() {
     if (!deleteModal) return;
+    const a = deleteModal;
     setDeleting(true);
     setDeleteErr(null);
     try {
-      await api(`/api/v1/fleet/${deleteModal.id}`, { method: "DELETE" });
+      await api(`/api/v1/fleet/${a.id}`, { method: "DELETE" });
       setDeleteModal(null);
       await reload();
+      // Undo re-registers the aircraft (deletes are only allowed for
+      // aircraft with no sectors, so a fresh POST restores it faithfully).
+      toast.show(`${a.registration} removed from fleet`, "info", {
+        label: "Undo",
+        onClick: async () => {
+          try {
+            await api("/api/v1/fleet", {
+              method: "POST",
+              body: JSON.stringify({
+                registration: a.registration,
+                aircraft_type: a.aircraft_type,
+              }),
+            });
+            await reload();
+            toast.show(`${a.registration} restored`, "success");
+          } catch {
+            toast.show("Could not restore the aircraft", "error");
+          }
+        },
+      });
     } catch (err) {
       setDeleteErr(err instanceof ApiError ? err.message : "Delete failed");
     } finally {
@@ -262,8 +285,9 @@ export function FleetPage() {
         >
           <div className="space-y-4">
             <p className="text-sm text-dn-dark">
-              Delete {deleteModal.registration} from the fleet? This cannot be undone. Aircraft with
-              recorded flight sectors can&apos;t be deleted — deactivate them instead.
+              Delete {deleteModal.registration} from the fleet? You can undo for a few seconds
+              afterwards. Aircraft with recorded flight sectors can&apos;t be deleted — deactivate
+              them instead.
             </p>
             {deleteErr && <ErrorAlert message={deleteErr} />}
             <div className="flex justify-end gap-3">

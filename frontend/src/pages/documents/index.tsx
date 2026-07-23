@@ -264,7 +264,7 @@ export function DocumentsPage() {
           <EmptyState
             icon="📄"
             title="No documents recorded yet"
-            hint="Add crew licences, medicals and certificates to track their expiry here."
+            hint="Record licences, medicals and certificates with the form above to track their expiry here."
           />
         ) : (
           <div className="overflow-x-auto">

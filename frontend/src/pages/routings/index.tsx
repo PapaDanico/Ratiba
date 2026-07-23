@@ -11,6 +11,7 @@ import { TableSkeleton } from "@/components/ui/Skeleton";
 import { Pager } from "@/components/ui/Pager";
 import { usePager } from "@/lib/usePager";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 
 type Sector = {
   id: string;
@@ -416,6 +417,7 @@ function AddRecurringForm({
 export function RoutingsPage() {
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(addDays(todayIso(), 27));
+  const toast = useToast();
   const [rows, setRows] = useState<Sector[]>([]);
   const pager = usePager(rows);
   const [aircraftTypes, setAircraftTypes] = useState<AircraftType[]>([]);
@@ -464,11 +466,38 @@ export function RoutingsPage() {
 
   async function confirmDelete() {
     if (!deleteModal) return;
+    const s = deleteModal;
     setDeleting(true);
     try {
-      await api(`/api/v1/sectors/${deleteModal.id}`, { method: "DELETE" });
+      await api(`/api/v1/sectors/${s.id}`, { method: "DELETE" });
       setReloadKey((k) => k + 1);
       setDeleteModal(null);
+      // Undo recreates the routing from the row we still hold (deleted
+      // routings are always PLANNED, so a fresh POST restores it faithfully).
+      toast.show(`Routing ${s.flight_no} deleted`, "info", {
+        label: "Undo",
+        onClick: async () => {
+          try {
+            await api("/api/v1/sectors", {
+              method: "POST",
+              body: JSON.stringify({
+                flight_no: s.flight_no,
+                date: s.date,
+                origin: s.origin,
+                destination: s.destination,
+                std: s.std,
+                sta: s.sta,
+                aircraft_reg: s.aircraft_reg,
+                aircraft_type: s.aircraft_type,
+              }),
+            });
+            setReloadKey((k) => k + 1);
+            toast.show(`Routing ${s.flight_no} restored`, "success");
+          } catch {
+            toast.show("Could not restore the routing", "error");
+          }
+        },
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to delete routing");
     } finally {
@@ -650,8 +679,8 @@ export function RoutingsPage() {
             >
               <div className="space-y-4">
                 <p className="text-sm text-dn-dark">
-                  Delete {deleteModal.flight_no} on {deleteModal.date}? This action cannot be
-                  undone.
+                  Delete {deleteModal.flight_no} on {deleteModal.date}? You can undo for a few
+                  seconds afterwards.
                 </p>
                 <div className="flex justify-end gap-3">
                   <Button
