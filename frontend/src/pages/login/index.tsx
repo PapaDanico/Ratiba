@@ -386,6 +386,24 @@ export function LoginPage() {
               </p>
             </div>
           </div>
+
+          {/* Flight-crew path: pilots don't have email accounts — they pair a
+              device with a code issued by their crewing officer. */}
+          <Link
+            to="/crew/me"
+            className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-dn-steel-lt bg-white/80 px-5 py-4 shadow-sm transition-colors hover:border-dn-steel hover:bg-white"
+            data-testid="crew-access-link"
+          >
+            <div>
+              <p className="text-sm font-semibold text-dn-dark">Flight crew?</p>
+              <p className="text-xs text-dn-muted">
+                View your roster, duty and notices with a pairing code — no account needed.
+              </p>
+            </div>
+            <span aria-hidden className="text-dn-steel-deep text-lg">
+              →
+            </span>
+          </Link>
         </div>
       </div>
     </main>

@@ -9,6 +9,8 @@ import { Select } from "@/components/ui/Select";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ShareButtons } from "@/components/ui/ShareButtons";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Pager } from "@/components/ui/Pager";
+import { usePager } from "@/lib/usePager";
 import { api, ApiError, authFetch } from "@/lib/api";
 import { useSort } from "@/lib/useSort";
 
@@ -483,6 +485,7 @@ export function CrewPage() {
     role: (c) => c.role,
     base: (c) => c.base_station,
   });
+  const pager = usePager(visibleRows);
 
   useEffect(() => {
     let cancelled = false;
@@ -542,7 +545,7 @@ export function CrewPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dn-steel-lt">
-                {visibleRows.map((c) => (
+                {pager.pageRows.map((c) => (
                   <tr key={c.id} className="group transition-colors hover:bg-dn-fog">
                     <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel-deep">
                       {c.employee_no}
@@ -589,6 +592,7 @@ export function CrewPage() {
                 ))}
               </tbody>
             </table>
+            <Pager {...pager} />
           </div>
         )}
       </CardBody>

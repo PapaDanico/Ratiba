@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/Label";
 import { Modal } from "@/components/ui/Modal";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { Pager } from "@/components/ui/Pager";
+import { usePager } from "@/lib/usePager";
 import { api, ApiError } from "@/lib/api";
 
 type Sector = {
@@ -415,6 +417,7 @@ export function RoutingsPage() {
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(addDays(todayIso(), 27));
   const [rows, setRows] = useState<Sector[]>([]);
+  const pager = usePager(rows);
   const [aircraftTypes, setAircraftTypes] = useState<AircraftType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -590,7 +593,7 @@ export function RoutingsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dn-steel-lt">
-                  {rows.map((s) => (
+                  {pager.pageRows.map((s) => (
                     <tr key={s.id} className="hover:bg-dn-fog">
                       <td data-label="Flight" className="py-2 pr-4 font-mono text-dn-steel-deep">
                         {s.flight_no}
@@ -635,6 +638,7 @@ export function RoutingsPage() {
                   ))}
                 </tbody>
               </table>
+              <Pager {...pager} />
             </div>
           )}
 
