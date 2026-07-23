@@ -177,10 +177,76 @@ jobs:
             --data '{"category":"OPERATIONAL","title":"Smoke test notice","body":"All good."}')
           [ "$code" = 201 ] || fail "notice -> $code"
 
-          # cleanup: deactivate smoke crew so the demo stays tidy
+          echo "CREW_ID=$CREW_ID" >> $GITHUB_ENV
+          echo "FO_ID=$FO_ID" >> $GITHUB_ENV
+          echo "WRITE FLOW OK"
+
+      - name: Pilot self-service (pair -> profile -> roster -> notices -> leave)
+        run: |
+          set -e
+          fail() { echo "FAIL: $1"; cat /tmp/out 2>/dev/null; exit 1; }
+          H=(-b /tmp/jar -H "content-type: application/json" -H "x-csrf-token: $CSRF")
+
+          # officer issues a pairing code for the smoke captain
+          code=$(curl -s "${H[@]}" -o /tmp/out -w '%{http_code}' \
+            -X POST $API/api/v1/crew/$CREW_ID/pairing-token --data '{}')
+          [ "$code" = 200 ] || fail "pairing-token -> $code"
+          CODE=$(python3 -c "import json;p=json.load(open('/tmp/out'));assert p['expires_at'];print(p['code'])")
+
+          # pilot redeems it (no officer cookies; Bearer from the response body)
+          code=$(curl -s -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/auth/pilot-pair \
+            -H 'content-type: application/json' --data "{\"code\":\"$CODE\"}")
+          [ "$code" = 200 ] || fail "pilot-pair -> $code"
+          PT=$(python3 -c "import json;p=json.load(open('/tmp/out'));assert p['crew_id']=='$CREW_ID', p;print(p['pilot_token'])")
+          P=(-H "authorization: Bearer $PT" -H "content-type: application/json")
+
+          # replay must be rejected
+          code=$(curl -s -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/auth/pilot-pair \
+            -H 'content-type: application/json' --data "{\"code\":\"$CODE\"}")
+          [ "$code" = 400 ] || fail "pilot-pair replay -> $code (want 400)"
+
+          # profile / roster / duty / currency
+          code=$(curl -s "${P[@]}" -o /tmp/out -w '%{http_code}' $API/api/v1/crew/me)
+          [ "$code" = 200 ] || fail "pilot profile -> $code"
+          python3 -c "import json;p=json.load(open('/tmp/out'));assert p['id']=='$CREW_ID', p;print('pilot profile', p['employee_no'])"
+          code=$(curl -s "${P[@]}" -o /tmp/out -w '%{http_code}' \
+            "$API/api/v1/crew/me/roster?date_from=2026-11-20&date_to=2026-11-22")
+          [ "$code" = 200 ] || fail "pilot roster -> $code"
+          python3 -c "import json;r=json.load(open('/tmp/out'));print('pilot duty days:', len(r['duty_days']))"
+          code=$(curl -s "${P[@]}" -o /dev/null -w '%{http_code}' $API/api/v1/crew/me/duty)
+          [ "$code" = 200 ] || fail "pilot duty -> $code"
+          code=$(curl -s "${P[@]}" -o /tmp/out -w '%{http_code}' $API/api/v1/crew/me/currency)
+          [ "$code" = 200 ] || fail "pilot currency -> $code"
+          python3 -c "import json;c=json.load(open('/tmp/out'))['currencies'];assert any(x['currency_type']=='OPC' and x['state']=='GREEN' for x in c), c;print('pilot currency OK')"
+
+          # notices + ack (idempotent)
+          code=$(curl -s "${P[@]}" -o /tmp/out -w '%{http_code}' $API/api/v1/crew/me/notices)
+          [ "$code" = 200 ] || fail "pilot notices -> $code"
+          NID=$(python3 -c "import json;n=json.load(open('/tmp/out'));assert n, 'no notices';print(n[0]['id'])")
+          for i in 1 2; do
+            code=$(curl -s "${P[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/crew/me/notices/$NID/ack)
+            [ "$code" = 200 ] || fail "notice ack #$i -> $code"
+          done
+          python3 -c "import json;assert json.load(open('/tmp/out'))['acknowledged']"
+
+          # pilot-submitted leave lands as PENDING
+          code=$(curl -s "${P[@]}" -o /tmp/out -w '%{http_code}' -X POST $API/api/v1/crew/me/leave \
+            --data '{"type":"ANNUAL","date_from":"2026-12-01","date_to":"2026-12-03"}')
+          [ "$code" = 200 ] || fail "pilot leave -> $code"
+          python3 -c "import json;l=json.load(open('/tmp/out'));assert l['status']=='PENDING', l;print('pilot leave OK', l['id'])"
+
+          # stale/garbage code
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST $API/api/v1/auth/pilot-pair \
+            -H 'content-type: application/json' --data '{"code":"NOPE0000"}')
+          [ "$code" = 400 ] || fail "unknown code -> $code (want 400)"
+          echo "PILOT FLOW OK"
+
+      - name: Deactivate smoke crew
+        run: |
+          H=(-b /tmp/jar -H "content-type: application/json" -H "x-csrf-token: $CSRF")
           curl -s "${H[@]}" -o /dev/null -X PATCH $API/api/v1/crew/$CREW_ID --data '{"active":false}'
           curl -s "${H[@]}" -o /dev/null -X PATCH $API/api/v1/crew/$FO_ID --data '{"active":false}'
-          echo "WRITE FLOW OK"
+          echo "smoke crew deactivated"
 
       - name: New page endpoints (postings + irop + onboarding)
         run: |
