@@ -239,7 +239,11 @@ export function AppShell() {
         tabIndex={-1}
         className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 sm:py-8"
       >
-        <Outlet />
+        {/* Re-keying on the path replays a gentle settle-up on every route
+            change, so navigation feels continuous rather than a hard cut. */}
+        <div key={location.pathname} className="motion-fade-up">
+          <Outlet />
+        </div>
       </main>
 
       {/* ── Footer ── */}

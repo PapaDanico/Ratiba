@@ -68,6 +68,99 @@
 }
 
 /*
+ * ── Motion layer ─────────────────────────────────────────────────────────
+ * A small, shared choreography vocabulary so the whole app moves the same
+ * calm way: content settles up on enter, dialogs scale in, toasts slide in,
+ * skeletons sweep. One easing (a soft decelerate) and short durations keep it
+ * premium, not playful. Every animation is disabled under prefers-reduced-
+ * motion so the app stays instantaneous for anyone who asks for that.
+ */
+@keyframes dn-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dn-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dn-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes dn-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dn-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@layer utilities {
+  .motion-fade-up {
+    animation: dn-fade-up 0.32s cubic-bezier(0.16, 0.84, 0.44, 1) both;
+  }
+  .motion-scale-in {
+    animation: dn-scale-in 0.2s cubic-bezier(0.16, 0.84, 0.44, 1) both;
+  }
+  .motion-fade-in {
+    animation: dn-fade-in 0.18s ease both;
+  }
+  .motion-toast-in {
+    animation: dn-toast-in 0.28s cubic-bezier(0.16, 0.84, 0.44, 1) both;
+  }
+
+  /* Sweeping highlight for loading placeholders (see Skeleton). */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    animation: dn-shimmer 1.4s infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .motion-fade-up,
+    .motion-scale-in,
+    .motion-fade-in,
+    .motion-toast-in {
+      animation: none;
+    }
+    .shimmer::after {
+      animation: none;
+    }
+  }
+}
+
+/*
  * Calm-grid polish for every `rtable` on desktop: a smooth hover highlight so
  * the eye tracks across wide rows. Per-table rhythm/opacity (e.g. hover-reveal
  * actions) stay in the component since they vary; this is the shared baseline.

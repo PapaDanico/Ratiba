@@ -69,7 +69,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-dn-dark/40 p-4"
+      className="motion-fade-in fixed inset-0 z-50 flex items-center justify-center bg-dn-dark/40 p-4 backdrop-blur-sm"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -81,7 +81,7 @@ export function Modal({
         aria-label={title}
         tabIndex={-1}
         data-testid={testId}
-        className={`w-full ${maxWidth} outline-none`}
+        className={`motion-scale-in w-full ${maxWidth} outline-none`}
       >
         <Card>
           <CardHeader>

@@ -12,16 +12,29 @@ const TONE_CLASS: Record<Tone, string> = {
   info: "bg-dn-steel-deep text-white",
 };
 
+const TONE_ICON: Record<Tone, string> = {
+  success: "✓",
+  error: "✕",
+  info: "ℹ",
+};
+
 /** App-wide transient feedback. Toasts auto-dismiss after 4s and are announced
  * via an aria-live region for screen readers. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const show = useCallback((message: string, tone: Tone = "info") => {
-    const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, tone }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+  const dismiss = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  const show = useCallback(
+    (message: string, tone: Tone = "info") => {
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [...prev, { id, message, tone }]);
+      setTimeout(() => dismiss(id), 4000);
+    },
+    [dismiss],
+  );
 
   return (
     <ToastContext.Provider value={{ show }}>
@@ -35,9 +48,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             data-testid="toast"
-            className={`rounded-md px-4 py-2 text-sm shadow-lg ${TONE_CLASS[t.tone]}`}
+            className={`motion-toast-in flex items-center gap-2.5 rounded-dn-sm py-2.5 pl-3 pr-2 text-sm shadow-dn-lg ${TONE_CLASS[t.tone]}`}
           >
-            {t.message}
+            <span aria-hidden className="grid h-5 w-5 place-items-center text-xs font-bold">
+              {TONE_ICON[t.tone]}
+            </span>
+            <span className="pr-1">{t.message}</span>
+            <button
+              type="button"
+              onClick={() => dismiss(t.id)}
+              aria-label="Dismiss notification"
+              className="ml-auto grid h-6 w-6 place-items-center rounded-sm text-base leading-none text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+            >
+              ✕
+            </button>
           </div>
         ))}
       </div>
