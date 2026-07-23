@@ -17,6 +17,7 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "hunter2pass";
 
 const ROUTES = [
   "/",
+  "/app",
   "/routings",
   "/roster",
   "/crew",
