@@ -2178,6 +2178,155 @@ async function recurrency(user: DbUser, url: URL): Promise<Response> {
   return json(items);
 }
 
+// ── compliance alerts ───────────────────────────────────────────────────────
+// On-demand compliance sweep for the dashboard: every non-LEGAL FTL verdict
+// in the recent-past/upcoming window plus every document, currency, and type
+// rating that is expired or inside the 30-day amber window. Computed live so
+// it needs no scheduler and can never go stale.
+
+async function alertsSummary(user: DbUser): Promise<Response> {
+  const today = todayUTC();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const fdpFrom = iso(new Date(today.getTime() - 7 * 86400000));
+  const [
+    { data: fdps },
+    { data: currencies },
+    { data: ratings },
+    { data: documents },
+    { data: crews },
+  ] = await Promise.all([
+    db
+      .from("flight_duty_periods")
+      .select("crew_id, date, legality_state, ftl_rules_applied, duty_hours")
+      .eq("operator_id", user.operator_id)
+      .neq("legality_state", "LEGAL")
+      .not("legality_state", "is", null)
+      .gte("date", fdpFrom)
+      .order("date"),
+    db
+      .from("crew_currencies")
+      .select("crew_id, currency_type, expires_date")
+      .eq("operator_id", user.operator_id),
+    db
+      .from("crew_type_ratings")
+      .select("crew_id, aircraft_type, valid_until")
+      .eq("operator_id", user.operator_id),
+    db
+      .from("crew_documents")
+      .select("crew_id, doc_type, expiry_date")
+      .eq("operator_id", user.operator_id)
+      .not("expiry_date", "is", null),
+    db
+      .from("crew")
+      .select("id, employee_no, first_name, last_name, active")
+      .eq("operator_id", user.operator_id),
+  ]);
+
+  const byId: Record<string, Record<string, unknown>> = {};
+  for (const c of crews ?? []) byId[c.id as string] = c;
+  const name = (crewId: string) => {
+    const c = byId[crewId];
+    return c
+      ? `${c.first_name} ${c.last_name} (${c.employee_no})`
+      : "Unknown crew";
+  };
+  const activeCrew = (crewId: string) => byId[crewId]?.active === true;
+
+  type Alert = {
+    severity: "RED" | "AMBER";
+    category: "FTL" | "DOCUMENT" | "CURRENCY" | "TYPE_RATING";
+    title: string;
+    detail: string;
+    date: string;
+    crew_id: string;
+    link: string;
+  };
+  const alerts: Alert[] = [];
+
+  for (const f of fdps ?? []) {
+    if (!activeCrew(f.crew_id as string)) continue;
+    const state = f.legality_state as string;
+    alerts.push({
+      severity: state === "AT_LIMIT" ? "AMBER" : "RED",
+      category: "FTL",
+      title: `${state.replaceAll("_", " ")} duty — ${name(f.crew_id as string)}`,
+      detail: `${Number(f.duty_hours ?? 0).toFixed(1)}h duty on ${f.date}; worst rule ${
+        ((f.ftl_rules_applied as string[] | null) ?? [])[0] ?? "n/a"
+      }`,
+      date: f.date as string,
+      crew_id: f.crew_id as string,
+      link: "/app/roster",
+    });
+  }
+
+  const pushExpiry = (
+    crewId: string,
+    category: Alert["category"],
+    label: string,
+    expires: string,
+    link: string,
+  ) => {
+    if (!activeCrew(crewId)) return;
+    const days = daysBetween(expires, today);
+    if (days > 30) return;
+    alerts.push({
+      severity: days < 0 ? "RED" : "AMBER",
+      category,
+      title: `${label} ${days < 0 ? "EXPIRED" : `expires in ${days}d`} — ${name(crewId)}`,
+      detail:
+        days < 0
+          ? `Expired ${expires} (${-days}d ago)`
+          : `Valid until ${expires}`,
+      date: expires,
+      crew_id: crewId,
+      link,
+    });
+  };
+  for (const cur of currencies ?? []) {
+    pushExpiry(
+      cur.crew_id as string,
+      "CURRENCY",
+      cur.currency_type as string,
+      cur.expires_date as string,
+      "/app/currency",
+    );
+  }
+  for (const r of ratings ?? []) {
+    pushExpiry(
+      r.crew_id as string,
+      "TYPE_RATING",
+      `Type rating ${r.aircraft_type}`,
+      r.valid_until as string,
+      "/app/training",
+    );
+  }
+  for (const d of documents ?? []) {
+    pushExpiry(
+      d.crew_id as string,
+      "DOCUMENT",
+      String(d.doc_type),
+      d.expiry_date as string,
+      "/app/documents",
+    );
+  }
+
+  alerts.sort((a, b) =>
+    a.severity === b.severity
+      ? a.date.localeCompare(b.date)
+      : a.severity === "RED"
+        ? -1
+        : 1,
+  );
+  return json({
+    generated_at: new Date().toISOString(),
+    counts: {
+      red: alerts.filter((a) => a.severity === "RED").length,
+      amber: alerts.filter((a) => a.severity === "AMBER").length,
+    },
+    alerts,
+  });
+}
+
 // ── roster ──────────────────────────────────────────────────────────────────
 
 // deno-lint-ignore no-explicit-any
@@ -3938,6 +4087,8 @@ Deno.serve(async (req: Request) => {
     }
     if (path === "/api/v1/training/recurrency" && m === "GET")
       return await recurrency(user, url);
+    if (path === "/api/v1/alerts" && m === "GET")
+      return await alertsSummary(user);
 
     // ftl & reference
     if (path === "/api/v1/ftl/limits" && m === "GET") {

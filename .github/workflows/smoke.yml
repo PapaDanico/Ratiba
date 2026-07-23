@@ -45,7 +45,7 @@ jobs:
         run: |
           set -e
           fail() { echo "FAIL: $1"; exit 1; }
-          for p in "crew" "crew/currency/dashboard" "fleet" "users" "notices" \
+          for p in "crew" "crew/currency/dashboard" "fleet" "users" "notices" "alerts" \
                    "training/type-ratings" "training/recurrency" "ftl/limits" \
                    "reference/aircraft-types" "reference/public-holidays" \
                    "leave" "swap" "settings/operator" "settings/account" \

@@ -156,6 +156,103 @@ function attentionTone(state: RecurrencyItem["state"]): "amber" | "red" | "neutr
   return "neutral";
 }
 
+type ComplianceAlert = {
+  severity: "RED" | "AMBER";
+  category: "FTL" | "DOCUMENT" | "CURRENCY" | "TYPE_RATING";
+  title: string;
+  detail: string;
+  date: string;
+  crew_id: string;
+  link: string;
+};
+
+type AlertsResponse = {
+  generated_at: string;
+  counts: { red: number; amber: number };
+  alerts: ComplianceAlert[];
+};
+
+const CATEGORY_LABEL: Record<ComplianceAlert["category"], string> = {
+  FTL: "FTL",
+  DOCUMENT: "Document",
+  CURRENCY: "Currency",
+  TYPE_RATING: "Type rating",
+};
+
+/**
+ * Live compliance sweep: non-LEGAL duties in the recent window plus anything
+ * expired or expiring within 30 days, worst first. The one card an officer
+ * must read before doing anything else — hidden only if the endpoint is
+ * unavailable (older backend), never on error.
+ */
+function ComplianceAlerts({ data, error }: { data: AlertsResponse | null; error: boolean }) {
+  if (error) {
+    return (
+      <Card className="border-dn-red/40">
+        <CardBody className="text-sm text-dn-red">Compliance alerts failed to load.</CardBody>
+      </Card>
+    );
+  }
+  if (!data) return null;
+  const { counts, alerts } = data;
+  if (!alerts.length) {
+    return (
+      <Card className="border-dn-green/30 bg-dn-green/5" data-testid="alerts-clear">
+        <CardBody className="flex items-center gap-3">
+          <span aria-hidden className="text-xl">
+            ✅
+          </span>
+          <p className="text-sm text-dn-dark">
+            <span className="font-medium">No compliance alerts.</span>{" "}
+            <span className="text-dn-muted">
+              All recorded duties are legal and nothing expires within 30 days.
+            </span>
+          </p>
+        </CardBody>
+      </Card>
+    );
+  }
+  const shown = alerts.slice(0, 8);
+  return (
+    <Card
+      className={
+        counts.red > 0 ? "border-dn-red/40 bg-dn-red/5" : "border-dn-amber/40 bg-dn-amber/5"
+      }
+      data-testid="alerts-panel"
+    >
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle>Compliance alerts</CardTitle>
+          <div className="flex gap-2 text-xs">
+            {counts.red > 0 && <Badge tone="red">{counts.red} critical</Badge>}
+            {counts.amber > 0 && <Badge tone="amber">{counts.amber} warning</Badge>}
+          </div>
+        </div>
+      </CardHeader>
+      <CardBody>
+        <ul className="divide-y divide-dn-steel-lt/60">
+          {shown.map((a, i) => (
+            <li key={i} className="py-2 first:pt-0 last:pb-0">
+              <Link to={a.link} className="group flex items-start gap-3">
+                <Badge tone={a.severity === "RED" ? "red" : "amber"}>
+                  {CATEGORY_LABEL[a.category]}
+                </Badge>
+                <span className="min-w-0 text-sm">
+                  <span className="font-medium text-dn-dark group-hover:underline">{a.title}</span>{" "}
+                  <span className="text-dn-muted">· {a.detail}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {alerts.length > shown.length && (
+          <p className="mt-2 text-xs text-dn-muted">…and {alerts.length - shown.length} more.</p>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 type HeroTone = "red" | "amber" | "steel" | "green";
 
 const HERO_STYLE: Record<HeroTone, string> = {
@@ -266,6 +363,8 @@ export function DashboardPage() {
   });
   const [attention, setAttention] = useState<RecurrencyItem[]>([]);
   const [schemeSource, setSchemeSource] = useState<"operator" | "baseline" | null>(null);
+  const [alertsData, setAlertsData] = useState<AlertsResponse | null>(null);
+  const [alertsError, setAlertsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -287,6 +386,16 @@ export function DashboardPage() {
             api<{ source: "operator" | "baseline" }>("/api/v1/ftl/limits").catch(() => null),
           ]);
         if (cancelled) return;
+        // Separate fetch: a 404/501 (older backend) hides the card; a real
+        // failure shows an inline error rather than silently hiding risk.
+        api<AlertsResponse>("/api/v1/alerts").then(
+          (a) => !cancelled && setAlertsData(a),
+          (e) => {
+            if (cancelled) return;
+            if (!(e instanceof ApiError && (e.status === 404 || e.status === 501)))
+              setAlertsError(true);
+          },
+        );
         setPendingLeave(pending.length);
         setPendingSwaps(swaps.length);
         if (notices)
@@ -336,6 +445,7 @@ export function DashboardPage() {
         pendingApprovals={pendingLeave + pendingSwaps}
         noticesPendingAck={noticesPendingAck}
       />
+      <ComplianceAlerts data={alertsData} error={alertsError} />
       <DemoGuide />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Link to="/app/leave" className="block">
