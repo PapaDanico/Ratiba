@@ -73,6 +73,12 @@ function AddRoutingForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The types list loads async; if the form mounted before it arrived the
+  // select would otherwise sit on an empty value and every submit would 422.
+  useEffect(() => {
+    if (!type && aircraftTypes.length) setType(aircraftTypes[0]!.icao);
+  }, [type, aircraftTypes]);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -228,6 +234,10 @@ function AddRecurringForm({
   const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4]); // weekdays default
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!type && aircraftTypes.length) setType(aircraftTypes[0]!.icao);
+  }, [type, aircraftTypes]);
 
   function toggleDay(idx: number) {
     setDays((prev) => (prev.includes(idx) ? prev.filter((d) => d !== idx) : [...prev, idx].sort()));
