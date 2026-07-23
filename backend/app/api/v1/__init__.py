@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     aircraft,
+    alerts,
     audit,
     auth,
     constraints,
@@ -54,5 +55,6 @@ api_router.include_router(reference.router, prefix="/reference", tags=["referenc
 api_router.include_router(constraints.router, prefix="/constraints", tags=["constraints"])
 api_router.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 
 __all__ = ["api_router"]
