@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { DnLogo } from "@/components/ui/DnLogo";
+import { CommandPalette } from "@/components/CommandPalette";
 
 type Role = "CREWING_OFFICER" | "CHIEF_PILOT" | "ADMIN" | "PILOT";
 type NavItem = { to: string; label: string; end?: boolean; roles?: Role[] };
@@ -107,6 +108,22 @@ export function AppShell() {
 
           {/* Desktop: identity + sign out */}
           <div className="hidden lg:flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))
+              }
+              className="flex items-center gap-2 rounded-dn-sm border border-dn-sand px-2.5 py-1.5 text-xs text-dn-muted transition-colors hover:border-dn-steel hover:text-dn-dark"
+              aria-label="Open command palette"
+              data-testid="palette-hint"
+            >
+              Search
+              <kbd className="rounded-sm bg-dn-fog px-1.5 py-0.5 font-mono text-[10px]">
+                {typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                  ? "⌘K"
+                  : "Ctrl K"}
+              </kbd>
+            </button>
             {userLabel && <span className="text-sm text-dn-muted">{userLabel}</span>}
             <Button
               variant="ghost"
@@ -232,6 +249,8 @@ export function AppShell() {
           </nav>
         )}
       </header>
+
+      <CommandPalette />
 
       {/* ── Main content ── */}
       <main
