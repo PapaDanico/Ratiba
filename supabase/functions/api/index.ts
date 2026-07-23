@@ -2327,6 +2327,436 @@ async function alertsSummary(user: DbUser): Promise<Response> {
   });
 }
 
+// ── pilot self-service (/auth/pilot-pair + /crew/me/*) ──────────────────────
+// The officer issues a short-lived pairing code; the pilot redeems it for a
+// long-lived pilot JWT (httpOnly rt_pilot cookie, Bearer fallback). Pilot
+// routes authenticate against crew, not users. Keep response shapes in
+// lockstep with backend/app/api/v1/me.py and schemas/pilot.py.
+
+const PILOT_DAYS = 180;
+const PAIRING_CODE_MINUTES = 15;
+const PAIRING_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+function newPairingCode(): string {
+  const buf = new Uint8Array(8);
+  crypto.getRandomValues(buf);
+  return [...buf]
+    .map((b) => PAIRING_ALPHABET[b % PAIRING_ALPHABET.length])
+    .join("");
+}
+
+async function signPilotToken(
+  crewId: string,
+  operatorId: string,
+): Promise<string> {
+  const key = await keyPromise;
+  const now = Math.floor(Date.now() / 1000);
+  return await new jose.SignJWT({
+    sub: crewId,
+    type: "pilot",
+    operator_id: operatorId,
+    iat: now,
+    exp: now + PILOT_DAYS * 86400,
+    jti: crypto.randomUUID(),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .sign(key);
+}
+
+// deno-lint-ignore no-explicit-any
+type DbCrew = Record<string, any>;
+
+async function currentPilot(req: Request): Promise<DbCrew | null> {
+  const auth = req.headers.get("authorization") ?? "";
+  const raw = auth.toLowerCase().startsWith("bearer ")
+    ? auth.slice(7).trim()
+    : parseCookies(req)[PILOT_COOKIE];
+  if (!raw) return null;
+  const payload = await decodeToken(raw);
+  if (!payload || payload.type !== "pilot" || !payload.sub) return null;
+  const { data } = await db
+    .from("crew")
+    .select("*")
+    .eq("id", payload.sub)
+    .maybeSingle();
+  if (!data || !data.active) return null;
+  return data as DbCrew;
+}
+
+async function issuePairingToken(
+  user: DbUser,
+  crewId: string,
+): Promise<Response> {
+  requireWriter(user);
+  const { data: crew } = await db
+    .from("crew")
+    .select("id")
+    .eq("id", crewId)
+    .eq("operator_id", user.operator_id)
+    .maybeSingle();
+  if (!crew) return json({ detail: "crew not found" }, 404);
+  let code = newPairingCode();
+  for (let i = 0; i < 3; i++) {
+    const { data: clash } = await db
+      .from("pairing_tokens")
+      .select("id")
+      .eq("code", code)
+      .maybeSingle();
+    if (!clash) break;
+    code = newPairingCode();
+  }
+  const expiresAt = new Date(
+    Date.now() + PAIRING_CODE_MINUTES * 60000,
+  ).toISOString();
+  const row = {
+    id: crypto.randomUUID(),
+    operator_id: user.operator_id,
+    created_by_user_id: user.id,
+    crew_id: crewId,
+    code,
+    expires_at: expiresAt,
+  };
+  const { error } = await db.from("pairing_tokens").insert(row);
+  if (error) return json({ detail: error.message }, 422);
+  await auditLog(
+    user.operator_id,
+    user.id,
+    "ISSUE_PAIRING_CODE",
+    "pairing_token",
+    row.id,
+    null,
+    {
+      crew_id: crewId,
+    },
+  );
+  return json({ code, expires_at: expiresAt });
+}
+
+async function pilotPair(req: Request): Promise<Response> {
+  const b = await readJson(req);
+  const code = String(need(b.code, "code")).trim().toUpperCase();
+  const { data: token } = await db
+    .from("pairing_tokens")
+    .select("*")
+    .eq("code", code)
+    .maybeSingle();
+  if (!token) return json({ detail: "unknown pairing code" }, 400);
+  if (token.redeemed_at)
+    return json({ detail: "pairing code already redeemed" }, 400);
+  if (new Date(token.expires_at as string) <= new Date()) {
+    return json({ detail: "pairing code expired" }, 400);
+  }
+  const { data: crew } = await db
+    .from("crew")
+    .select("*")
+    .eq("id", token.crew_id)
+    .maybeSingle();
+  if (!crew || !crew.active) return json({ detail: "crew not found" }, 400);
+
+  await db
+    .from("pairing_tokens")
+    .update({ redeemed_at: new Date().toISOString() })
+    .eq("id", token.id);
+  await auditLog(
+    token.operator_id as string,
+    null,
+    "REDEEM_PAIRING_CODE",
+    "pairing_token",
+    token.id as string,
+    null,
+    { crew_id: crew.id },
+  );
+
+  const jwt = await signPilotToken(
+    crew.id as string,
+    crew.operator_id as string,
+  );
+  const csrf =
+    crypto.randomUUID().replaceAll("-", "") +
+    crypto.randomUUID().replaceAll("-", "");
+  const headers = new Headers({ "content-type": "application/json" });
+  headers.append(
+    "set-cookie",
+    cookie(PILOT_COOKIE, jwt, PILOT_DAYS * 86400, true),
+  );
+  headers.append(
+    "set-cookie",
+    cookie(CSRF_COOKIE, csrf, PILOT_DAYS * 86400, false),
+  );
+  return new Response(
+    JSON.stringify({
+      pilot_token: jwt,
+      crew_id: crew.id,
+      employee_no: crew.employee_no,
+      role: crew.role,
+      operator_id: crew.operator_id,
+    }),
+    { status: 200, headers },
+  );
+}
+
+type PilotDutyDay = {
+  date_local: string;
+  aircraft_reg: string;
+  aircraft_type: string;
+  sector_ids: string[];
+  role_on_duty: string;
+  report_time: string | null;
+  off_duty_time: string | null;
+  flight_hours: number | null;
+  duty_hours: number | null;
+  legality_state: string | null;
+};
+
+async function pilotDutyDays(
+  crew: DbCrew,
+  dateFrom: string,
+  dateTo: string,
+): Promise<PilotDutyDay[]> {
+  const [{ data: sas }, { data: fdps }] = await Promise.all([
+    db
+      .from("sector_assignments")
+      .select(
+        "role_on_sector, sectors!inner(date, flight_no, aircraft_reg, aircraft_type)",
+      )
+      .eq("crew_id", crew.id)
+      .gte("sectors.date", dateFrom)
+      .lte("sectors.date", dateTo),
+    db
+      .from("flight_duty_periods")
+      .select(
+        "date, report_time, off_duty_time, flight_hours, duty_hours, legality_state",
+      )
+      .eq("crew_id", crew.id)
+      .eq("type", "FDP")
+      .gte("date", dateFrom)
+      .lte("date", dateTo),
+  ]);
+  const fdpByDate: Record<string, Record<string, unknown>> = {};
+  for (const f of fdps ?? []) fdpByDate[f.date as string] = f;
+
+  const grouped: Record<
+    string,
+    { reg: string; date: string; type: string; role: string; flights: string[] }
+  > = {};
+  // deno-lint-ignore no-explicit-any
+  for (const a of (sas ?? []) as any[]) {
+    const s = a.sectors;
+    const key = `${s.aircraft_reg}|${s.date}|${a.role_on_sector}`;
+    (grouped[key] ??= {
+      reg: s.aircraft_reg,
+      date: s.date,
+      type: s.aircraft_type,
+      role: a.role_on_sector,
+      flights: [],
+    }).flights.push(s.flight_no);
+  }
+  return Object.values(grouped)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.reg.localeCompare(b.reg))
+    .map((g) => {
+      const f = fdpByDate[g.date];
+      return {
+        date_local: g.date,
+        aircraft_reg: g.reg,
+        aircraft_type: g.type,
+        sector_ids: [...g.flights].sort(),
+        role_on_duty: g.role,
+        report_time: (f?.report_time as string | undefined) ?? null,
+        off_duty_time: (f?.off_duty_time as string | undefined) ?? null,
+        flight_hours: f ? Number(f.flight_hours) : null,
+        duty_hours: f ? Number(f.duty_hours) : null,
+        legality_state: (f?.legality_state as string | undefined) ?? null,
+      };
+    });
+}
+
+async function pilotRoutes(
+  req: Request,
+  path: string,
+  url: URL,
+): Promise<Response> {
+  const crew = await currentPilot(req);
+  if (!crew) return json({ detail: "Not authenticated" }, 401);
+  const m = req.method;
+  const rest = path.slice("/api/v1/crew/me".length); // "", "/roster", ...
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  if ((rest === "" || rest === "/") && m === "GET") {
+    return json({
+      id: crew.id,
+      employee_no: crew.employee_no,
+      first_name: crew.first_name,
+      last_name: crew.last_name,
+      role: crew.role,
+      base_station: crew.base_station,
+    });
+  }
+  if (rest === "/roster" && m === "GET") {
+    const df = url.searchParams.get("date_from") ?? todayIso;
+    const dt =
+      url.searchParams.get("date_to") ??
+      new Date(Date.now() + 13 * 86400000).toISOString().slice(0, 10);
+    if (dt < df) return json({ detail: "date_to before date_from" }, 400);
+    return json({
+      date_from: df,
+      date_to: dt,
+      duty_days: await pilotDutyDays(crew, df, dt),
+    });
+  }
+  if (rest === "/duty" && m === "GET") {
+    const days = await pilotDutyDays(crew, todayIso, todayIso);
+    return json(
+      days.length ? { has_duty: true, duty_day: days[0] } : { has_duty: false },
+    );
+  }
+  if (rest === "/currency" && m === "GET") {
+    const { data: rows } = await db
+      .from("crew_currencies")
+      .select("currency_type, expires_date")
+      .eq("crew_id", crew.id)
+      .order("expires_date");
+    const today = todayUTC();
+    return json({
+      currencies: (rows ?? []).map((r) => {
+        const days = daysBetween(r.expires_date as string, today);
+        return {
+          currency_type: r.currency_type,
+          expires_date: r.expires_date,
+          days_remaining: days,
+          state:
+            days < 0 ? "RED" : days <= AMBER_THRESHOLD_DAYS ? "AMBER" : "GREEN",
+        };
+      }),
+    });
+  }
+  if (rest === "/leave" && m === "POST") {
+    const b = await readJson(req);
+    const created = await one(
+      db
+        .from("leave_requests")
+        .insert({
+          operator_id: crew.operator_id,
+          crew_id: crew.id,
+          status: "PENDING",
+          type: need(b.type, "type"),
+          date_from: need(b.date_from, "date_from"),
+          date_to: need(b.date_to, "date_to"),
+          note: b.note ?? null,
+        })
+        .select()
+        .single(),
+    );
+    await auditLog(
+      crew.operator_id,
+      null,
+      "PILOT_SUBMIT_LEAVE",
+      "leave_request",
+      (created as { id: string }).id,
+      null,
+      {
+        crew_id: crew.id,
+        type: b.type,
+        date_from: b.date_from,
+        date_to: b.date_to,
+      },
+    );
+    return json(leaveOut(created));
+  }
+  if (rest === "/swap" && m === "POST") {
+    const b = await readJson(req);
+    const counterpartyNo = String(
+      need(b.counterparty_employee_no, "counterparty_employee_no"),
+    );
+    const { data: counterparty } = await db
+      .from("crew")
+      .select("id, employee_no")
+      .eq("operator_id", crew.operator_id)
+      .eq("employee_no", counterpartyNo)
+      .maybeSingle();
+    if (!counterparty)
+      return json(
+        { detail: `counterparty '${counterpartyNo}' not found` },
+        404,
+      );
+    const created = await one(
+      db
+        .from("swap_requests")
+        .insert({
+          operator_id: crew.operator_id,
+          crew_id_initiator: crew.id,
+          crew_id_counterparty: counterparty.id,
+          fdp_or_sector_ref: need(b.fdp_or_sector_ref, "fdp_or_sector_ref"),
+          reason: b.reason ?? null,
+          status: "PENDING",
+        })
+        .select()
+        .single(),
+    );
+    await auditLog(
+      crew.operator_id,
+      null,
+      "PILOT_SUBMIT_SWAP",
+      "swap_request",
+      (created as { id: string }).id,
+      null,
+      { initiator: crew.employee_no, counterparty: counterparty.employee_no },
+    );
+    return json(swapOut(created));
+  }
+  if (rest === "/notices" && m === "GET") {
+    const now = new Date().toISOString();
+    const [{ data: notices }, { data: acks }] = await Promise.all([
+      db
+        .from("notices")
+        .select("*")
+        .eq("operator_id", crew.operator_id)
+        .eq("published", true)
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false }),
+      db
+        .from("notice_acknowledgements")
+        .select("notice_id")
+        .eq("crew_id", crew.id),
+    ]);
+    const acked = new Set((acks ?? []).map((a) => a.notice_id as string));
+    return json(
+      (notices ?? [])
+        .filter((n) => !n.expires_at || (n.expires_at as string) >= now)
+        .map((n) => ({
+          ...noticeOut(n),
+          acknowledged: acked.has(n.id as string),
+        })),
+    );
+  }
+  const ackMatch = rest.match(/^\/notices\/([0-9a-f-]{36})\/ack$/i);
+  if (ackMatch && m === "POST") {
+    const noticeId = ackMatch[1]!;
+    const { data: notice } = await db
+      .from("notices")
+      .select("id")
+      .eq("id", noticeId)
+      .eq("operator_id", crew.operator_id)
+      .maybeSingle();
+    if (!notice) return json({ detail: "notice not found" }, 404);
+    const { data: existing } = await db
+      .from("notice_acknowledgements")
+      .select("id")
+      .eq("notice_id", noticeId)
+      .eq("crew_id", crew.id)
+      .maybeSingle();
+    if (!existing) {
+      await db.from("notice_acknowledgements").insert({
+        id: crypto.randomUUID(),
+        notice_id: noticeId,
+        crew_id: crew.id,
+        acknowledged_at: new Date().toISOString(),
+      });
+    }
+    return json({ acknowledged: true });
+  }
+  return json({ detail: "not found" }, 404);
+}
+
 // ── roster ──────────────────────────────────────────────────────────────────
 
 // deno-lint-ignore no-explicit-any
@@ -3943,6 +4373,12 @@ Deno.serve(async (req: Request) => {
       return await handleRefresh(req);
     if (path === "/api/v1/auth/logout" && req.method === "POST")
       return await handleLogout(req);
+    if (path === "/api/v1/auth/pilot-pair" && req.method === "POST")
+      return await pilotPair(req);
+
+    // Pilot self-service rides its own token, not the officer session.
+    if (path === "/api/v1/crew/me" || path.startsWith("/api/v1/crew/me/"))
+      return await pilotRoutes(req, path, url);
 
     const user = await currentUser(req);
     if (!user) return json({ detail: "Not authenticated" }, 401);
@@ -3977,6 +4413,15 @@ Deno.serve(async (req: Request) => {
       (m === "GET" || m === "POST")
     ) {
       return await crewCurrency(user, req, seg[3]);
+    }
+    if (
+      seg[2] === "crew" &&
+      isUuid(seg[3]) &&
+      seg[4] === "pairing-token" &&
+      seg.length === 5 &&
+      m === "POST"
+    ) {
+      return await issuePairingToken(user, seg[3]);
     }
 
     // fleet
