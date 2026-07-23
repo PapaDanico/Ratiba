@@ -1,6 +1,8 @@
-/** Animated placeholder bars for content that's still loading. */
+/** Animated placeholder bars for content that's still loading. A shimmer
+ * sweeps across each bar; under prefers-reduced-motion it rests as a static
+ * tint. */
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded bg-dn-steel-lt/60 ${className}`} />;
+  return <div className={`shimmer rounded bg-dn-steel-lt/60 ${className}`} />;
 }
 
 /** A simple multi-row placeholder for tables that are still loading. */
