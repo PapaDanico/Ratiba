@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { DnLogo } from "@/components/ui/DnLogo";
 
-type NavItem = { to: string; label: string; end?: boolean };
+type Role = "CREWING_OFFICER" | "CHIEF_PILOT" | "ADMIN" | "PILOT";
+type NavItem = { to: string; label: string; end?: boolean; roles?: Role[] };
 type NavGroup = { label: string; items: NavItem[] };
+
+const WRITERS: Role[] = ["CREWING_OFFICER", "CHIEF_PILOT", "ADMIN"];
 
 // Grouped so the main menu scans as sections rather than a flat 18-item list
 // — especially important in the mobile/PWA drawer, the primary way crew
@@ -37,13 +40,13 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Fleet & data",
     items: [
       { to: "/app/fleet", label: "Fleet" },
-      { to: "/app/import", label: "Import" },
+      { to: "/app/import", label: "Import", roles: WRITERS },
     ],
   },
   {
     label: "Compliance",
     items: [
-      { to: "/app/constraints", label: "FTL setup" },
+      { to: "/app/constraints", label: "FTL setup", roles: WRITERS },
       { to: "/app/fatigue", label: "Fatigue" },
       { to: "/app/audit", label: "Audit packs" },
     ],
@@ -52,10 +55,19 @@ const NAV_GROUPS: NavGroup[] = [
     label: "System",
     items: [
       { to: "/app/notices", label: "Notices" },
-      { to: "/app/settings", label: "Settings" },
+      { to: "/app/settings", label: "Settings", roles: WRITERS },
     ],
   },
 ];
+
+/** Nav filtered to what this role can actually use: read-only PILOT accounts
+ * lose the configuration/import surfaces (the API rejects their writes anyway). */
+function navGroupsFor(role: Role | undefined): NavGroup[] {
+  return NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => !i.roles || (role && i.roles.includes(role))),
+  })).filter((g) => g.items.length > 0);
+}
 
 export function AppShell() {
   const { user, logout } = useAuth();
@@ -75,6 +87,7 @@ export function AppShell() {
   const userLabel = user
     ? `${user.full_name} · ${user.role.toLowerCase().replace(/_/g, " ")}`
     : null;
+  const groups = navGroupsFor(user?.role);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -147,7 +160,7 @@ export function AppShell() {
           aria-label="Main"
           className="hidden lg:flex mx-auto max-w-7xl px-6 flex-wrap items-center gap-x-1 border-t border-dn-steel-lt/50"
         >
-          {NAV_GROUPS.map((group, gi) => (
+          {groups.map((group, gi) => (
             <div key={group.label} className="flex items-center">
               {gi > 0 && <span className="mx-1.5 h-5 w-px bg-dn-steel-lt/60" aria-hidden />}
               {group.items.map((item) => (
@@ -179,7 +192,7 @@ export function AppShell() {
             data-testid="mobile-nav"
           >
             <div className="max-h-[70vh] overflow-y-auto py-2">
-              {NAV_GROUPS.map((group) => (
+              {groups.map((group) => (
                 <div key={group.label} className="py-1">
                   <p className="px-5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-dn-muted">
                     {group.label}

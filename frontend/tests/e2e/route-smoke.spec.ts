@@ -42,6 +42,9 @@ test("every authenticated route renders without errors", async ({ page }) => {
     !process.env.E2E_LIVE,
     "Set E2E_LIVE=1 with a live backend + frontend stack to run this test.",
   );
+  // One long sweep over ~19 routes with networkidle waits against a remote
+  // deployment doesn't fit the default 60s per-test budget.
+  test.setTimeout(300_000);
 
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
