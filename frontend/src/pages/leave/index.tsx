@@ -17,9 +17,12 @@ type LeaveRequest = {
   note: string | null;
 };
 
+type CrewLite = { id: string; employee_no: string; first_name: string; last_name: string };
+
 export function LeavePage() {
   const toast = useToast();
   const [rows, setRows] = useState<LeaveRequest[]>([]);
+  const [crewById, setCrewById] = useState<Record<string, CrewLite>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -31,11 +34,20 @@ export function LeavePage() {
     request: LeaveRequest;
   } | null>(null);
 
+  function crewLabel(crewId: string): string {
+    const c = crewById[crewId];
+    return c ? `${c.first_name} ${c.last_name} (${c.employee_no})` : `${crewId.slice(0, 8)}…`;
+  }
+
   async function reload() {
     setLoading(true);
     try {
-      const list = await api<LeaveRequest[]>("/api/v1/leave?status=PENDING");
+      const [list, crew] = await Promise.all([
+        api<LeaveRequest[]>("/api/v1/leave?status=PENDING"),
+        api<CrewLite[]>("/api/v1/crew"),
+      ]);
       setRows(list);
+      setCrewById(Object.fromEntries(crew.map((c) => [c.id, c])));
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to load leave requests");
@@ -95,8 +107,8 @@ export function LeavePage() {
                 data-testid="leave-row"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-xs text-dn-steel-deep">
-                    {r.crew_id.slice(0, 8)}…
+                  <div className="text-sm font-medium text-dn-steel-deep">
+                    {crewLabel(r.crew_id)}
                   </div>
                   <div className="text-dn-dark">
                     <Badge tone="steel">{r.type}</Badge>{" "}
@@ -137,6 +149,10 @@ export function LeavePage() {
           >
             <div className="space-y-4">
               <div className="bg-dn-fog rounded p-3 space-y-2">
+                <div>
+                  <span className="text-xs text-dn-muted">Crew</span>
+                  <div className="font-medium">{crewLabel(confirmModal.request.crew_id)}</div>
+                </div>
                 <div>
                   <span className="text-xs text-dn-muted">Type</span>
                   <div className="font-medium">{confirmModal.request.type}</div>
