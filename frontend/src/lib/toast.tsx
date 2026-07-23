@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 
 type Tone = "success" | "error" | "info";
-type Toast = { id: number; message: string; tone: Tone };
-type ToastContextValue = { show: (message: string, tone?: Tone) => void };
+type ToastAction = { label: string; onClick: () => void };
+type Toast = { id: number; message: string; tone: Tone; action?: ToastAction };
+type ToastContextValue = { show: (message: string, tone?: Tone, action?: ToastAction) => void };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
@@ -28,10 +29,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const show = useCallback(
-    (message: string, tone: Tone = "info") => {
+    (message: string, tone: Tone = "info", action?: ToastAction) => {
       const id = Date.now() + Math.random();
-      setToasts((prev) => [...prev, { id, message, tone }]);
-      setTimeout(() => dismiss(id), 4000);
+      setToasts((prev) => [...prev, { id, message, tone, ...(action ? { action } : {}) }]);
+      // Action toasts linger longer — the user needs time to change their mind.
+      setTimeout(() => dismiss(id), action ? 7000 : 4000);
     },
     [dismiss],
   );
@@ -54,6 +56,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               {TONE_ICON[t.tone]}
             </span>
             <span className="pr-1">{t.message}</span>
+            {t.action && (
+              <button
+                type="button"
+                onClick={() => {
+                  dismiss(t.id);
+                  t.action?.onClick();
+                }}
+                className="rounded-sm border border-white/40 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-white/15"
+                data-testid="toast-action"
+              >
+                {t.action.label}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => dismiss(t.id)}

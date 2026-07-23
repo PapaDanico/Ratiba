@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api";
 import { safeStorage } from "@/lib/safeStorage";
 import { useAuth } from "@/lib/auth";
@@ -350,6 +351,154 @@ function AttentionHero({
   );
 }
 
+type TodayAssignment = {
+  duty_day_key: string;
+  aircraft_reg: string;
+  sector_ids: string[];
+  captain_id: string;
+  fo_id: string;
+  legality_state: "LEGAL" | "AT_LIMIT" | "REQUIRES_FRMS_DEROGATION" | "ILLEGAL" | null;
+};
+
+type TodayDuty = {
+  id: string;
+  crew_name: string;
+  type: string;
+  start: string;
+  end: string;
+};
+
+type CrewName = { id: string; employee_no: string; first_name: string; last_name: string };
+
+const LEGALITY_TONE: Record<string, "green" | "amber" | "red"> = {
+  LEGAL: "green",
+  AT_LIMIT: "amber",
+  REQUIRES_FRMS_DEROGATION: "amber",
+  ILLEGAL: "red",
+};
+
+function utcHm(iso: string): string {
+  return `${new Date(iso).toISOString().slice(11, 16)}Z`;
+}
+
+/** Answers the morning question at a glance: who is flying today, who is on
+ * standby, and whether everything is legal. Fetches on its own so a failure
+ * or slow response never holds up the rest of the dashboard. */
+function TodayStrip() {
+  const [flights, setFlights] = useState<TodayAssignment[] | null>(null);
+  const [duties, setDuties] = useState<TodayDuty[]>([]);
+  const [crewById, setCrewById] = useState<Record<string, string>>({});
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const today = isoDaysAgo(0);
+    Promise.all([
+      api<TodayAssignment[]>(`/api/v1/roster?date_from=${today}&date_to=${today}`),
+      api<TodayDuty[]>(`/api/v1/duties?date_from=${today}&date_to=${today}`).catch(() => []),
+      api<CrewName[]>("/api/v1/crew"),
+    ]).then(
+      ([r, d, crew]) => {
+        if (cancelled) return;
+        setFlights(r);
+        setDuties(d);
+        // The roster endpoint identifies crew by employee number; map both
+        // keys so either identifier resolves to a name.
+        setCrewById(
+          Object.fromEntries(
+            crew.flatMap((c) => {
+              const name = `${c.first_name} ${c.last_name}`;
+              return [
+                [c.id, name],
+                [c.employee_no, name],
+              ];
+            }),
+          ),
+        );
+      },
+      () => !cancelled && setFailed(true),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (failed) return null; // advisory panel — vanish quietly rather than alarm
+
+  const name = (id: string) => crewById[id] ?? "—";
+  const empty = flights !== null && flights.length === 0 && duties.length === 0;
+
+  return (
+    <Card data-testid="today-strip">
+      <CardHeader>
+        <div className="flex items-baseline justify-between">
+          <CardTitle>Today</CardTitle>
+          <span className="text-xs text-dn-muted">
+            {new Date().toLocaleDateString("en-GB", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </span>
+        </div>
+      </CardHeader>
+      <CardBody className="p-4">
+        {flights === null ? (
+          <Skeleton className="h-14 w-full" />
+        ) : empty ? (
+          <p className="px-2 py-1 text-sm text-dn-muted">
+            No flights or standby today. Tomorrow&apos;s roster is on the{" "}
+            <Link to="/app/roster" className="underline hover:text-dn-dark">
+              Roster page
+            </Link>
+            .
+          </p>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {flights.map((f) => (
+              <div
+                key={f.duty_day_key}
+                className="min-w-[15rem] shrink-0 rounded-dn-sm border border-dn-sand bg-dn-fog/40 px-4 py-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-sm font-medium text-dn-steel-deep">
+                    {f.sector_ids.join(" · ")}
+                  </span>
+                  {f.legality_state && (
+                    <Badge tone={LEGALITY_TONE[f.legality_state] ?? "neutral"}>
+                      {f.legality_state === "REQUIRES_FRMS_DEROGATION"
+                        ? "FRMS"
+                        : f.legality_state.replace("_", " ")}
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-dn-muted">
+                  <span className="font-mono">{f.aircraft_reg}</span> · {name(f.captain_id)} /{" "}
+                  {name(f.fo_id)}
+                </p>
+              </div>
+            ))}
+            {duties.map((d) => (
+              <div
+                key={d.id}
+                className="min-w-[13rem] shrink-0 rounded-dn-sm border border-dn-sand bg-white px-4 py-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-dn-dark">Standby</span>
+                  <span className="font-mono text-xs text-dn-muted">
+                    {utcHm(d.start)}–{utcHm(d.end)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-dn-muted">{d.crew_name}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 export function DashboardPage() {
   const { user } = useAuth();
   const [pendingLeave, setPendingLeave] = useState<number>(0);
@@ -445,6 +594,7 @@ export function DashboardPage() {
         pendingApprovals={pendingLeave + pendingSwaps}
         noticesPendingAck={noticesPendingAck}
       />
+      <TodayStrip />
       <ComplianceAlerts data={alertsData} error={alertsError} />
       <DemoGuide />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

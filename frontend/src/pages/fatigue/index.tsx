@@ -99,6 +99,7 @@ export function FatiguePage() {
             icon="🌙"
             title="No duties in this period"
             hint="Fatigue scoring appears once crew have published duties in the selected window."
+            action={{ label: "Go to Roster", to: "/app/roster" }}
           />
         ) : (
           <div className="overflow-x-auto">
