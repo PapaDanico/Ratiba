@@ -75,8 +75,12 @@ test("every authenticated route renders without errors", async ({ page }) => {
     await page.goto(route, { waitUntil: "networkidle" });
     // Did not silently bounce back to the login screen.
     expect(page.url(), `route ${route} redirected to login`).not.toContain("/login");
-    // Rendered some content (a heading or any test-id'd element).
-    await expect(page.locator("h1, h2, [data-testid]").first()).toBeVisible();
+    // Rendered some content (a heading or any test-id'd element). :visible
+    // filters out things like the mobile nav toggle, which is display:none on
+    // desktop viewports but sits first in DOM order.
+    await expect(
+      page.locator("h1:visible, h2:visible, [data-testid]:visible").first(),
+    ).toBeVisible();
   }
 
   expect(pageErrors, "page errors").toEqual([]);

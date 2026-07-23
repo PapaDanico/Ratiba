@@ -36,7 +36,7 @@ jobs:
           PLAYWRIGHT_BASE_URL: https://ratibacrewmanagement.netlify.app
           E2E_ADMIN_EMAIL: officer@example.aero
           E2E_ADMIN_PASSWORD: hunter2pass
-        run: npx playwright test tests/e2e/route-smoke.spec.ts
+        run: npx playwright test tests/e2e/route-smoke.spec.ts --reporter=github,html
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
