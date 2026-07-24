@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
@@ -93,13 +93,28 @@ function chevron(open: boolean) {
 
 /** One entry in the desktop nav row: a group of 2+ pages collapses into a
  * single button that opens a small dropdown, so the whole menu reads as one
- * calm row instead of 18 links wrapped across two. Closes on outside click,
- * Escape, or picking an item. */
+ * calm row instead of 18 links wrapped across two. This is a disclosure
+ * (button + a plain list of links it reveals), not an application menu — the
+ * items are ordinary navigation, not commands — so it deliberately doesn't
+ * use role="menu"/"menuitem" (which would obligate Arrow/Home/End keyboard
+ * support this widget doesn't offer); aria-expanded + aria-controls is the
+ * correct, honest contract for what's actually implemented: Tab through real
+ * links, Escape to close. Closes on outside click, Escape (returning focus
+ * to the trigger button), picking an item, or the route changing by any
+ * other means (e.g. the command palette or browser back/forward). */
 function NavGroupMenu({ group }: { group: NavGroup }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
   const active = group.items.some((i) => isItemActive(i, location.pathname));
+
+  // Belt-and-braces close: item clicks and outside clicks already close it,
+  // but this catches navigation that isn't a click inside the page at all.
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -107,7 +122,10 @@ function NavGroupMenu({ group }: { group: NavGroup }) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
     }
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("keydown", onKey);
@@ -120,10 +138,11 @@ function NavGroupMenu({ group }: { group: NavGroup }) {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-haspopup="menu"
+        aria-controls={panelId}
         data-testid={`nav-group-${group.label}`}
         className={cn(
           "flex items-center gap-1 px-3 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
@@ -137,7 +156,7 @@ function NavGroupMenu({ group }: { group: NavGroup }) {
       </button>
       {open && (
         <div
-          role="menu"
+          id={panelId}
           className="motion-scale-in absolute left-0 top-full z-40 mt-1 min-w-[11rem] rounded-dn-sm border border-dn-sand bg-white py-1.5 shadow-dn-lg"
         >
           {group.items.map((item) => (
@@ -145,7 +164,6 @@ function NavGroupMenu({ group }: { group: NavGroup }) {
               key={item.to}
               to={item.to}
               end={item.end ?? false}
-              role="menuitem"
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
                 cn(
@@ -169,8 +187,19 @@ function NavGroupMenu({ group }: { group: NavGroup }) {
  * page starts expanded, so opening the menu doesn't dump all 18 links down
  * the screen at once. Remounts fresh each time the drawer opens (it's only
  * in the DOM while `menuOpen`), so the lazy initial state always reflects
- * wherever the user currently is. */
-function MobileNav({ groups }: { groups: NavGroup[] }) {
+ * wherever the user currently is. The sign-out row lives inside the same
+ * max-h-[70vh] overflow-y-auto container as the groups (not a sibling of
+ * it) so it stays reachable via that container's own scrollbar even if
+ * several groups are expanded on a short viewport. */
+function MobileNav({
+  groups,
+  userLabel,
+  onSignOut,
+}: {
+  groups: NavGroup[];
+  userLabel: string | null;
+  onSignOut: () => void;
+}) {
   const location = useLocation();
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const current = groups.find((g) => g.items.some((i) => isItemActive(i, location.pathname)));
@@ -235,6 +264,16 @@ function MobileNav({ groups }: { groups: NavGroup[] }) {
             </div>
           );
         })}
+        <div className="mt-2 border-t border-dn-steel-lt/50 px-5 py-3 flex items-center justify-between">
+          {userLabel && <span className="text-xs text-dn-muted truncate pr-3">{userLabel}</span>}
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="text-sm text-dn-steel-deep hover:text-dn-dark underline shrink-0"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </nav>
   );
@@ -373,24 +412,9 @@ export function AppShell() {
           )}
         </nav>
 
-        {/* Mobile slide-down menu: an accordion of the same groups. */}
-        {menuOpen && (
-          <>
-            <MobileNav groups={groups} />
-            <div className="lg:hidden border-t border-dn-steel-lt/50 bg-white px-5 py-3 flex items-center justify-between">
-              {userLabel && (
-                <span className="text-xs text-dn-muted truncate pr-3">{userLabel}</span>
-              )}
-              <button
-                type="button"
-                onClick={signOut}
-                className="text-sm text-dn-steel-deep hover:text-dn-dark underline shrink-0"
-              >
-                Sign out
-              </button>
-            </div>
-          </>
-        )}
+        {/* Mobile slide-down menu: an accordion of the same groups, with
+            sign-out inside the same scroll region so it's always reachable. */}
+        {menuOpen && <MobileNav groups={groups} userLabel={userLabel} onSignOut={signOut} />}
       </header>
 
       <CommandPalette />
