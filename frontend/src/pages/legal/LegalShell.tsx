@@ -13,10 +13,10 @@ export function LegalShell({
 }) {
   return (
     <main className="min-h-screen bg-dn-fog">
-      <header className="bg-dn-lava">
+      <header className="bg-dn-dark">
         <div className="mx-auto max-w-3xl px-6 py-4 flex items-center justify-between">
-          <span className="font-display text-2xl text-dn-gold tracking-wide">Ratiba</span>
-          <Link to="/login" className="text-sm text-dn-gold/70 hover:text-dn-gold underline">
+          <span className="font-display text-2xl text-dn-amber tracking-wide">Ratiba</span>
+          <Link to="/login" className="text-sm text-dn-amber/70 hover:text-dn-amber underline">
             Back to sign in
           </Link>
         </div>
@@ -24,7 +24,7 @@ export function LegalShell({
       </header>
 
       <div className="mx-auto max-w-3xl px-6 py-10">
-        <div className="mb-6 rounded-md border border-dn-gold/40 bg-dn-gold/5 p-3 text-xs text-dn-muted">
+        <div className="mb-6 rounded-md border border-dn-amber/40 bg-dn-amber/5 p-3 text-xs text-dn-muted">
           <strong className="text-dn-dark">Draft for review.</strong> These notices are templates
           aligned to the Kenya Data Protection Act, 2019 and its Regulations. Have them reviewed by
           qualified legal counsel and complete the bracketed details before relying on them in
@@ -36,7 +36,7 @@ export function LegalShell({
 
         <div className="mt-8 space-y-7 text-sm text-dn-dark leading-relaxed">{children}</div>
 
-        <footer className="mt-12 border-t border-dn-steel-lt pt-4 text-xs text-dn-muted">
+        <footer className="mt-12 border-t border-dn-navy-lt pt-4 text-xs text-dn-muted">
           DN Consultancy · Ratiba ·{" "}
           <Link to="/privacy" className="underline">
             Privacy Policy

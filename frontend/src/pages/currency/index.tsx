@@ -52,7 +52,7 @@ export function CurrencyPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm" data-testid="currency-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
                   <th className="py-2 pr-4 font-medium">Currency</th>
@@ -61,10 +61,10 @@ export function CurrencyPage() {
                   <th className="py-2 pr-4 font-medium">State</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {rows.map((r, idx) => (
                   <tr key={`${r.crew_id}-${r.currency_type}-${idx}`} className="hover:bg-dn-fog">
-                    <td className="py-2 pr-4 font-mono text-dn-steel-deep">
+                    <td className="py-2 pr-4 font-mono text-dn-navy-deep">
                       {r.crew_id.slice(0, 8)}…
                     </td>
                     <td className="py-2 pr-4">{r.currency_type}</td>

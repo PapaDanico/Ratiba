@@ -155,8 +155,8 @@ export function ImportPage() {
                 className={[
                   "px-3 py-1.5 rounded-md text-sm border",
                   k.key === kindKey
-                    ? "bg-dn-steel-deep text-white border-dn-steel"
-                    : "bg-white text-dn-steel-deep border-dn-steel-lt",
+                    ? "bg-dn-navy-deep text-white border-dn-navy"
+                    : "bg-white text-dn-navy-deep border-dn-navy-lt",
                 ].join(" ")}
                 data-testid={`import-kind-${k.key}`}
               >
@@ -165,7 +165,7 @@ export function ImportPage() {
             ))}
           </div>
 
-          <div className="rounded-md border border-dn-steel-lt bg-dn-fog p-3 text-xs">
+          <div className="rounded-md border border-dn-navy-lt bg-dn-fog p-3 text-xs">
             <p className="mb-1">
               <span className="font-semibold text-dn-dark">Required columns:</span>{" "}
               <span className="font-mono">{kind.required.join(", ")}</span>
@@ -222,7 +222,7 @@ export function ImportPage() {
             <div
               className={[
                 "rounded-md border p-3 text-sm",
-                hasErrors ? "border-dn-red/40 bg-dn-red/5" : "border-dn-gold/40 bg-dn-gold/5",
+                hasErrors ? "border-dn-red/40 bg-dn-red/5" : "border-dn-amber/40 bg-dn-amber/5",
               ].join(" ")}
               data-testid="import-result"
             >

@@ -8,8 +8,8 @@ export function ValidationMessage({ message, type = "error" }: ValidationMessage
 
   const colors = {
     error: "text-dn-red text-sm",
-    success: "text-green-600 text-sm",
-    warning: "text-amber-600 text-sm",
+    success: "text-dn-green-deep text-sm",
+    warning: "text-dn-amber-deep text-sm",
   };
 
   return <p className={colors[type]}>{message}</p>;

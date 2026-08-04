@@ -1,30 +1,36 @@
 # DN brand tokens
 
 Single source of truth for colour, type, and motion across Ratiba. Wired into
-`frontend/tailwind.config.ts` and into the WeasyPrint stylesheet for audit packs.
+`frontend/tailwind.config.ts`, the Supabase edge function's PDF renderer
+(`supabase/functions/api/pdf.ts`), and the local-dev WeasyPrint stylesheets
+(`backend/app/services/crew_roster_pdf.py`, `audit_pack.py`) — all four must
+stay in lockstep.
 
-## Palette — DN reference
+## Palette — navy + amber
 
-Exact hex values from the DN Consultancy reference site
-(dnconsultancydiagnostictoolkit.netlify.app `:root`). Legacy token names
-(`DN_SAND`, `DN_SAVANNA`, `DN_LAVA`) are kept and remapped for compatibility.
+DN Consultancy Aviation's stated brand ("navy and amber"), warmed with
+parchment-toned neutrals instead of cool grey so the whole surface reads as
+one temperature — no cool greys, no pure white. Ink and the primary accent
+share one navy family; amber is the single secondary accent, carrying both
+brand highlights and the warning/caution status role.
 
-| Token         | Hex       | Purpose                                   |
-|---------------|-----------|-------------------------------------------|
-| `DN_DARK`     | `#1C1C1C` | Primary text; dark hero/nav surfaces      |
-| `DN_STEEL`    | `#4A7FA5` | Primary brand accent — DN steel blue      |
-| `DN_STEEL_LT` | `#D6E4F0` | Tint backgrounds                          |
-| `DN_STEEL_DEEP` | `#3A6584` | Deep accent (links, hovers)             |
-| `DN_GOLD`     | `#C9A84C` | Accents, dividers — DN gold               |
-| `DN_GOLD_LT`  | `#FFF8E6` | Callout panels                            |
-| `DN_FOG`      | `#F4F4F2` | Page background — light fog               |
-| `DN_SAND`     | `#ECECE9` | Card header tint — a step deeper than fog |
-| `DN_MUTED`    | `#5B6472` | Body text, captions (darkened for WCAG AA) |
-| `DN_GREEN`    | `#1E8449` | Compliant / positive                      |
-| `DN_RED`      | `#C0392B` | Alerts / critical                         |
-| `DN_AMBER`    | `#D4AC0D` | Watch items                               |
-| `DN_SAVANNA`  | `#C9A84C` | Legacy warm accent → mapped to gold       |
-| `DN_LAVA`     | `#1C1C1C` | Legacy nav surface → mapped to dark       |
+| Token           | Hex       | Purpose                                      |
+|-----------------|-----------|-----------------------------------------------|
+| `DN_DARK`       | `#0A192F` | Primary text / ink                            |
+| `DN_DARK_DEEP`  | `#020C1B` | Deepest dark band — hero sections, footers    |
+| `DN_NAVY`       | `#0A192F` | Primary brand accent — buttons, active states |
+| `DN_NAVY_LT`    | `#DCE3ED` | Pale navy tint — badges, hover surfaces       |
+| `DN_NAVY_DEEP`  | `#020C1B` | Hover/pressed, darkest                        |
+| `DN_AMBER`      | `#D97706` | Secondary accent + warning/caution status     |
+| `DN_AMBER_LT`   | `#FFF6E5` | Pale amber wash — callout panels              |
+| `DN_AMBER_DEEP` | `#B45309` | AA-safe amber for text on tints               |
+| `DN_FOG`        | `#F7F3EA` | Page background — warm parchment              |
+| `DN_SAND`       | `#EDE6D3` | Card header tint — a step deeper than fog     |
+| `DN_SAND_DEEP`  | `#E3D8BE` | Borders, dividers — warm, not cool grey       |
+| `DN_MUTED`      | `#5C6B7D` | Body text, captions (AA-checked)              |
+| `DN_GREEN`      | `#1E7A4A` | Compliant / positive                          |
+| `DN_GREEN_DEEP` | `#166437` | Readable green text on light tints            |
+| `DN_RED`        | `#C0392B` | Alerts / critical                             |
 
 ## Typography
 
@@ -34,15 +40,22 @@ Exact hex values from the DN Consultancy reference site
 | Body     | DM Sans             | Google Fonts | Matches the DN reference site body face |
 | Code/data| JetBrains Mono      | Google Fonts | Monospace for IDs, times, figures  |
 
+Cormorant Garamond ships old-style (text) figures by default — digits at
+inconsistent heights, which reads as broken in a heading like "12,345" rather
+than as a number. `body { font-variant-numeric: lining-nums; }` in
+`frontend/src/styles/index.css` corrects this globally by inheritance; the
+`.tnum` utility additionally sets `tabular-nums` for figures that sit in
+columns or update in place.
+
 ## Tribal decorative system
 
 Three CSS utility classes provide Maasai-inspired geometric accents:
 
-- **`.tribal-stripe`** — 3-colour repeating horizontal stripe (gold / earth-red / rift-blue).
+- **`.tribal-stripe`** — 3-colour repeating horizontal stripe (amber / navy / deep navy).
   Used beneath card headers and as nav divider. Height: 3 px.
-- **`.tribal-texture`** — Subtle diamond-grid overlay at 6% opacity.
+- **`.tribal-texture`** — Subtle diamond-grid overlay at 5% opacity, amber-tinted.
   Used on dark surfaces (login backdrop, nav header).
-- **`.savanna-dawn`** — Kenyan sunrise gradient (#1A0D05 → #C9A84C).
+- **`.savanna-dawn`** — Navy-night-to-amber-dawn gradient (`#020C1B` → `#0A192F` → `#1E3A5F` → `#B45309`).
   Used as the login page full-bleed background.
 
 ## Tailwind binding
@@ -52,18 +65,29 @@ In `tailwind.config.ts` colours are namespaced under the `dn-` prefix:
 ```ts
 colors: {
   dn: {
-    dark: "#1E0F05",
-    steel: "#1B4F72",
-    "steel-lt": "#D0E8F5",
-    gold: "#C9A84C",
+    dark: "#0A192F",
+    navy: "#0A192F",
+    "navy-lt": "#DCE3ED",
+    amber: "#D97706",
     // ...
   },
 }
 ```
 
-Use them as `bg-dn-fog`, `text-dn-dark`, `border-dn-gold`, etc.
+Use them as `bg-dn-fog`, `text-dn-dark`, `border-dn-amber`, etc.
 
-## Audit pack
+Large background areas (full-page gradients, hero backdrops) should lean on
+`dn-fog`/`dn-amber-lt` rather than `dn-navy-lt` — navy is a cool hue, and
+spreading its light tint across a whole viewport reads cold despite being
+on-brand. Reserve navy tints for small accent touches (badges, chips, icon
+circles); keep the dominant surface warm.
 
-The WeasyPrint stylesheet mirrors these tokens via CSS custom properties so
-that the PDF audit pack and the dashboard are visually consistent.
+## PDF renderers
+
+Both PDF pipelines mirror this palette via literal RGB/hex constants (no
+shared token import across the Deno/Python/TypeScript boundary, so they must
+be updated by hand together):
+
+- `supabase/functions/api/pdf.ts` — pdf-lib `rgb()` triples, production.
+- `backend/app/services/crew_roster_pdf.py` / `audit_pack.py` — WeasyPrint
+  CSS hex values, local-dev only (parity with the edge function).

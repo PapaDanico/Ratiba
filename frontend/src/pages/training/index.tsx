@@ -116,7 +116,7 @@ function RecurrencySection() {
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="recurrency-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
                   <th className="py-2 pr-4 font-medium">Item</th>
@@ -125,7 +125,7 @@ function RecurrencySection() {
                   <th className="py-2 pr-4 font-medium">State</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {items.map((i, idx) => (
                   <tr key={`${i.crew_id}-${i.label}-${idx}`} className="hover:bg-dn-fog">
                     <td data-label="Crew" className="py-2 pr-4">
@@ -333,7 +333,7 @@ function TypeRatingsSection() {
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="ratings-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
                   <th className="py-2 pr-4 font-medium">Type</th>
@@ -344,7 +344,7 @@ function TypeRatingsSection() {
                   <th className="py-2 pr-4 font-medium" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {ratings.map((r) => (
                   <tr key={r.id} className="hover:bg-dn-fog">
                     <td data-label="Crew" className="py-2 pr-4">
@@ -352,7 +352,7 @@ function TypeRatingsSection() {
                       <span className="font-mono text-xs text-dn-muted">({r.employee_no})</span>
                     </td>
                     <td data-label="Type" className="py-2 pr-4">
-                      <Badge tone="steel">{r.aircraft_type}</Badge>
+                      <Badge tone="navy">{r.aircraft_type}</Badge>
                     </td>
                     <td data-label="Valid from" className="py-2 pr-4 font-mono">
                       {r.valid_from}

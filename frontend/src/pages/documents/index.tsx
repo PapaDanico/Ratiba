@@ -269,7 +269,7 @@ export function DocumentsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="documents-table">
-              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-3 pr-4 font-medium">
                     <SortableTh label="Crew" col="crew" sort={sort} onSort={toggle} />
@@ -289,7 +289,7 @@ export function DocumentsPage() {
                   <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {visibleDocs.map((d) => (
                   <tr key={d.id}>
                     <td data-label="Crew" className="py-3 pr-4">

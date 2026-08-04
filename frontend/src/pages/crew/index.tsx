@@ -78,7 +78,7 @@ function CrossOpFtlButton({ crew }: { crew: Crew }) {
       <button
         type="button"
         onClick={load}
-        className="text-dn-steel-deep underline text-xs hover:text-dn-dark"
+        className="text-dn-navy-deep underline text-xs hover:text-dn-dark"
         data-testid={`xop-ftl-${crew.employee_no}`}
       >
         Cross-op FTL
@@ -116,7 +116,7 @@ function CrossOpFtlButton({ crew }: { crew: Crew }) {
                 )}
               </p>
               <table className="w-full text-sm responsive-table">
-                <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                   <tr>
                     <th className="py-2 pr-4 font-medium">Window</th>
                     <th className="py-2 pr-4 font-medium">Total</th>
@@ -124,7 +124,7 @@ function CrossOpFtlButton({ crew }: { crew: Crew }) {
                     <th className="py-2 pr-4 font-medium">State</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-dn-steel-lt">
+                <tbody className="divide-y divide-dn-navy-lt">
                   {data.windows.map((w) => (
                     <tr key={w.label}>
                       <td data-label="Window" className="py-2 pr-4 text-dn-dark">
@@ -163,9 +163,9 @@ const CATEGORY_LABEL: Record<Crew["crew_category"], string> = {
   ENGINEERING: "Engineering",
 };
 
-const CATEGORY_TONE: Record<Crew["crew_category"], "steel" | "gold" | "amber"> = {
-  FLIGHT_DECK: "steel",
-  CABIN: "gold",
+const CATEGORY_TONE: Record<Crew["crew_category"], "navy" | "neutral" | "amber"> = {
+  FLIGHT_DECK: "navy",
+  CABIN: "neutral",
   ENGINEERING: "amber",
 };
 
@@ -239,7 +239,7 @@ function RosterPdfButton({ crew }: { crew: Crew }) {
         Roster PDF
       </Button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-52 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+        <div className="absolute right-0 z-20 mt-1 w-52 bg-white border border-dn-navy-lt rounded-lg shadow-lg p-3 space-y-2">
           <p className="text-xs font-medium text-dn-dark">Download monthly roster</p>
           <div className="flex gap-2">
             <Select
@@ -335,7 +335,7 @@ function CalendarFeedButton({ crew }: { crew: Crew }) {
         Calendar feed
       </Button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-navy-lt rounded-lg shadow-lg p-3 space-y-2">
           <p className="text-xs font-medium text-dn-dark">Subscribe this roster in a calendar</p>
           <p className="text-xs text-dn-muted">
             Add this URL in Google/Apple/Outlook as a subscribed calendar — it stays in sync.
@@ -349,7 +349,7 @@ function CalendarFeedButton({ crew }: { crew: Crew }) {
               <textarea
                 readOnly
                 value={url}
-                className="w-full text-[10px] font-mono border border-dn-steel-lt rounded p-1 h-16"
+                className="w-full text-[10px] font-mono border border-dn-navy-lt rounded p-1 h-16"
                 onFocus={(e) => e.currentTarget.select()}
               />
               <Button size="sm" className="w-full" onClick={copy}>
@@ -431,7 +431,7 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
         Pair device
       </Button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-steel-lt rounded-lg shadow-lg p-3 space-y-2">
+        <div className="absolute right-0 z-20 mt-1 w-72 bg-white border border-dn-navy-lt rounded-lg shadow-lg p-3 space-y-2">
           <p className="text-xs font-medium text-dn-dark">Pair {crew.employee_no}&rsquo;s device</p>
           <p className="text-xs text-dn-muted">
             Send this one-tap link — opening it on the pilot&rsquo;s phone pairs the{" "}
@@ -446,7 +446,7 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
               <textarea
                 readOnly
                 value={link}
-                className="w-full text-[10px] font-mono border border-dn-steel-lt rounded p-1 h-16"
+                className="w-full text-[10px] font-mono border border-dn-navy-lt rounded p-1 h-16"
                 onFocus={(e) => e.currentTarget.select()}
                 data-testid={`pair-link-${crew.id}`}
               />
@@ -461,7 +461,7 @@ function PairDeviceButton({ crew }: { crew: Crew }) {
                 testidPrefix={`pair-share-${crew.id}`}
               />
               <p className="text-[10px] text-dn-muted">
-                Or dictate the code <span className="font-mono text-dn-steel-deep">{code}</span>
+                Or dictate the code <span className="font-mono text-dn-navy-deep">{code}</span>
                 {expiresAt ? ` · expires ${new Date(expiresAt).toLocaleString()}` : ""}
               </p>
             </>
@@ -524,7 +524,7 @@ export function CrewPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="crew-table">
-              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-3 pr-4 font-medium">
                     <SortableTh label="Employee #" col="employee_no" sort={sort} onSort={toggle} />
@@ -545,17 +545,17 @@ export function CrewPage() {
                   <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {pager.pageRows.map((c) => (
                   <tr key={c.id} className="group transition-colors hover:bg-dn-fog">
-                    <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-steel-deep">
+                    <td data-label="Employee #" className="py-3 pr-4 font-mono text-dn-navy-deep">
                       {c.employee_no}
                     </td>
                     <td data-label="Name" className="py-3 pr-4 text-dn-dark">
                       {c.first_name} {c.last_name}
                     </td>
                     <td data-label="Role" className="py-3 pr-4">
-                      <Badge tone="steel">{c.role}</Badge>
+                      <Badge tone="navy">{c.role}</Badge>
                     </td>
                     <td data-label="Category" className="py-3 pr-4">
                       <Badge tone={CATEGORY_TONE[c.crew_category]}>

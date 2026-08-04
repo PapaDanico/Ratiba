@@ -286,7 +286,7 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="rtable min-w-full text-sm" data-testid="duties-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-3 pr-4 font-medium">Crew</th>
                   <th className="py-3 pr-4 font-medium">Date</th>
@@ -296,7 +296,7 @@ function StandbyPanel({ from, to }: { from: string; to: string }) {
                   <th className="py-3 pr-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {duties.map((d) => (
                   <tr key={d.id}>
                     <td data-label="Crew" className="py-3 pr-4">
@@ -564,7 +564,7 @@ export function RosterPage() {
                   aria-label="Roster range from"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
-                  className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+                  className="rounded-md border border-dn-navy-lt px-2 py-1 font-mono"
                   data-testid="roster-date-from"
                 />
                 <span>→</span>
@@ -573,7 +573,7 @@ export function RosterPage() {
                   aria-label="Roster range to"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
-                  className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+                  className="rounded-md border border-dn-navy-lt px-2 py-1 font-mono"
                   data-testid="roster-date-to"
                 />
               </div>
@@ -617,7 +617,7 @@ export function RosterPage() {
         <CardBody>
           {(draft || draftMsg) && (
             <div
-              className="mb-4 rounded-md border border-dn-gold/40 bg-dn-gold/5 p-4"
+              className="mb-4 rounded-md border border-dn-amber/40 bg-dn-amber/5 p-4"
               data-testid="draft-banner"
             >
               {draft && (
@@ -682,11 +682,11 @@ export function RosterPage() {
                             setDraggingRole(c.role === "CAPT" ? "CAPT" : "FO");
                           }}
                           onDragEnd={() => setDraggingRole(null)}
-                          className="cursor-grab rounded-full border border-dn-steel-lt bg-white px-2 py-0.5 text-xs hover:border-dn-gold"
+                          className="cursor-grab rounded-full border border-dn-navy-lt bg-white px-2 py-0.5 text-xs hover:border-dn-amber"
                           data-testid={`crew-chip-${c.employee_no}`}
                           title={`${c.first_name} ${c.last_name} · ${c.role}`}
                         >
-                          <span className="font-mono text-dn-steel-deep">{c.employee_no}</span>{" "}
+                          <span className="font-mono text-dn-navy-deep">{c.employee_no}</span>{" "}
                           {c.first_name} {c.last_name}
                           <span className="ml-1 text-[10px] text-dn-muted">{c.role}</span>
                         </span>
@@ -706,10 +706,10 @@ export function RosterPage() {
                         compact ? "p-1 min-h-[64px]" : "p-2 min-h-[100px]",
                         holidayName
                           ? "bg-amber-50 border-amber-200"
-                          : "bg-dn-fog border-dn-steel-lt",
+                          : "bg-dn-fog border-dn-navy-lt",
                       ].join(" ")}
                     >
-                      <div className="font-mono text-xs text-dn-steel-deep mb-1">{d}</div>
+                      <div className="font-mono text-xs text-dn-navy-deep mb-1">{d}</div>
                       {holidayName && (
                         <div
                           className="text-xs font-medium text-amber-700 mb-1 truncate"
@@ -726,13 +726,13 @@ export function RosterPage() {
                             <li
                               key={a.duty_day_key}
                               className={[
-                                "bg-white rounded border border-dn-steel-lt text-xs",
+                                "bg-white rounded border border-dn-navy-lt text-xs",
                                 compact ? "px-1 py-0.5" : "px-2 py-1",
                               ].join(" ")}
                             >
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-mono">{a.aircraft_reg}</span>
-                                <Badge tone="steel">{a.aircraft_type}</Badge>
+                                <Badge tone="navy">{a.aircraft_type}</Badge>
                               </div>
                               <div className="mt-0.5 space-y-0.5">
                                 {(["CAPT", "FO"] as const).map((role) => {
@@ -743,9 +743,9 @@ export function RosterPage() {
                                     draggingRole === null || roleFits(draggingRole, role);
                                   const cls =
                                     isOver && valid
-                                      ? "bg-dn-gold/30 ring-1 ring-dn-gold"
+                                      ? "bg-dn-amber/30 ring-1 ring-dn-amber"
                                       : draggingRole !== null && valid
-                                        ? "ring-1 ring-dn-gold/40"
+                                        ? "ring-1 ring-dn-amber/40"
                                         : draggingRole !== null && !valid
                                           ? "opacity-40"
                                           : "";
@@ -771,7 +771,7 @@ export function RosterPage() {
                                       ].join(" ")}
                                       data-testid={`slot-${role}-${a.duty_day_key}`}
                                     >
-                                      <span className="text-[10px] font-semibold text-dn-steel-deep">
+                                      <span className="text-[10px] font-semibold text-dn-navy-deep">
                                         {role}
                                       </span>
                                       <span
@@ -804,7 +804,7 @@ export function RosterPage() {
                                 <button
                                   type="button"
                                   onClick={() => setEditing(a)}
-                                  className="text-dn-steel-deep underline text-xs"
+                                  className="text-dn-navy-deep underline text-xs"
                                   data-testid={`amend-btn-${a.duty_day_key}`}
                                 >
                                   amend

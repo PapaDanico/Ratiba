@@ -16,25 +16,65 @@
   }
   /* Smooth focus ring */
   :focus-visible {
-    @apply outline-none ring-2 ring-dn-gold ring-offset-2 ring-offset-dn-fog;
+    @apply outline-none ring-2 ring-dn-amber ring-offset-2 ring-offset-dn-fog;
+  }
+
+  /*
+   * Cormorant Garamond ships OLD-STYLE (text) figures by default: "11"
+   * renders as "II", digits sit at inconsistent heights, and a number like
+   * "12–24" in a serif heading reads as broken rather than as a range.
+   * Correct everywhere at once (root + inherit) rather than an allow-list,
+   * which would silently miss anything rendered later. DM Sans carries only
+   * lining figures, so this is a no-op for body copy.
+   */
+  body {
+    font-variant-numeric: lining-nums;
+  }
+
+  /*
+   * Tracking is optical, not fixed: a display face set large needs to be
+   * pulled tighter than the same face set small, where negative tracking
+   * just makes it muddy. text-wrap:balance stops a headline stranding one
+   * word alone on its last line; :pretty avoids the same for body copy.
+   */
+  h1 {
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+  }
+  h2 {
+    letter-spacing: -0.016em;
+    text-wrap: balance;
+  }
+  h3 {
+    letter-spacing: -0.008em;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
 }
 
 @layer utilities {
+  /* Tabular figures for numbers that sit in columns or update in place, so
+     digits keep a constant advance width and totals don't jitter. */
+  .tnum {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
   /*
-   * DN brand stripe — gold / steel / charcoal repeating band.
+   * DN brand stripe — amber / navy / deep-navy repeating band.
    * Use as a thin decorative separator on card headers, page dividers, etc.
    */
   .tribal-stripe {
     height: 3px;
     background: repeating-linear-gradient(
       90deg,
-      #c9a84c 0px,
-      #c9a84c 16px,
-      #4a7fa5 16px,
-      #4a7fa5 32px,
-      #1c1c1c 32px,
-      #1c1c1c 48px
+      #d97706 0px,
+      #d97706 16px,
+      #0a192f 16px,
+      #0a192f 32px,
+      #020c1b 32px,
+      #020c1b 48px
     );
     flex-shrink: 0;
   }
@@ -47,23 +87,23 @@
     background-image:
       repeating-linear-gradient(
         45deg,
-        rgba(201, 168, 76, 0.06) 0px,
-        rgba(201, 168, 76, 0.06) 1px,
+        rgba(217, 119, 6, 0.05) 0px,
+        rgba(217, 119, 6, 0.05) 1px,
         transparent 1px,
         transparent 14px
       ),
       repeating-linear-gradient(
         -45deg,
-        rgba(201, 168, 76, 0.06) 0px,
-        rgba(201, 168, 76, 0.06) 1px,
+        rgba(217, 119, 6, 0.05) 0px,
+        rgba(217, 119, 6, 0.05) 1px,
         transparent 1px,
         transparent 14px
       );
   }
 
-  /* DN dark-steel gradient — login page backdrop (matches reference hero panels) */
+  /* Navy-night-to-amber-dawn gradient — login page backdrop. */
   .savanna-dawn {
-    background: linear-gradient(160deg, #1c1c1c 0%, #2c3e50 55%, #3a6584 85%, #4a7fa5 100%);
+    background: linear-gradient(160deg, #020c1b 0%, #0a192f 45%, #1e3a5f 75%, #b45309 100%);
   }
 }
 
@@ -172,7 +212,7 @@
   }
   table.rtable tbody tr:hover,
   table.responsive-table tbody tr:hover {
-    background-color: #f4f4f2; /* DN_FOG */
+    background-color: #F7F3EA; /* DN_FOG */
   }
   /*
    * Sticky header for long tables: the column labels stay visible while the
@@ -183,7 +223,7 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    background-color: #f4f4f2; /* DN_FOG — matches page bg so rows slide under cleanly */
+    background-color: #F7F3EA; /* DN_FOG — matches page bg so rows slide under cleanly */
   }
 
   /*
@@ -223,7 +263,7 @@
   }
   table.rtable tr,
   table.responsive-table tr {
-    border: 1px solid #d0e8f5;
+    border: 1px solid #DCE3ED; /* DN_NAVY_LT */
     border-radius: 10px;
     padding: 6px 12px;
     margin-bottom: 10px;
@@ -246,7 +286,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #6b7280;
+    color: #5C6B7D; /* DN_MUTED */
     text-align: left;
     flex-shrink: 0;
   }

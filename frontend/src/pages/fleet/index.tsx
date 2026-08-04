@@ -220,7 +220,7 @@ export function FleetPage() {
             </p>
           ) : (
             <table className="min-w-full text-sm" data-testid="fleet-table">
-              <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Registration</th>
                   <th className="py-2 pr-4 font-medium">Type</th>
@@ -228,7 +228,7 @@ export function FleetPage() {
                   <th className="py-2 pr-4 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {fleet.map((a) => (
                   <tr key={a.id} className="hover:bg-dn-fog">
                     <td className="py-2 pr-4 font-mono">{a.registration}</td>
@@ -251,7 +251,7 @@ export function FleetPage() {
                           type="button"
                           onClick={() => void toggleActive(a)}
                           disabled={busyId === a.id}
-                          className="text-dn-steel-deep underline text-xs disabled:opacity-50"
+                          className="text-dn-navy-deep underline text-xs disabled:opacity-50"
                           data-testid={`fleet-toggle-${a.id}`}
                         >
                           {busyId === a.id ? "…" : a.active ? "deactivate" : "activate"}

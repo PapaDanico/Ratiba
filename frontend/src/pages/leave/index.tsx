@@ -99,7 +99,7 @@ export function LeavePage() {
             No pending requests. Nicely done.
           </p>
         ) : (
-          <ul className="divide-y divide-dn-steel-lt">
+          <ul className="divide-y divide-dn-navy-lt">
             {rows.map((r) => (
               <li
                 key={r.id}
@@ -107,11 +107,11 @@ export function LeavePage() {
                 data-testid="leave-row"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-dn-steel-deep">
+                  <div className="text-sm font-medium text-dn-navy-deep">
                     {crewLabel(r.crew_id)}
                   </div>
                   <div className="text-dn-dark">
-                    <Badge tone="steel">{r.type}</Badge>{" "}
+                    <Badge tone="navy">{r.type}</Badge>{" "}
                     <span className="font-mono">{r.date_from}</span> →{" "}
                     <span className="font-mono">{r.date_to}</span>
                   </div>

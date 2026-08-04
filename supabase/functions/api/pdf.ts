@@ -31,24 +31,25 @@ export interface AuditPackMeta {
   anomaly_count: number;
 }
 
-const INK = rgb(0.11, 0.11, 0.11);
-const STEEL = rgb(0.23, 0.4, 0.52);
+const INK = rgb(0.039, 0.098, 0.184); // #0A192F — navy ink
+const STEEL = rgb(0.039, 0.098, 0.184); // #0A192F — navy (was steel blue)
 const RED = rgb(0.75, 0.22, 0.17);
 
 // DN Consultancy brand tokens (frontend/tailwind.config.ts is the source of
-// truth — keep these two in lockstep).
-const DARK = rgb(0.11, 0.11, 0.11); // #1C1C1C
-const GOLD = rgb(0.788, 0.659, 0.298); // #C9A84C
-const GOLD_LT = rgb(1, 0.973, 0.902); // #FFF8E6
-const FOG = rgb(0.957, 0.957, 0.949); // #F4F4F2
-const MUTED = rgb(0.357, 0.392, 0.447); // #5B6472
+// truth — keep these two in lockstep). Navy + amber per DNCA's own stated
+// brand, warmed parchment neutrals — see tailwind.config.ts for the rationale.
+const DARK = rgb(0.039, 0.098, 0.184); // #0A192F
+const GOLD = rgb(0.851, 0.467, 0.024); // #D97706 (amber — was gold #C9A84C)
+const GOLD_LT = rgb(1, 0.965, 0.898); // #FFF6E5 (was #FFF8E6)
+const FOG = rgb(0.969, 0.953, 0.918); // #F7F3EA (was #F4F4F2)
+const MUTED = rgb(0.361, 0.42, 0.49); // #5C6B7D (was #5B6472)
 const GREEN_DEEP = rgb(0.086, 0.392, 0.216); // #166437
 const GREEN_LT = rgb(0.902, 0.957, 0.914);
-const AMBER_DEEP = rgb(0.478, 0.361, 0); // #7A5C00
+const AMBER_DEEP = rgb(0.706, 0.325, 0.035); // #B45309 (was #7A5C00)
 const RED_LT = rgb(0.98, 0.91, 0.89);
 const PURPLE_DEEP = rgb(0.38, 0.3, 0.56);
 const PURPLE_LT = rgb(0.93, 0.91, 0.97);
-const STEEL_LT = rgb(0.839, 0.894, 0.941); // #D6E4F0
+const STEEL_LT = rgb(0.863, 0.89, 0.929); // #DCE3ED (was #D6E4F0)
 const BORDER = rgb(0.85, 0.87, 0.89);
 
 export async function buildAuditPackPdf(

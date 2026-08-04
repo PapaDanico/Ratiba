@@ -129,7 +129,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm responsive-table">
-                <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                   <tr>
                     <th className="py-3 pr-4 font-medium">Name</th>
                     <th className="py-3 pr-4 font-medium">Email</th>
@@ -138,7 +138,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                     <th className="py-3 pr-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-dn-steel-lt">
+                <tbody className="divide-y divide-dn-navy-lt">
                   {members.map((m) => {
                     const isSelf = m.id === currentUserId;
                     return (
@@ -152,7 +152,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                         </td>
                         <td data-label="Role" className="py-3 pr-4">
                           {isSelf ? (
-                            <Badge tone="steel">{ROLE_LABEL[m.role]}</Badge>
+                            <Badge tone="navy">{ROLE_LABEL[m.role]}</Badge>
                           ) : (
                             <Select
                               value={m.role}
@@ -187,7 +187,7 @@ export function TeamPanel({ currentUserId }: { currentUserId: string }) {
                                     ? setConfirmDeactivate(m)
                                     : patch(m.id, { is_active: true })
                                 }
-                                className="text-dn-steel-deep underline text-xs hover:text-dn-dark"
+                                className="text-dn-navy-deep underline text-xs hover:text-dn-dark"
                                 data-testid={`toggle-${m.email}`}
                               >
                                 {m.is_active ? "Deactivate" : "Reactivate"}

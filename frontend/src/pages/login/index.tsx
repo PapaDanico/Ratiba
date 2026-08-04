@@ -114,7 +114,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-dn-steel-lt via-white to-dn-steel-lt flex flex-col lg:flex-row">
+    <main className="min-h-screen bg-gradient-to-br from-dn-fog via-white to-dn-amber-lt flex flex-col lg:flex-row">
       {/* Left panel: brand column */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-16 relative">
         {/* Logo & Brand — top */}
@@ -122,7 +122,7 @@ export function LoginPage() {
           <div className="flex items-center gap-3">
             <DnLogo showText={true} width={200} />
           </div>
-          <p className="mt-4 text-dn-steel-deep text-lg font-light max-w-xs leading-relaxed">
+          <p className="mt-4 text-dn-navy-deep text-lg font-light max-w-xs leading-relaxed">
             Intelligent crew rostering for East African aviation
           </p>
         </div>
@@ -130,7 +130,7 @@ export function LoginPage() {
         {/* Key benefits — bottom */}
         <div className="relative z-10 space-y-6">
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-navy/10 flex items-center justify-center text-dn-navy-deep font-bold">
               ✓
             </div>
             <div>
@@ -139,7 +139,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-navy/10 flex items-center justify-center text-dn-navy-deep font-bold">
               ✓
             </div>
             <div>
@@ -148,7 +148,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-navy/10 flex items-center justify-center text-dn-navy-deep font-bold">
               ✓
             </div>
             <div>
@@ -162,9 +162,9 @@ export function LoginPage() {
       {/* Right panel: auth form */}
       <div className="flex-1 flex items-center justify-center px-6 py-16 lg:py-0">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-dn-steel-lt">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-dn-navy-lt">
             {/* Card header */}
-            <div className="bg-gradient-to-r from-dn-steel-lt to-transparent px-8 pt-8 pb-0">
+            <div className="bg-gradient-to-r from-dn-amber-lt to-transparent px-8 pt-8 pb-0">
               <div className="flex items-center gap-2 mb-4">
                 <DnLogo showText={false} width={28} />
                 <span className="text-sm font-semibold text-dn-dark">Ratiba</span>
@@ -178,7 +178,7 @@ export function LoginPage() {
 
             <div className="px-8 py-8 space-y-5">
               {/* Mode toggle */}
-              <div className="flex rounded-lg border border-dn-steel-lt overflow-hidden text-sm bg-dn-steel-lt/30">
+              <div className="flex rounded-lg border border-dn-navy-lt overflow-hidden text-sm bg-dn-navy-lt/30">
                 <button
                   type="button"
                   onClick={() => {
@@ -187,8 +187,8 @@ export function LoginPage() {
                   }}
                   className={`flex-1 py-2.5 font-medium transition-colors ${
                     mode === "signin"
-                      ? "bg-dn-steel-deep text-white shadow-sm"
-                      : "bg-transparent text-dn-steel-deep hover:text-dn-dark"
+                      ? "bg-dn-navy-deep text-white shadow-sm"
+                      : "bg-transparent text-dn-navy-deep hover:text-dn-dark"
                   }`}
                   data-testid="tab-signin"
                 >
@@ -202,8 +202,8 @@ export function LoginPage() {
                   }}
                   className={`flex-1 py-2.5 font-medium transition-colors ${
                     mode === "create"
-                      ? "bg-dn-steel-deep text-white shadow-sm"
-                      : "bg-transparent text-dn-steel-deep hover:text-dn-dark"
+                      ? "bg-dn-navy-deep text-white shadow-sm"
+                      : "bg-transparent text-dn-navy-deep hover:text-dn-dark"
                   }`}
                   data-testid="tab-create"
                 >
@@ -272,7 +272,7 @@ export function LoginPage() {
                         setMode("create");
                         setError(null);
                       }}
-                      className="text-dn-steel-deep hover:underline"
+                      className="text-dn-navy-deep hover:underline"
                     >
                       Create one
                     </button>
@@ -391,7 +391,7 @@ export function LoginPage() {
               device with a code issued by their crewing officer. */}
           <Link
             to="/crew/me"
-            className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-dn-steel-lt bg-white/80 px-5 py-4 shadow-sm transition-colors hover:border-dn-steel hover:bg-white"
+            className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-dn-navy-lt bg-white/80 px-5 py-4 shadow-sm transition-colors hover:border-dn-navy hover:bg-white"
             data-testid="crew-access-link"
           >
             <div>
@@ -400,7 +400,7 @@ export function LoginPage() {
                 View your roster, duty and notices with a pairing code — no account needed.
               </p>
             </div>
-            <span aria-hidden className="text-dn-steel-deep text-lg">
+            <span aria-hidden className="text-dn-navy-deep text-lg">
               →
             </span>
           </Link>

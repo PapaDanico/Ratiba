@@ -268,11 +268,11 @@ export function IropPage() {
           {assessErr && <ErrorAlert message={assessErr} />}
 
           {result && (
-            <div className="rounded-md border border-dn-steel-lt p-4" data-testid="irop-result">
+            <div className="rounded-md border border-dn-navy-lt p-4" data-testid="irop-result">
               <div className="flex flex-wrap items-center gap-3 mb-3">
                 <span className="font-mono text-sm text-dn-dark">{result.crew_employee_no}</span>
                 <span className="text-sm text-dn-muted">{result.date}</span>
-                {result.away_from_base && <Badge tone="gold">Away from base</Badge>}
+                {result.away_from_base && <Badge tone="navy">Away from base</Badge>}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 text-sm">
@@ -313,7 +313,7 @@ export function IropPage() {
                 </div>
               )}
 
-              <div className="mt-3 border-t border-dn-steel-lt pt-3 text-sm">
+              <div className="mt-3 border-t border-dn-navy-lt pt-3 text-sm">
                 <p className="text-dn-muted mb-1">Cascade into next duty</p>
                 {result.cascade.next_date == null ? (
                   <span className="text-dn-muted">No subsequent published duty.</span>
@@ -406,7 +406,7 @@ export function IropPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm responsive-table">
-                  <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                  <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                     <tr>
                       <th className="py-2 pr-4 font-medium">Crew</th>
                       <th className="py-2 pr-4 font-medium">Role</th>
@@ -417,7 +417,7 @@ export function IropPage() {
                       <th className="py-2 pr-4 font-medium">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-dn-steel-lt">
+                  <tbody className="divide-y divide-dn-navy-lt">
                     {alts.map((a) => (
                       <tr key={a.crew_id} className="hover:bg-dn-fog">
                         <td data-label="Crew" className="py-2 pr-4 text-dn-dark">
@@ -444,7 +444,7 @@ export function IropPage() {
                             <button
                               type="button"
                               onClick={() => setAmendFor(a)}
-                              className="text-dn-steel-deep underline text-xs hover:text-dn-dark"
+                              className="text-dn-navy-deep underline text-xs hover:text-dn-dark"
                               data-testid={`apply-relief-${a.employee_no}`}
                             >
                               Apply relief

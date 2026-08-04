@@ -147,8 +147,8 @@ function NavGroupMenu({ group }: { group: NavGroup }) {
         className={cn(
           "flex items-center gap-1 px-3 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
           active
-            ? "border-dn-steel text-dn-steel-deep"
-            : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-steel-lt",
+            ? "border-dn-navy text-dn-navy-deep"
+            : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-navy-lt",
         )}
       >
         {group.label}
@@ -169,7 +169,7 @@ function NavGroupMenu({ group }: { group: NavGroup }) {
                 cn(
                   "block px-4 py-2 text-sm transition-colors",
                   isActive
-                    ? "bg-dn-steel-lt/40 font-medium text-dn-steel-deep"
+                    ? "bg-dn-navy-lt/40 font-medium text-dn-navy-deep"
                     : "text-dn-dark hover:bg-dn-fog",
                 )
               }
@@ -218,7 +218,7 @@ function MobileNav({
   return (
     <nav
       aria-label="Main"
-      className="lg:hidden bg-white border-t border-dn-steel-lt/50"
+      className="lg:hidden bg-white border-t border-dn-navy-lt/50"
       data-testid="mobile-nav"
     >
       <div className="max-h-[70vh] overflow-y-auto py-1">
@@ -226,14 +226,14 @@ function MobileNav({
           const isOpen = expanded.has(group.label);
           const active = group.items.some((i) => isItemActive(i, location.pathname));
           return (
-            <div key={group.label} className="border-b border-dn-steel-lt/30 last:border-b-0">
+            <div key={group.label} className="border-b border-dn-navy-lt/30 last:border-b-0">
               <button
                 type="button"
                 onClick={() => toggle(group.label)}
                 aria-expanded={isOpen}
                 className={cn(
                   "flex w-full items-center justify-between px-5 py-3 text-sm font-semibold uppercase tracking-wide transition-colors",
-                  active ? "text-dn-steel-deep" : "text-dn-muted",
+                  active ? "text-dn-navy-deep" : "text-dn-muted",
                 )}
                 data-testid={`mobile-nav-group-${group.label}`}
               >
@@ -251,8 +251,8 @@ function MobileNav({
                         cn(
                           "block px-5 py-3 text-base border-l-4 transition-colors",
                           isActive
-                            ? "border-dn-steel text-dn-steel-deep bg-dn-steel-lt/10"
-                            : "border-transparent text-dn-muted hover:text-dn-dark hover:bg-dn-steel-lt/5",
+                            ? "border-dn-navy text-dn-navy-deep bg-dn-navy-lt/10"
+                            : "border-transparent text-dn-muted hover:text-dn-dark hover:bg-dn-navy-lt/5",
                         )
                       }
                     >
@@ -264,12 +264,12 @@ function MobileNav({
             </div>
           );
         })}
-        <div className="mt-2 border-t border-dn-steel-lt/50 px-5 py-3 flex items-center justify-between">
+        <div className="mt-2 border-t border-dn-navy-lt/50 px-5 py-3 flex items-center justify-between">
           {userLabel && <span className="text-xs text-dn-muted truncate pr-3">{userLabel}</span>}
           <button
             type="button"
             onClick={onSignOut}
-            className="text-sm text-dn-steel-deep hover:text-dn-dark underline shrink-0"
+            className="text-sm text-dn-navy-deep hover:text-dn-dark underline shrink-0"
           >
             Sign out
           </button>
@@ -303,12 +303,12 @@ export function AppShell() {
     <div className="min-h-screen flex flex-col bg-white">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-dn-steel-deep focus:px-3 focus:py-2 focus:text-sm focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-dn-navy-deep focus:px-3 focus:py-2 focus:text-sm focus:text-white"
       >
         Skip to content
       </a>
       {/* ── Top bar: modern header ── */}
-      <header className="bg-white border-b border-dn-steel-lt sticky top-0 z-30">
+      <header className="bg-white border-b border-dn-navy-lt sticky top-0 z-30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <DnLogo showText={false} width={28} />
@@ -322,7 +322,7 @@ export function AppShell() {
               onClick={() =>
                 window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))
               }
-              className="flex items-center gap-2 rounded-dn-sm border border-dn-sand px-2.5 py-1.5 text-xs text-dn-muted transition-colors hover:border-dn-steel hover:text-dn-dark"
+              className="flex items-center gap-2 rounded-dn-sm border border-dn-sand px-2.5 py-1.5 text-xs text-dn-muted transition-colors hover:border-dn-navy hover:text-dn-dark"
               aria-label="Open command palette"
               data-testid="palette-hint"
             >
@@ -337,7 +337,7 @@ export function AppShell() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-dn-steel-deep hover:text-dn-dark hover:bg-dn-steel-lt/30"
+              className="text-dn-navy-deep hover:text-dn-dark hover:bg-dn-navy-lt/30"
               onClick={signOut}
             >
               Sign out
@@ -347,7 +347,7 @@ export function AppShell() {
           {/* Mobile: hamburger toggle */}
           <button
             type="button"
-            className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-md text-dn-steel-deep hover:bg-dn-steel-lt/30"
+            className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-md text-dn-navy-deep hover:bg-dn-navy-lt/30"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
@@ -387,7 +387,7 @@ export function AppShell() {
             rows of flat text. */}
         <nav
           aria-label="Main"
-          className="hidden lg:flex mx-auto max-w-7xl px-6 items-center gap-1 border-t border-dn-steel-lt/50"
+          className="hidden lg:flex mx-auto max-w-7xl px-6 items-center gap-1 border-t border-dn-navy-lt/50"
         >
           {groups.map((group) =>
             group.items.length === 1 ? (
@@ -399,8 +399,8 @@ export function AppShell() {
                   cn(
                     "px-3 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                     isActive
-                      ? "border-dn-steel text-dn-steel-deep"
-                      : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-steel-lt",
+                      ? "border-dn-navy text-dn-navy-deep"
+                      : "border-transparent text-dn-muted hover:text-dn-dark hover:border-dn-navy-lt",
                   )
                 }
               >
@@ -433,17 +433,17 @@ export function AppShell() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-dn-steel-lt/50 bg-white py-6 text-center text-xs text-dn-muted">
+      <footer className="border-t border-dn-navy-lt/50 bg-white py-6 text-center text-xs text-dn-muted">
         <div className="mx-auto max-w-7xl px-4">
           <p className="mb-3">
             DN Consultancy · Aligned with the KCAA Flight Duty Time Scheme &amp; ICAO Annex 6
           </p>
           <div className="flex justify-center gap-4">
-            <NavLink to="/privacy" className="hover:text-dn-steel-deep underline">
+            <NavLink to="/privacy" className="hover:text-dn-navy-deep underline">
               Privacy Policy
             </NavLink>
             <span>·</span>
-            <NavLink to="/terms" className="hover:text-dn-steel-deep underline">
+            <NavLink to="/terms" className="hover:text-dn-navy-deep underline">
               Terms of Use
             </NavLink>
           </div>

@@ -35,8 +35,8 @@ const CATEGORIES: { value: Category; label: string }[] = [
 
 const SEVERITIES: Severity[] = ["INFO", "IMPORTANT", "CRITICAL"];
 
-function severityTone(s: Severity): "steel" | "amber" | "red" {
-  return s === "INFO" ? "steel" : s === "IMPORTANT" ? "amber" : "red";
+function severityTone(s: Severity): "navy" | "amber" | "red" {
+  return s === "INFO" ? "navy" : s === "IMPORTANT" ? "amber" : "red";
 }
 
 export function NoticesPage() {
@@ -159,7 +159,7 @@ export function NoticesPage() {
                 onChange={(e) => setBody(e.target.value)}
                 required
                 rows={4}
-                className="block w-full rounded-md border border-dn-steel-lt bg-white px-3 py-2 text-sm"
+                className="block w-full rounded-md border border-dn-navy-lt bg-white px-3 py-2 text-sm"
                 data-testid="notice-body"
               />
             </div>
@@ -219,18 +219,18 @@ export function NoticesPage() {
               No notices yet.
             </p>
           ) : (
-            <ul className="divide-y divide-dn-steel-lt" data-testid="notices-list">
+            <ul className="divide-y divide-dn-navy-lt" data-testid="notices-list">
               {rows.map((n) => (
                 <li key={n.id} className="py-3">
                   <div className="flex items-center gap-2 flex-wrap">
-                    {n.pinned && <Badge tone="gold">📌 pinned</Badge>}
-                    <Badge tone="steel">{n.category}</Badge>
+                    {n.pinned && <Badge tone="navy">📌 pinned</Badge>}
+                    <Badge tone="navy">{n.category}</Badge>
                     <Badge tone={severityTone(n.severity)}>{n.severity}</Badge>
                     <span className="font-medium text-dn-dark">{n.title}</span>
                   </div>
                   <p className="mt-1 text-sm text-dn-muted whitespace-pre-line">{n.body}</p>
                   {n.requires_ack && (
-                    <p className="mt-1 text-xs text-dn-steel-deep">
+                    <p className="mt-1 text-xs text-dn-navy-deep">
                       Acknowledged by {n.ack_count} / {n.crew_total} crew
                     </p>
                   )}

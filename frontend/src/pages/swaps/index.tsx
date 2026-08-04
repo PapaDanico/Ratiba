@@ -86,7 +86,7 @@ export function SwapsPage() {
             No pending swap requests.
           </p>
         ) : (
-          <ul className="divide-y divide-dn-steel-lt">
+          <ul className="divide-y divide-dn-navy-lt">
             {rows.map((r) => (
               <li
                 key={r.id}
@@ -94,11 +94,11 @@ export function SwapsPage() {
                 data-testid="swap-row"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-xs text-dn-steel-deep">
+                  <div className="font-mono text-xs text-dn-navy-deep">
                     {r.crew_id_initiator.slice(0, 8)}… ↔ {r.crew_id_counterparty.slice(0, 8)}…
                   </div>
                   <div className="text-dn-dark">
-                    <Badge tone="steel">{r.fdp_or_sector_ref}</Badge>
+                    <Badge tone="navy">{r.fdp_or_sector_ref}</Badge>
                   </div>
                   {r.reason && <div className="text-sm text-dn-muted mt-1">{r.reason}</div>}
                 </div>
