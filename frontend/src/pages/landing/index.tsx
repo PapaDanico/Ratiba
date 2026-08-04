@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/Button";
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dn-steel-lt via-white to-dn-steel-lt">
+    <div className="min-h-screen bg-gradient-to-br from-dn-fog via-white to-dn-amber-lt">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-dn-steel-lt z-50">
+      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-dn-navy-lt z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
@@ -37,13 +37,13 @@ export function LandingPage() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="space-y-4">
-              <p className="inline-flex items-center gap-2 rounded-full border border-dn-steel-lt bg-white/70 px-4 py-1.5 text-xs font-medium text-dn-steel-deep">
+              <p className="inline-flex items-center gap-2 rounded-full border border-dn-navy-lt bg-white/70 px-4 py-1.5 text-xs font-medium text-dn-navy-deep">
                 <span aria-hidden>✈️</span> Built for African aviation · KCAA FTL scheme
               </p>
               <h1 className="text-5xl sm:text-6xl font-bold text-dn-dark leading-tight">
                 Crew rostering,
                 <br />
-                <span className="bg-gradient-to-r from-dn-steel to-dn-steel-lt bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-dn-navy to-dn-navy-lt bg-clip-text text-transparent">
                   compliance-first
                 </span>
               </h1>
@@ -66,7 +66,7 @@ export function LandingPage() {
               </Link>
             </div>
 
-            <div className="flex items-center gap-8 pt-8 border-t border-dn-steel-lt">
+            <div className="flex items-center gap-8 pt-8 border-t border-dn-navy-lt">
               <div>
                 <div className="text-3xl font-bold text-dn-dark">15</div>
                 <p className="text-sm text-dn-muted">FTL rules enforced on every publish</p>
@@ -85,8 +85,8 @@ export function LandingPage() {
           {/* Right visual: stylised roster snapshot */}
           <div className="hidden lg:block">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-dn-steel-lt to-transparent rounded-3xl blur-3xl opacity-20"></div>
-              <div className="relative bg-white rounded-2xl shadow-2xl p-8 border border-dn-steel-lt">
+              <div className="absolute inset-0 bg-gradient-to-r from-dn-navy-lt to-transparent rounded-3xl blur-3xl opacity-20"></div>
+              <div className="relative bg-white rounded-2xl shadow-2xl p-8 border border-dn-navy-lt">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-semibold text-dn-dark">November roster</span>
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
@@ -101,18 +101,16 @@ export function LandingPage() {
                   ].map(([flt, time, crew]) => (
                     <div
                       key={flt}
-                      className="flex items-center justify-between rounded-lg border border-dn-steel-lt/70 bg-dn-fog/40 px-4 py-3"
+                      className="flex items-center justify-between rounded-lg border border-dn-navy-lt/70 bg-dn-fog/40 px-4 py-3"
                     >
                       <div>
-                        <div className="text-sm font-mono font-medium text-dn-steel-deep">
-                          {flt}
-                        </div>
+                        <div className="text-sm font-mono font-medium text-dn-navy-deep">{flt}</div>
                         <div className="text-xs text-dn-muted">{crew}</div>
                       </div>
                       <span className="text-xs font-mono text-dn-muted">{time}</span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between rounded-lg bg-dn-steel-lt/30 px-4 py-3 text-xs text-dn-steel-deep">
+                  <div className="flex items-center justify-between rounded-lg bg-dn-navy-lt/30 px-4 py-3 text-xs text-dn-navy-deep">
                     <span>FDP 11.4h of 13h · rest 14h · within limits</span>
                     <span aria-hidden>✓</span>
                   </div>
@@ -137,7 +135,7 @@ export function LandingPage() {
             {rolePaths.map((r) => (
               <div
                 key={r.title}
-                className="flex flex-col rounded-xl border border-dn-steel-lt p-8 hover:border-dn-steel hover:shadow-lg transition-all"
+                className="flex flex-col rounded-xl border border-dn-navy-lt p-8 hover:border-dn-navy hover:shadow-lg transition-all"
               >
                 <div className="text-3xl mb-4" aria-hidden>
                   {r.icon}
@@ -146,7 +144,7 @@ export function LandingPage() {
                 <ul className="text-sm text-dn-muted leading-relaxed space-y-1.5 mb-6">
                   {r.points.map((p) => (
                     <li key={p} className="flex gap-2">
-                      <span className="text-dn-steel-deep" aria-hidden>
+                      <span className="text-dn-navy-deep" aria-hidden>
                         ·
                       </span>
                       {p}
@@ -180,7 +178,7 @@ export function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group p-8 rounded-xl border border-dn-steel-lt bg-white hover:border-dn-steel hover:shadow-lg transition-all"
+                className="group p-8 rounded-xl border border-dn-navy-lt bg-white hover:border-dn-navy hover:shadow-lg transition-all"
               >
                 <div className="text-3xl mb-4" aria-hidden>
                   {feature.icon}
@@ -201,7 +199,7 @@ export function LandingPage() {
               <h2 className="text-4xl font-bold text-dn-dark">Why operators choose Ratiba</h2>
               {benefits.map((benefit) => (
                 <div key={benefit.title} className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-steel/10 flex items-center justify-center text-dn-steel-deep font-bold">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-dn-navy/10 flex items-center justify-center text-dn-navy-deep font-bold">
                     ✓
                   </div>
                   <div>
@@ -211,24 +209,24 @@ export function LandingPage() {
                 </div>
               ))}
             </div>
-            <div className="bg-gradient-to-br from-dn-steel-lt via-white to-dn-steel-lt rounded-2xl p-12 shadow-lg">
+            <div className="bg-gradient-to-br from-dn-fog via-white to-dn-amber-lt rounded-2xl p-12 shadow-lg">
               <div className="space-y-4">
-                <div className="bg-white rounded-lg p-4 border-l-4 border-dn-steel">
-                  <div className="text-sm font-mono text-dn-steel-deep">Legality engine</div>
+                <div className="bg-white rounded-lg p-4 border-l-4 border-dn-navy">
+                  <div className="text-sm font-mono text-dn-navy-deep">Legality engine</div>
                   <div className="text-2xl font-bold text-dn-dark">KCAR-P8 FTL scheme</div>
                   <p className="text-xs text-dn-muted mt-1">
                     Daily, cumulative, and rest rules — with operator-approved variations.
                   </p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border-l-4 border-dn-steel">
-                  <div className="text-sm font-mono text-dn-steel-deep">Evidence</div>
+                <div className="bg-white rounded-lg p-4 border-l-4 border-dn-navy">
+                  <div className="text-sm font-mono text-dn-navy-deep">Evidence</div>
                   <div className="text-2xl font-bold text-dn-dark">Tamper-evident PDFs</div>
                   <p className="text-xs text-dn-muted mt-1">
                     Roster cards and audit packs, hash-sealed and re-verifiable at any time.
                   </p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border-l-4 border-dn-steel">
-                  <div className="text-sm font-mono text-dn-steel-deep">Crew experience</div>
+                <div className="bg-white rounded-lg p-4 border-l-4 border-dn-navy">
+                  <div className="text-sm font-mono text-dn-navy-deep">Crew experience</div>
                   <div className="text-2xl font-bold text-dn-dark">Roster in the pocket</div>
                   <p className="text-xs text-dn-muted mt-1">
                     Pilots pair once with a code and always see today&apos;s duty, notices, and
@@ -242,7 +240,7 @@ export function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-dn-steel to-dn-steel-lt">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-dn-navy to-dn-navy-lt">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <h2 className="text-4xl font-bold text-white">See your operation in Ratiba today</h2>
           <p className="text-lg text-white/80">
@@ -251,7 +249,7 @@ export function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link to="/login">
-              <Button size="lg" className="bg-white text-dn-steel-deep hover:bg-gray-100">
+              <Button size="lg" className="bg-white text-dn-navy-deep hover:bg-gray-100">
                 Create a demo workspace
               </Button>
             </Link>
@@ -269,24 +267,24 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-dn-steel-lt bg-white/50 backdrop-blur">
+      <footer className="border-t border-dn-navy-lt bg-white/50 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
               <h3 className="font-semibold text-dn-dark mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
                 <li>
-                  <a href="#roles" className="hover:text-dn-steel-deep">
+                  <a href="#roles" className="hover:text-dn-navy-deep">
                     Who it&apos;s for
                   </a>
                 </li>
                 <li>
-                  <Link to="/login" className="hover:text-dn-steel-deep">
+                  <Link to="/login" className="hover:text-dn-navy-deep">
                     Operations sign-in
                   </Link>
                 </li>
                 <li>
-                  <Link to="/crew/me" className="hover:text-dn-steel-deep">
+                  <Link to="/crew/me" className="hover:text-dn-navy-deep">
                     Crew portal
                   </Link>
                 </li>
@@ -304,19 +302,19 @@ export function LandingPage() {
               <h3 className="font-semibold text-dn-dark mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-dn-muted">
                 <li>
-                  <Link to="/privacy" className="hover:text-dn-steel-deep">
+                  <Link to="/privacy" className="hover:text-dn-navy-deep">
                     Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link to="/terms" className="hover:text-dn-steel-deep">
+                  <Link to="/terms" className="hover:text-dn-navy-deep">
                     Terms of Use
                   </Link>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-dn-steel-lt pt-8 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-dn-muted">
+          <div className="border-t border-dn-navy-lt pt-8 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-dn-muted">
             <div>© 2026 Ratiba · A DN Consultancy platform</div>
             <div className="italic">Shaping Africa&apos;s Future, Together.</div>
           </div>

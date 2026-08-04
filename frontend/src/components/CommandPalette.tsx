@@ -202,7 +202,7 @@ export function CommandPalette() {
                 }}
                 className={cn(
                   "mx-1.5 flex cursor-pointer items-baseline justify-between gap-4 rounded-dn-sm px-3.5 py-2.5 text-sm",
-                  i === active ? "bg-dn-steel-lt/50 text-dn-dark" : "text-dn-dark",
+                  i === active ? "bg-dn-navy-lt/50 text-dn-dark" : "text-dn-dark",
                 )}
               >
                 <span>{item.label}</span>

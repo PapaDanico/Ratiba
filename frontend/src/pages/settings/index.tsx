@@ -155,7 +155,7 @@ export function SettingsPage() {
       onClick={() => setTab(id)}
       className={
         tab === id
-          ? "px-4 py-2 text-sm border-b-2 border-dn-steel text-dn-dark"
+          ? "px-4 py-2 text-sm border-b-2 border-dn-navy text-dn-dark"
           : "px-4 py-2 text-sm text-dn-muted hover:text-dn-dark"
       }
       data-testid={`tab-${id}`}
@@ -165,7 +165,7 @@ export function SettingsPage() {
   );
 
   const tabBar = (
-    <div className="flex gap-1 border-b border-dn-steel-lt" data-testid="settings-tabs">
+    <div className="flex gap-1 border-b border-dn-navy-lt" data-testid="settings-tabs">
       {tabButton("operator", "Operator")}
       {tabButton("account", "My account")}
       {isAdmin && tabButton("team", "Team")}
@@ -269,7 +269,7 @@ export function SettingsPage() {
               />
             </div>
 
-            <fieldset className="border-t border-dn-steel-lt pt-4 space-y-3">
+            <fieldset className="border-t border-dn-navy-lt pt-4 space-y-3">
               <legend className="font-display text-lg text-dn-dark">Optimiser soft weights</legend>
               <p className="text-sm text-dn-muted">
                 Persisted defaults the optimiser uses unless a request overrides them. Higher =
@@ -312,27 +312,27 @@ export function SettingsPage() {
         </CardHeader>
         <CardBody>
           <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2" data-testid="compliance-info">
-            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+            <div className="flex justify-between border-b border-dn-navy-lt pb-2">
               <dt className="text-dn-muted">Subscription tier</dt>
               <dd className="text-dn-dark">{TIER_LABEL[op.tier]}</dd>
             </div>
-            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+            <div className="flex justify-between border-b border-dn-navy-lt pb-2">
               <dt className="text-dn-muted">AOC number</dt>
               <dd className="font-mono text-dn-dark">{op.aoc_number}</dd>
             </div>
-            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+            <div className="flex justify-between border-b border-dn-navy-lt pb-2">
               <dt className="text-dn-muted">FTL scheme</dt>
               <dd className="text-dn-dark">KCAA CAA-AC-OPS033</dd>
             </div>
-            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+            <div className="flex justify-between border-b border-dn-navy-lt pb-2">
               <dt className="text-dn-muted">Reference standard</dt>
               <dd className="text-dn-dark">ICAO Annex 6, Part I</dd>
             </div>
-            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+            <div className="flex justify-between border-b border-dn-navy-lt pb-2">
               <dt className="text-dn-muted">Data residency</dt>
               <dd className="text-dn-dark">Kenya (KDPA 2019)</dd>
             </div>
-            <div className="flex justify-between border-b border-dn-steel-lt pb-2">
+            <div className="flex justify-between border-b border-dn-navy-lt pb-2">
               <dt className="text-dn-muted">Workspace ID</dt>
               <dd className="font-mono text-xs text-dn-dark">{op.id}</dd>
             </div>
@@ -344,7 +344,7 @@ export function SettingsPage() {
           </p>
 
           {isAdmin && (
-            <div className="mt-4 border-t border-dn-steel-lt pt-4">
+            <div className="mt-4 border-t border-dn-navy-lt pt-4">
               <Button
                 variant="secondary"
                 size="sm"

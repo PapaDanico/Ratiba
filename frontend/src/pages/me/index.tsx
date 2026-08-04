@@ -102,7 +102,7 @@ function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void
       <main className="min-h-screen flex items-center justify-center bg-dn-fog px-4">
         <Card className="w-full max-w-sm">
           <CardBody className="space-y-2 text-center">
-            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel-deep">
+            <p className="font-mono text-xs uppercase tracking-widest text-dn-navy-deep">
               Ratiba · Crew
             </p>
             <h1 className="font-display text-2xl text-dn-dark">Pairing your device…</h1>
@@ -119,7 +119,7 @@ function PairingScreen({ onPaired }: { onPaired: (profile: PilotProfile) => void
     <main className="min-h-screen flex items-center justify-center bg-dn-fog px-4">
       <Card className="w-full max-w-sm">
         <CardBody className="space-y-4">
-          <p className="font-mono text-xs uppercase tracking-widest text-dn-steel-deep">
+          <p className="font-mono text-xs uppercase tracking-widest text-dn-navy-deep">
             Ratiba · Crew
           </p>
           <h1 className="font-display text-3xl text-dn-dark">Pair your device</h1>
@@ -190,9 +190,9 @@ function DutyToday() {
   const d = state.data.duty_day!;
   return (
     <div className="space-y-2">
-      <p className="font-mono text-sm text-dn-steel-deep">{d.date_local}</p>
+      <p className="font-mono text-sm text-dn-navy-deep">{d.date_local}</p>
       <p className="font-display text-2xl text-dn-dark">
-        {d.aircraft_reg} <Badge tone="steel">{d.aircraft_type}</Badge>
+        {d.aircraft_reg} <Badge tone="navy">{d.aircraft_type}</Badge>
       </p>
       <p className="text-sm">
         Role: <span className="font-mono">{d.role_on_duty}</span>
@@ -289,10 +289,10 @@ function Roster() {
       <ShareButtons message={rosterMsg} subject="My Ratiba roster" testidPrefix="me-share-roster" />
       <ul className="space-y-3" data-testid="me-roster-list">
         {state.data.duty_days.map((d, i) => (
-          <li key={i} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
+          <li key={i} className="rounded-md border border-dn-navy-lt bg-dn-fog p-3">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-sm text-dn-steel-deep">{d.date_local}</span>
-              <Badge tone="steel">{d.aircraft_type}</Badge>
+              <span className="font-mono text-sm text-dn-navy-deep">{d.date_local}</span>
+              <Badge tone="navy">{d.aircraft_type}</Badge>
             </div>
             <p className="mt-1 text-dn-dark">
               {d.aircraft_reg} · {d.role_on_duty}
@@ -333,7 +333,7 @@ function Currency() {
       {state.data.currencies.map((c, i) => (
         <li
           key={i}
-          className="flex items-center justify-between rounded-md border border-dn-steel-lt bg-white px-3 py-2"
+          className="flex items-center justify-between rounded-md border border-dn-navy-lt bg-white px-3 py-2"
         >
           <div>
             <p className="font-mono text-sm text-dn-dark">{c.currency_type}</p>
@@ -389,12 +389,12 @@ function Notices() {
   return (
     <ul className="space-y-3" data-testid="me-notices-list">
       {rows.map((n) => (
-        <li key={n.id} className="rounded-md border border-dn-steel-lt bg-dn-fog p-3">
+        <li key={n.id} className="rounded-md border border-dn-navy-lt bg-dn-fog p-3">
           <div className="flex items-center gap-2 flex-wrap">
-            {n.pinned && <Badge tone="gold">📌</Badge>}
-            <Badge tone="steel">{n.category}</Badge>
+            {n.pinned && <Badge tone="navy">📌</Badge>}
+            <Badge tone="navy">{n.category}</Badge>
             <Badge
-              tone={n.severity === "INFO" ? "steel" : n.severity === "IMPORTANT" ? "amber" : "red"}
+              tone={n.severity === "INFO" ? "navy" : n.severity === "IMPORTANT" ? "amber" : "red"}
             >
               {n.severity}
             </Badge>
@@ -405,7 +405,7 @@ function Notices() {
             <img
               src={n.image_url}
               alt=""
-              className="mt-2 max-h-48 rounded border border-dn-steel-lt"
+              className="mt-2 max-h-48 rounded border border-dn-navy-lt"
             />
           )}
           {n.requires_ack &&
@@ -437,12 +437,12 @@ export function CrewMePage() {
 
   return (
     <main className="min-h-screen bg-dn-fog">
-      <header className="bg-white border-b border-dn-steel-lt">
+      <header className="bg-white border-b border-dn-navy-lt">
         <div className="mx-auto max-w-md px-4 py-3 flex items-center justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-dn-steel-deep">Ratiba</p>
+            <p className="font-mono text-xs uppercase tracking-widest text-dn-navy-deep">Ratiba</p>
             <p className="font-display text-lg text-dn-dark">
-              {profile.employee_no} <Badge tone="steel">{profile.role}</Badge>
+              {profile.employee_no} <Badge tone="navy">{profile.role}</Badge>
             </p>
           </div>
           <Button
@@ -465,7 +465,7 @@ export function CrewMePage() {
               onClick={() => setTab(t)}
               className={cn(
                 "px-3 py-2 text-sm font-medium border-b-2 capitalize",
-                tab === t ? "border-dn-gold text-dn-dark" : "border-transparent text-dn-muted",
+                tab === t ? "border-dn-amber text-dn-dark" : "border-transparent text-dn-muted",
               )}
               data-testid={`me-tab-${t}`}
             >

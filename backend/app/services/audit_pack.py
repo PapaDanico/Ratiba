@@ -273,36 +273,36 @@ def _gather(session: Session, operator: Operator, df: date, dt: date) -> PackDat
 # Self-contained CSS using only DN brand colours — no external assets so the
 # PDF is fully portable.
 _CSS = """
-@page { size: A4; margin: 18mm 16mm; @bottom-right { content: counter(page) " / " counter(pages); font-family: 'DM Sans', sans-serif; font-size: 9pt; color: #6B7280; } }
+@page { size: A4; margin: 18mm 16mm; @bottom-right { content: counter(page) " / " counter(pages); font-family: 'DM Sans', sans-serif; font-size: 9pt; color: #5C6B7D; } }
 * { box-sizing: border-box; }
-html, body { font-family: 'DM Sans', Helvetica, Arial, sans-serif; color: #1C1C1C; font-size: 10pt; }
-h1, h2, h3 { font-family: 'Cormorant Garamond', Georgia, serif; color: #1C1C1C; margin: 0 0 6pt 0; }
+html, body { font-family: 'DM Sans', Helvetica, Arial, sans-serif; color: #0A192F; font-size: 10pt; }
+h1, h2, h3 { font-family: 'Cormorant Garamond', Georgia, serif; color: #0A192F; margin: 0 0 6pt 0; }
 h1 { font-size: 28pt; }
-h2 { font-size: 18pt; border-bottom: 1.5pt solid #C9A84C; padding-bottom: 4pt; margin-top: 24pt; }
+h2 { font-size: 18pt; border-bottom: 1.5pt solid #D97706; padding-bottom: 4pt; margin-top: 24pt; }
 h3 { font-size: 13pt; margin-top: 14pt; }
-.dn-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: 2pt; text-transform: uppercase; color: #4A7FA5; }
+.dn-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: 2pt; text-transform: uppercase; color: #0A192F; }
 .cover-logo { display: block; width: 230px; height: auto; margin: 0 0 14pt 0; }
-.muted { color: #6B7280; font-size: 9pt; }
+.muted { color: #5C6B7D; font-size: 9pt; }
 .mono { font-family: 'JetBrains Mono', monospace; font-size: 9pt; }
 .cover { page-break-after: always; }
-.hash-strip { margin-top: 18pt; padding: 8pt; background: #F4F4F2; border-left: 3pt solid #C9A84C; font-family: 'JetBrains Mono', monospace; font-size: 8pt; word-break: break-all; }
+.hash-strip { margin-top: 18pt; padding: 8pt; background: #F7F3EA; border-left: 3pt solid #D97706; font-family: 'JetBrains Mono', monospace; font-size: 8pt; word-break: break-all; }
 .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10pt; margin-top: 10pt; }
-.summary-card { border: 0.5pt solid #D6E4F0; background: #F4F4F2; padding: 10pt; }
-.summary-card .figure { font-family: 'Cormorant Garamond', serif; font-size: 26pt; color: #1C1C1C; }
-.summary-card .label { font-size: 9pt; color: #6B7280; margin-top: 4pt; }
+.summary-card { border: 0.5pt solid #DCE3ED; background: #F7F3EA; padding: 10pt; }
+.summary-card .figure { font-family: 'Cormorant Garamond', serif; font-size: 26pt; color: #0A192F; }
+.summary-card .label { font-size: 9pt; color: #5C6B7D; margin-top: 4pt; }
 table { width: 100%; border-collapse: collapse; margin-top: 6pt; font-size: 9pt; }
-th { text-align: left; background: #D6E4F0; padding: 4pt 6pt; color: #1C1C1C; border-bottom: 0.5pt solid #4A7FA5; font-weight: 600; }
-td { padding: 4pt 6pt; border-bottom: 0.5pt solid #D6E4F0; vertical-align: top; }
-tr:nth-child(even) td { background: #F4F4F2; }
-.state-LEGAL { color: #1E8449; }
-.state-AT_LIMIT { color: #D4AC0D; }
+th { text-align: left; background: #DCE3ED; padding: 4pt 6pt; color: #0A192F; border-bottom: 0.5pt solid #0A192F; font-weight: 600; }
+td { padding: 4pt 6pt; border-bottom: 0.5pt solid #DCE3ED; vertical-align: top; }
+tr:nth-child(even) td { background: #F7F3EA; }
+.state-LEGAL { color: #1E7A4A; }
+.state-AT_LIMIT { color: #D97706; }
 .state-REQUIRES_FRMS_DEROGATION { color: #C0392B; }
 .state-ILLEGAL { color: #C0392B; font-weight: 600; }
-.state-GREEN { color: #1E8449; }
-.state-AMBER { color: #D4AC0D; }
+.state-GREEN { color: #1E7A4A; }
+.state-AMBER { color: #D97706; }
 .state-RED { color: #C0392B; }
-.empty { font-style: italic; color: #6B7280; padding: 12pt 0; }
-.footer-note { margin-top: 24pt; padding: 8pt 10pt; background: #FFF8E6; border-left: 3pt solid #C9A84C; font-size: 9pt; }
+.empty { font-style: italic; color: #5C6B7D; padding: 12pt 0; }
+.footer-note { margin-top: 24pt; padding: 8pt 10pt; background: #FFF6E5; border-left: 3pt solid #D97706; font-size: 9pt; }
 """
 
 

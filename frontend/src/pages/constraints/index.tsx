@@ -36,11 +36,11 @@ type SetSummary = {
 
 type SetDetail = SetSummary & { rules: Rule[] };
 
-function statusTone(s: ReviewStatus): "green" | "amber" | "red" | "steel" {
+function statusTone(s: ReviewStatus): "green" | "amber" | "red" | "navy" {
   if (s === "ACCEPTED") return "green";
   if (s === "EDITED") return "amber";
   if (s === "REJECTED") return "red";
-  return "steel";
+  return "navy";
 }
 
 type Limits = {
@@ -69,7 +69,7 @@ type LimitsResponse = { source: "baseline" | "operator"; regulation_ref: string;
 
 function Stat({ label, value, unit = "h" }: { label: string; value: number; unit?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-dn-steel-lt/60 py-1">
+    <div className="flex items-baseline justify-between gap-3 border-b border-dn-navy-lt/60 py-1">
       <span className="text-dn-muted">{label}</span>
       <span className="font-mono text-dn-dark">
         {value}
@@ -104,7 +104,7 @@ function BaselineCard() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle>FTL limits in force</CardTitle>
           {data && (
-            <Badge tone={data.source === "operator" ? "green" : "steel"}>
+            <Badge tone={data.source === "operator" ? "green" : "navy"}>
               {data.source === "operator" ? "Operator scheme" : "Generic baseline"}
             </Badge>
           )}
@@ -335,7 +335,7 @@ export function ConstraintsPage() {
                 onChange={(e) => setText(e.target.value)}
                 required
                 rows={8}
-                className="block w-full rounded-md border border-dn-steel-lt bg-white px-3 py-2 text-sm font-mono"
+                className="block w-full rounded-md border border-dn-navy-lt bg-white px-3 py-2 text-sm font-mono"
                 placeholder="Paste the operator's flight-time-limitation chapter here…"
                 data-testid="parse-text"
               />
@@ -360,7 +360,7 @@ export function ConstraintsPage() {
           {sets.length === 0 ? (
             <p className="text-sm text-dn-muted">No constraint sets yet.</p>
           ) : (
-            <ul className="divide-y divide-dn-steel-lt">
+            <ul className="divide-y divide-dn-navy-lt">
               {sets.map((s) => (
                 <li key={s.id} className="flex items-center justify-between py-2">
                   <div>
@@ -370,7 +370,7 @@ export function ConstraintsPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge tone={s.status === "ACCEPTED" ? "green" : "steel"}>{s.status}</Badge>
+                    <Badge tone={s.status === "ACCEPTED" ? "green" : "navy"}>{s.status}</Badge>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -419,7 +419,7 @@ export function ConstraintsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-dn-muted">
-                  <tr className="border-b border-dn-steel-lt">
+                  <tr className="border-b border-dn-navy-lt">
                     <th className="py-2 pr-3">Rule</th>
                     <th className="py-2 pr-3">Baseline</th>
                     <th className="py-2 pr-3">Proposed</th>
@@ -446,7 +446,7 @@ export function ConstraintsPage() {
                           <span className="text-dn-muted">—</span>
                         ) : (
                           <span
-                            className={r.differs_from_baseline ? "font-semibold text-dn-gold" : ""}
+                            className={r.differs_from_baseline ? "font-semibold text-dn-amber" : ""}
                           >
                             {r.proposed_value}
                           </span>

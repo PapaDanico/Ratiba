@@ -156,21 +156,21 @@ _CSS = """
     content: counter(page) " / " counter(pages);
     font-family: 'DM Sans', Helvetica, sans-serif;
     font-size: 8pt;
-    color: #6B7280;
+    color: #5C6B7D;
   }
 }
 * { box-sizing: border-box; }
 html, body {
   font-family: 'DM Sans', Helvetica, Arial, sans-serif;
   font-size: 9pt;
-  color: #1C1C1C;
+  color: #0A192F;
   margin: 0;
 }
 .header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2pt solid #C9A84C;
+  border-bottom: 2pt solid #D97706;
   padding-bottom: 8pt;
   margin-bottom: 12pt;
 }
@@ -178,11 +178,11 @@ html, body {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 22pt;
   margin: 0 0 2pt 0;
-  color: #1C1C1C;
+  color: #0A192F;
 }
 .header-left .sub {
   font-size: 9pt;
-  color: #6B7280;
+  color: #5C6B7D;
 }
 .header-right {
   text-align: right;
@@ -192,7 +192,7 @@ html, body {
   font-size: 7pt;
   letter-spacing: 2pt;
   text-transform: uppercase;
-  color: #4A7FA5;
+  color: #0A192F;
 }
 .brand-logo {
   width: 84px;
@@ -202,7 +202,7 @@ html, body {
 .month-title {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 16pt;
-  color: #1C1C1C;
+  color: #0A192F;
   margin: 0;
 }
 table.cal {
@@ -211,8 +211,8 @@ table.cal {
   table-layout: fixed;
 }
 table.cal th {
-  background: #1a1a1a;
-  color: #C9A84C;
+  background: #020C1B;
+  color: #D97706;
   font-family: 'DM Sans', Helvetica, sans-serif;
   font-size: 8pt;
   font-weight: 600;
@@ -221,7 +221,7 @@ table.cal th {
   border: 0.5pt solid #333;
 }
 table.cal td {
-  border: 0.5pt solid #D6E4F0;
+  border: 0.5pt solid #DCE3ED;
   vertical-align: top;
   padding: 3pt;
   height: 52pt;
@@ -234,13 +234,13 @@ td.in-month {
   background: #FFFFFF;
 }
 td.today {
-  background: #FFF8E6;
-  border-color: #C9A84C;
+  background: #FFF6E5;
+  border-color: #D97706;
 }
 .day-num {
   font-family: 'JetBrains Mono', monospace;
   font-size: 8pt;
-  color: #6B7280;
+  color: #5C6B7D;
   font-weight: 600;
 }
 .duty-code {
@@ -248,11 +248,11 @@ td.today {
   font-family: 'JetBrains Mono', monospace;
   margin-top: 2pt;
   word-break: break-all;
-  color: #1C1C1C;
+  color: #0A192F;
 }
 .duty-hours {
   font-size: 7pt;
-  color: #6B7280;
+  color: #5C6B7D;
   margin-top: 1pt;
 }
 .badge {
@@ -270,7 +270,7 @@ td.today {
 .badge-REQUIRES_FRMS_DEROGATION { background: #FEE2E2; color: #991B1B; }
 .badge-ILLEGAL { background: #FEE2E2; color: #991B1B; font-weight: 900; }
 .badge-leave { background: #E0E7FF; color: #3730A3; }
-.badge-off { background: #F3F4F6; color: #6B7280; }
+.badge-off { background: #F3F4F6; color: #5C6B7D; }
 .badge-standby { background: #FEF9C3; color: #713F12; }
 .summary-bar {
   margin-top: 14pt;
@@ -279,24 +279,24 @@ td.today {
   gap: 8pt;
 }
 .stat-box {
-  border: 0.5pt solid #D6E4F0;
-  background: #F4F4F2;
+  border: 0.5pt solid #DCE3ED;
+  background: #F7F3EA;
   padding: 6pt;
   text-align: center;
 }
 .stat-num {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 18pt;
-  color: #1C1C1C;
+  color: #0A192F;
 }
 .stat-label {
   font-size: 7pt;
-  color: #6B7280;
+  color: #5C6B7D;
   margin-top: 2pt;
 }
 .footer {
   margin-top: 12pt;
-  border-top: 0.5pt solid #D6E4F0;
+  border-top: 0.5pt solid #DCE3ED;
   padding-top: 6pt;
   display: flex;
   justify-content: space-between;
@@ -308,7 +308,7 @@ td.today {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
   font-size: 9pt;
-  color: #C9A84C;
+  color: #D97706;
   margin-top: 5pt;
 }
 .legend {
@@ -317,7 +317,7 @@ td.today {
   gap: 10pt;
   flex-wrap: wrap;
   font-size: 7.5pt;
-  color: #6B7280;
+  color: #5C6B7D;
 }
 .legend-item {
   display: flex;

@@ -58,7 +58,7 @@ function DemoGuide() {
   }
 
   return (
-    <Card className="border-dn-gold/40 bg-dn-gold/5">
+    <Card className="border-dn-amber/40 bg-dn-amber/5">
       <CardBody>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -72,7 +72,7 @@ function DemoGuide() {
           <button
             type="button"
             onClick={toggle}
-            className="text-xs text-dn-steel-deep underline shrink-0"
+            className="text-xs text-dn-navy-deep underline shrink-0"
             data-testid="toggle-guide"
           >
             {collapsed ? "Show guide" : "Hide"}
@@ -83,13 +83,13 @@ function DemoGuide() {
           <ol className="mt-4 space-y-3">
             {GUIDE_STEPS.map((step, i) => (
               <li key={step.title} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-dn-gold/80 text-xs font-semibold text-dn-lava">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-dn-amber/80 text-xs font-semibold text-dn-dark">
                   {i + 1}
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm">
                     <span className="font-medium text-dn-dark">{step.title}</span>{" "}
-                    <span className="font-mono text-[11px] uppercase tracking-wide text-dn-steel-deep">
+                    <span className="font-mono text-[11px] uppercase tracking-wide text-dn-navy-deep">
                       {step.tab}
                     </span>
                   </p>
@@ -231,7 +231,7 @@ function ComplianceAlerts({ data, error }: { data: AlertsResponse | null; error:
         </div>
       </CardHeader>
       <CardBody>
-        <ul className="divide-y divide-dn-steel-lt/60">
+        <ul className="divide-y divide-dn-navy-lt/60">
           {shown.map((a, i) => (
             <li key={i} className="py-2 first:pt-0 last:pb-0">
               <Link to={a.link} className="group flex items-start gap-3">
@@ -254,12 +254,12 @@ function ComplianceAlerts({ data, error }: { data: AlertsResponse | null; error:
   );
 }
 
-type HeroTone = "red" | "amber" | "steel" | "green";
+type HeroTone = "red" | "amber" | "navy" | "green";
 
 const HERO_STYLE: Record<HeroTone, string> = {
   red: "border-dn-red/40 bg-dn-red/5",
   amber: "border-dn-amber/40 bg-dn-amber/5",
-  steel: "border-dn-steel/30 bg-dn-steel/5",
+  navy: "border-dn-navy/30 bg-dn-navy/5",
   green: "border-dn-green/30 bg-dn-green/5",
 };
 
@@ -308,7 +308,7 @@ function AttentionHero({
     };
   } else if (pendingApprovals > 0) {
     hero = {
-      tone: "steel",
+      tone: "navy",
       icon: "📝",
       title: `${pendingApprovals} request${pendingApprovals > 1 ? "s" : ""} awaiting your decision`,
       detail: "Leave and swap requests are pending approval.",
@@ -316,7 +316,7 @@ function AttentionHero({
     };
   } else if (noticesPendingAck > 0) {
     hero = {
-      tone: "steel",
+      tone: "navy",
       icon: "📣",
       title: `${noticesPendingAck} notice${noticesPendingAck > 1 ? "s" : ""} awaiting crew acknowledgement`,
       detail: "Some crew haven't yet acknowledged a required notice.",
@@ -461,7 +461,7 @@ function TodayStrip() {
                 className="min-w-[15rem] shrink-0 rounded-dn-sm border border-dn-sand bg-dn-fog/40 px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-mono text-sm font-medium text-dn-steel-deep">
+                  <span className="font-mono text-sm font-medium text-dn-navy-deep">
                     {f.sector_ids.join(" · ")}
                   </span>
                   {f.legality_state && (
@@ -681,7 +681,7 @@ export function DashboardPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle>Needs attention — next 30 days</CardTitle>
-            <Link to="/app/training" className="text-xs text-dn-steel-deep underline">
+            <Link to="/app/training" className="text-xs text-dn-navy-deep underline">
               View all
             </Link>
           </div>
@@ -692,7 +692,7 @@ export function DashboardPage() {
               Nothing expiring in the next 30 days. ✅
             </p>
           ) : (
-            <ul className="divide-y divide-dn-steel-lt" data-testid="attention-list">
+            <ul className="divide-y divide-dn-navy-lt" data-testid="attention-list">
               {attention.slice(0, 8).map((i, idx) => (
                 <li
                   key={`${i.crew_id}-${i.label}-${idx}`}

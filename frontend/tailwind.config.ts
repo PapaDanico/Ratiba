@@ -1,45 +1,44 @@
 import type { Config } from "tailwindcss";
 
-// DN brand tokens — aligned with the DN Consultancy reference site
-// (dnconsultancydiagnostictoolkit.netlify.app :root palette, exact hex).
-// Legacy token names (sand/savanna/lava) are kept and remapped so existing
-// components restyle without churn.
+// DN Consultancy Aviation brand tokens — navy + amber, per the brand as
+// stated in the DNCA platform CLAUDE.md ("DN Consultancy brand colours:
+// navy and amber"), warmed with parchment-toned neutrals instead of cool
+// grey so the whole surface reads as one temperature (no cool greys, no
+// pure white — the same restraint principle behind Claude's own cream/ink
+// product palette). Ink and primary-accent share one navy family; amber is
+// the single secondary accent carrying both brand highlights and the
+// warning/caution status role — one accent doing double duty rather than
+// two similar ambers competing.
 const config: Config = {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         dn: {
-          // Surfaces
-          fog: "#F4F4F2", // --dn-fog
-          sand: "#ECECE9", // card header tint — a step deeper than fog
+          // Warm parchment surfaces
+          fog: "#F7F3EA", // page background
+          sand: "#EDE6D3", // card header tint / recessed surface
+          "sand-deep": "#E3D8BE", // borders, dividers — warm, not cool grey
 
-          // Text
-          dark: "#1C1C1C", // --dn-dark
-          muted: "#5B6472", // --dn-muted, darkened for WCAG AA on tinted surfaces
+          // Ink — navy doing text duty (was near-black #1C1C1C)
+          dark: "#0A192F",
+          "dark-deep": "#020C1B", // deepest dark band — hero sections, footers
+          muted: "#5C6B7D", // secondary text, AA-checked on fog/sand/white
 
-          // Primary accent — DN steel blue
-          steel: "#4A7FA5", // --dn-steel / --accent
-          "steel-lt": "#D6E4F0", // --dn-steel-lt
-          "steel-deep": "#3A6584", // --accent-deep
+          // Primary accent — navy (was steel blue)
+          navy: "#0A192F",
+          "navy-lt": "#DCE3ED", // pale navy tint — badges, hover surfaces
+          "navy-deep": "#020C1B", // hover/pressed, darkest
 
-          // Gold
-          gold: "#C9A84C", // --dn-gold
-          "gold-lt": "#FFF8E6", // --dn-gold-lt
-
-          // Warm accent (legacy savanna) — mapped to brand gold
-          savanna: "#C9A84C",
-          "savanna-lt": "#FFF8E6",
+          // Secondary accent — amber (was gold; also carries warning status)
+          amber: "#D97706",
+          "amber-lt": "#FFF6E5", // pale amber wash — callout panels
+          "amber-deep": "#B45309", // AA-safe amber for text on tints
 
           // Status
-          green: "#1E8449", // --dn-green
+          green: "#1E7A4A",
           "green-deep": "#166437", // readable green text on light tints
-          red: "#C0392B", // --dn-red
-          amber: "#D4AC0D", // --dn-amber
-          "amber-deep": "#7A5C00", // readable amber text on light tints
-
-          // Dark nav surface (legacy lava) — brand dark
-          lava: "#1C1C1C",
+          red: "#C0392B",
         },
       },
       fontFamily: {
@@ -60,8 +59,8 @@ const config: Config = {
         "dn-sm": "8px", // --radius-sm
       },
       boxShadow: {
-        dn: "0 6px 24px rgba(28,28,28,.08)", // --shadow
-        "dn-lg": "0 18px 48px rgba(28,28,28,.14)", // --shadow-lg
+        dn: "0 6px 24px rgba(10,25,47,.08)", // --shadow, navy-tinted
+        "dn-lg": "0 18px 48px rgba(10,25,47,.16)", // --shadow-lg
       },
     },
   },

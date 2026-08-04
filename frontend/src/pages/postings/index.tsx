@@ -48,9 +48,9 @@ const TYPE_LABEL: Record<Posting["type"], string> = {
   TRAINING: "Training",
 };
 
-const CAT_TONE: Record<PostingCrew["crew_category"], "steel" | "gold" | "amber"> = {
-  FLIGHT_DECK: "steel",
-  CABIN: "gold",
+const CAT_TONE: Record<PostingCrew["crew_category"], "navy" | "neutral" | "amber"> = {
+  FLIGHT_DECK: "navy",
+  CABIN: "neutral",
   ENGINEERING: "amber",
 };
 
@@ -287,7 +287,7 @@ export function PostingsPage() {
         ) : (
           <div className="space-y-4" data-testid="postings-list">
             {postings.map((p) => (
-              <div key={p.id} className="rounded-md border border-dn-steel-lt p-4">
+              <div key={p.id} className="rounded-md border border-dn-navy-lt p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-medium text-dn-dark">
@@ -301,7 +301,7 @@ export function PostingsPage() {
                     {p.crew.length > 0 && !p.engineer_cover && (
                       <Badge tone="amber">No engineer cover</Badge>
                     )}
-                    <Badge tone="steel">{p.duration_days} days</Badge>
+                    <Badge tone="navy">{p.duration_days} days</Badge>
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-dn-muted">

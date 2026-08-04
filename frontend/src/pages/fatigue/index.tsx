@@ -104,7 +104,7 @@ export function FatiguePage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm responsive-table">
-              <thead className="sticky-head text-left text-dn-muted border-b border-dn-steel-lt">
+              <thead className="sticky-head text-left text-dn-muted border-b border-dn-navy-lt">
                 <tr>
                   <th className="py-2 pr-4 font-medium">Crew</th>
                   <th className="py-2 pr-4 font-medium">Role</th>
@@ -115,7 +115,7 @@ export function FatiguePage() {
                   <th className="py-2 pr-4 font-medium">Peak</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dn-steel-lt">
+              <tbody className="divide-y divide-dn-navy-lt">
                 {rows.map((r) => (
                   <tr key={r.employee_no} className="hover:bg-dn-fog">
                     <td data-label="Crew" className="py-2 pr-4 text-dn-dark">

@@ -385,26 +385,26 @@ function AddRecurringForm({
               className={[
                 "px-2 py-1 rounded text-xs border",
                 days.includes(d.idx)
-                  ? "bg-dn-steel-deep text-white border-dn-steel"
-                  : "bg-white text-dn-steel-deep border-dn-steel-lt",
+                  ? "bg-dn-navy-deep text-white border-dn-navy"
+                  : "bg-white text-dn-navy-deep border-dn-navy-lt",
               ].join(" ")}
               data-testid={`weekday-${d.idx}`}
             >
               {d.label}
             </button>
           ))}
-          <span className="mx-1 text-dn-steel-lt">|</span>
+          <span className="mx-1 text-dn-navy-lt">|</span>
           <button
             type="button"
             onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])}
-            className="text-xs underline text-dn-steel-deep"
+            className="text-xs underline text-dn-navy-deep"
           >
             Daily
           </button>
           <button
             type="button"
             onClick={() => setDays([0, 1, 2, 3, 4])}
-            className="text-xs underline text-dn-steel-deep"
+            className="text-xs underline text-dn-navy-deep"
           >
             Weekdays
           </button>
@@ -521,14 +521,14 @@ export function RoutingsPage() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Add flight routing</CardTitle>
-            <div className="inline-flex rounded-md border border-dn-steel-lt overflow-hidden text-sm">
+            <div className="inline-flex rounded-md border border-dn-navy-lt overflow-hidden text-sm">
               <button
                 type="button"
                 onClick={() => setMode("single")}
                 className={
                   mode === "single"
-                    ? "px-3 py-1 bg-dn-steel-deep text-white"
-                    : "px-3 py-1 bg-white text-dn-steel-deep"
+                    ? "px-3 py-1 bg-dn-navy-deep text-white"
+                    : "px-3 py-1 bg-white text-dn-navy-deep"
                 }
                 data-testid="mode-single"
               >
@@ -539,8 +539,8 @@ export function RoutingsPage() {
                 onClick={() => setMode("recurring")}
                 className={
                   mode === "recurring"
-                    ? "px-3 py-1 bg-dn-steel-deep text-white"
-                    : "px-3 py-1 bg-white text-dn-steel-deep"
+                    ? "px-3 py-1 bg-dn-navy-deep text-white"
+                    : "px-3 py-1 bg-white text-dn-navy-deep"
                 }
                 data-testid="mode-recurring"
               >
@@ -557,7 +557,7 @@ export function RoutingsPage() {
               " Recurring mode creates one routing per operating day across the date range."}
           </p>
           {notice && (
-            <p className="mb-3 text-sm text-dn-steel-deep" data-testid="routing-notice">
+            <p className="mb-3 text-sm text-dn-navy-deep" data-testid="routing-notice">
               {notice}
             </p>
           )}
@@ -593,7 +593,7 @@ export function RoutingsPage() {
                 aria-label="Schedule range from"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+                className="rounded-md border border-dn-navy-lt px-2 py-1 font-mono"
               />
               <span>→</span>
               <input
@@ -601,7 +601,7 @@ export function RoutingsPage() {
                 aria-label="Schedule range to"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="rounded-md border border-dn-steel-lt px-2 py-1 font-mono"
+                className="rounded-md border border-dn-navy-lt px-2 py-1 font-mono"
               />
             </div>
           </div>
@@ -618,7 +618,7 @@ export function RoutingsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="rtable min-w-full text-sm" data-testid="routings-table">
-                <thead className="text-left text-dn-muted border-b border-dn-steel-lt">
+                <thead className="text-left text-dn-muted border-b border-dn-navy-lt">
                   <tr>
                     <th className="py-2 pr-4 font-medium">Flight</th>
                     <th className="py-2 pr-4 font-medium">Date</th>
@@ -631,10 +631,10 @@ export function RoutingsPage() {
                     <th className="py-2 pr-4 font-medium" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-dn-steel-lt">
+                <tbody className="divide-y divide-dn-navy-lt">
                   {pager.pageRows.map((s) => (
                     <tr key={s.id} className="hover:bg-dn-fog">
-                      <td data-label="Flight" className="py-2 pr-4 font-mono text-dn-steel-deep">
+                      <td data-label="Flight" className="py-2 pr-4 font-mono text-dn-navy-deep">
                         {s.flight_no}
                       </td>
                       <td data-label="Date" className="py-2 pr-4 font-mono">
@@ -654,7 +654,7 @@ export function RoutingsPage() {
                       </td>
                       <td data-label="Aircraft" className="py-2 pr-4">
                         <span className="font-mono">{s.aircraft_reg}</span>{" "}
-                        <Badge tone="steel">{s.aircraft_type}</Badge>
+                        <Badge tone="navy">{s.aircraft_type}</Badge>
                       </td>
                       <td data-label="Status" className="py-2 pr-4">
                         <Badge tone={s.status === "PUBLISHED" ? "green" : "neutral"}>

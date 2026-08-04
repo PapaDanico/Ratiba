@@ -10,7 +10,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 const TONE_CLASS: Record<Tone, string> = {
   success: "bg-dn-green text-white",
   error: "bg-dn-red text-white",
-  info: "bg-dn-steel-deep text-white",
+  info: "bg-dn-navy-deep text-white",
 };
 
 const TONE_ICON: Record<Tone, string> = {
