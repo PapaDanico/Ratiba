@@ -212,7 +212,7 @@
   }
   table.rtable tbody tr:hover,
   table.responsive-table tbody tr:hover {
-    background-color: #F7F3EA; /* DN_FOG */
+    background-color: #f7f3ea; /* DN_FOG */
   }
   /*
    * Sticky header for long tables: the column labels stay visible while the
@@ -223,7 +223,7 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    background-color: #F7F3EA; /* DN_FOG — matches page bg so rows slide under cleanly */
+    background-color: #f7f3ea; /* DN_FOG — matches page bg so rows slide under cleanly */
   }
 
   /*
@@ -263,7 +263,7 @@
   }
   table.rtable tr,
   table.responsive-table tr {
-    border: 1px solid #DCE3ED; /* DN_NAVY_LT */
+    border: 1px solid #dce3ed; /* DN_NAVY_LT */
     border-radius: 10px;
     padding: 6px 12px;
     margin-bottom: 10px;
@@ -286,7 +286,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #5C6B7D; /* DN_MUTED */
+    color: #5c6b7d; /* DN_MUTED */
     text-align: left;
     flex-shrink: 0;
   }
