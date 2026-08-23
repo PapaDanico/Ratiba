@@ -8,7 +8,7 @@
  *   safe to serve cache-first.
  * - /api/* and non-GET requests are never intercepted.
  */
-const CACHE = "ratiba-cache-v1";
+const CACHE = "ratiba-cache-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

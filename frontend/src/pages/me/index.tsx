@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { ShareButtons } from "@/components/ui/ShareButtons";
 import { pilotApi, pilotPair, pilotStore, type PilotProfile } from "@/lib/pilotAuth";
 import { cn } from "@/lib/cn";
+import { DnLogo } from "@/components/ui/DnLogo";
 
 type DutyDay = {
   date_local: string;
@@ -436,45 +437,14 @@ export function CrewMePage() {
   }
 
   return (
-    <main className="min-h-screen bg-dn-fog">
-      <header className="bg-white border-b border-dn-navy-lt">
-        <div className="mx-auto max-w-md px-4 py-3 flex items-center justify-between">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-dn-navy-deep">Ratiba</p>
-            <p className="font-display text-lg text-dn-dark">
-              {profile.employee_no} <Badge tone="navy">{profile.role}</Badge>
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              pilotStore.clear();
-              setProfile(null);
-            }}
-            data-testid="me-signout"
-          >
-            Sign out
-          </Button>
+    <main className="min-h-screen bg-dn-dark-deep pb-24 text-dn-dark">
+      <header className="ratiba-grid border-b border-dn-sand-deep bg-dn-dark-deep">
+        <div className="mx-auto max-w-md px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3"><DnLogo showText={false} width={38} /><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-dn-navy-deep">Ratiba crew</p><p className="text-sm font-medium text-dn-dark">{profile.employee_no} <Badge tone="navy">{profile.role}</Badge></p></div></div>
+          <Button variant="ghost" size="sm" onClick={() => { pilotStore.clear(); setProfile(null); }} data-testid="me-signout">Sign out</Button>
         </div>
-        <nav className="mx-auto max-w-md px-4 flex gap-1 -mb-px">
-          {(["today", "roster", "currency", "notices"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={cn(
-                "px-3 py-2 text-sm font-medium border-b-2 capitalize",
-                tab === t ? "border-dn-amber text-dn-dark" : "border-transparent text-dn-muted",
-              )}
-              data-testid={`me-tab-${t}`}
-            >
-              {t}
-            </button>
-          ))}
-        </nav>
       </header>
-      <section className="mx-auto max-w-md px-4 py-4">
+      <section className="mx-auto max-w-md px-4 py-5">
         <Card>
           <CardHeader>
             <CardTitle className="capitalize">{tab}</CardTitle>
@@ -487,6 +457,9 @@ export function CrewMePage() {
           </CardBody>
         </Card>
       </section>
+      <nav aria-label="Crew sections" className="fixed inset-x-0 bottom-0 z-20 border-t border-dn-sand-deep bg-dn-sand/95 px-3 py-2 backdrop-blur">
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">{(["today", "roster", "currency", "notices"] as Tab[]).map((t) => <button key={t} type="button" onClick={() => setTab(t)} className={cn("rounded-dn-sm px-2 py-2 text-xs font-medium capitalize", tab === t ? "bg-dn-navy text-dn-dark" : "text-dn-muted")} data-testid={`me-tab-${t}`}>{t}</button>)}</div>
+      </nav>
     </main>
   );
 }
