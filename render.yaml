@@ -10,10 +10,10 @@ services:
     # won't route to an instance that can't serve login. /healthz is liveness.
     healthCheckPath: /readyz
     envVars:
+      # Supabase Postgres: configure this as a secret on each backend service.
+      # See docs/supabase-backend-configuration.md. TLS (`?sslmode=require`) is required.
       - key: DATABASE_URL
-        fromDatabase:
-          name: ratiba-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
         fromService:
           type: redis
@@ -55,10 +55,10 @@ services:
     dockerCommand: ./worker.sh
     plan: free
     envVars:
+      # Supabase Postgres: configure this as a secret on each backend service.
+      # See docs/supabase-backend-configuration.md. TLS (`?sslmode=require`) is required.
       - key: DATABASE_URL
-        fromDatabase:
-          name: ratiba-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
         fromService:
           type: redis
@@ -79,10 +79,10 @@ services:
     schedule: "0 5 * * *"  # 05:00 UTC ≈ 08:00 EAT, daily
     plan: free
     envVars:
+      # Supabase Postgres: configure this as a secret on each backend service.
+      # See docs/supabase-backend-configuration.md. TLS (`?sslmode=require`) is required.
       - key: DATABASE_URL
-        fromDatabase:
-          name: ratiba-db
-          property: connectionString
+        sync: false
       - key: SECRET_KEY
         generateValue: true
 
@@ -110,10 +110,3 @@ services:
     ipAllowList:
       - source: 0.0.0.0/0
         description: allow all
-
-databases:
-  # ── Postgres ───────────────────────────────────────────────────────────────
-  - name: ratiba-db
-    databaseName: ratiba
-    user: ratiba
-    plan: free
