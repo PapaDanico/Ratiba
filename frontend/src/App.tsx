@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -94,6 +95,7 @@ export function App() {
               <Route path="/me" element={<Navigate to="/crew/me" replace />} />
               <Route path="*" element={<ErrorPage />} />
             </Routes>
+            <Analytics />
           </BrowserRouter>
         </ToastProvider>
       </AuthProvider>
