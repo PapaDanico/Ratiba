@@ -16,29 +16,29 @@ const config: Config = {
       colors: {
         dn: {
           // Warm parchment surfaces
-          fog: "#F7F3EA", // page background
-          sand: "#EDE6D3", // card header tint / recessed surface
-          "sand-deep": "#E3D8BE", // borders, dividers — warm, not cool grey
+          fog: "#0B0D0F", // cockpit-black application canvas
+          sand: "#161A1E", // elevated dark surface
+          "sand-deep": "#2B3035", // structural borders
 
           // Ink — navy doing text duty (was near-black #1C1C1C)
-          dark: "#0A192F",
-          "dark-deep": "#020C1B", // deepest dark band — hero sections, footers
-          muted: "#5C6B7D", // secondary text, AA-checked on fog/sand/white
+          dark: "#F4E8D0", // ivory operational text
+          "dark-deep": "#07090B", // deepest black
+          muted: "#A99F91", // muted ivory
 
           // Primary accent — navy (was steel blue)
-          navy: "#0A192F",
-          "navy-lt": "#DCE3ED", // pale navy tint — badges, hover surfaces
-          "navy-deep": "#020C1B", // hover/pressed, darkest
+          navy: "#D96528", // Ratiba copper
+          "navy-lt": "#243F52", // aviation blue surface
+          "navy-deep": "#F08943", // copper highlight
 
           // Secondary accent — amber (was gold; also carries warning status)
-          amber: "#D97706",
-          "amber-lt": "#FFF6E5", // pale amber wash — callout panels
-          "amber-deep": "#B45309", // AA-safe amber for text on tints
+          amber: "#E7AE54", // warm flight-deck gold
+          "amber-lt": "#3A2C19", // gold wash
+          "amber-deep": "#F5C574", // readable gold
 
           // Status
-          green: "#1E7A4A",
-          "green-deep": "#166437", // readable green text on light tints
-          red: "#C0392B",
+          green: "#629B69",
+          "green-deep": "#8ACB91",
+          red: "#D8634F",
         },
       },
       fontFamily: {

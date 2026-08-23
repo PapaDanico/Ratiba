@@ -572,11 +572,12 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl text-dn-dark">
-          Welcome back, {user?.full_name.split(" ")[0]}
+      <div className="ratiba-grid ratiba-panel relative overflow-hidden rounded-dn border border-dn-sand-deep bg-dn-sand px-5 py-6 sm:px-7">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[.22em] text-dn-navy-deep">Operations command centre</p>
+        <h1 className="font-body text-2xl font-semibold tracking-tight text-dn-dark sm:text-3xl">
+          Good day, {user?.full_name.split(" ")[0]}
         </h1>
-        <p className="mt-1 text-dn-muted text-sm">
+        <p className="mt-2 max-w-2xl text-dn-muted text-sm">
           {schemeSource === "operator"
             ? "Operations overview — your operator FTL scheme (over the KCAA baseline)."
             : "Operations overview — KCAA Flight Duty Time Scheme (generic baseline)."}
@@ -597,14 +598,14 @@ export function DashboardPage() {
       <TodayStrip />
       <ComplianceAlerts data={alertsData} error={alertsError} />
       <DemoGuide />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <Link to="/app/leave" className="block">
           <Card interactive>
             <CardHeader>
               <CardTitle>Pending leave</CardTitle>
             </CardHeader>
             <CardBody>
-              <div className="font-display text-5xl text-dn-dark" data-testid="pending-leave-count">
+              <div className="font-body text-4xl font-semibold tracking-tight text-dn-dark" data-testid="pending-leave-count">
                 {pendingLeave}
               </div>
               <p className="mt-2 text-sm text-dn-muted">Requests awaiting your decision.</p>
@@ -617,7 +618,7 @@ export function DashboardPage() {
               <CardTitle>Pending swaps</CardTitle>
             </CardHeader>
             <CardBody>
-              <div className="font-display text-5xl text-dn-dark" data-testid="pending-swaps-count">
+              <div className="font-body text-4xl font-semibold tracking-tight text-dn-dark" data-testid="pending-swaps-count">
                 {pendingSwaps}
               </div>
               <p className="mt-2 text-sm text-dn-muted">Duty-swap requests to review.</p>
@@ -651,7 +652,7 @@ export function DashboardPage() {
               <CardTitle>Fatigue watch</CardTitle>
             </CardHeader>
             <CardBody>
-              <div className="font-display text-5xl text-dn-dark" data-testid="fatigue-high-count">
+              <div className="font-body text-4xl font-semibold tracking-tight text-dn-dark" data-testid="fatigue-high-count">
                 {fatigueHigh ?? "—"}
               </div>
               <p className="mt-2 text-sm text-dn-muted">
@@ -666,7 +667,7 @@ export function DashboardPage() {
               <CardTitle>Notices</CardTitle>
             </CardHeader>
             <CardBody>
-              <div className="font-display text-5xl text-dn-dark" data-testid="notices-pending-ack">
+              <div className="font-body text-4xl font-semibold tracking-tight text-dn-dark" data-testid="notices-pending-ack">
                 {noticesPendingAck}
               </div>
               <p className="mt-2 text-sm text-dn-muted">
